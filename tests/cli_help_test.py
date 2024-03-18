@@ -163,11 +163,11 @@ usage: otava analyze [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_U
                      [--bigquery-credentials BIGQUERY_CREDENTIALS] [--update-grafana]
                      [--update-postgres] [--update-bigquery]
                      [--notify-slack NOTIFY_SLACK [NOTIFY_SLACK ...]] [--cph-report-since DATE]
-                     [--output {log,json,regressions_only}] [--branch [STRING]] [--metrics LIST]
-                     [--attrs LIST] [--since-commit STRING | --since-version STRING |
-                     --since DATE] [--until-commit STRING | --until-version STRING | --until DATE]
-                     [--last COUNT] [-P, --p-value PVALUE] [-M MAGNITUDE] [--window WINDOW]
-                     [--orig-edivisive ORIG_EDIVISIVE]
+                     [--branch [STRING]] [--metrics LIST] [--attrs LIST] [--since-commit STRING |
+                     --since-version STRING | --since DATE] [--until-commit STRING |
+                     --until-version STRING | --until DATE] [--last COUNT] [-P, --p-value PVALUE]
+                     [-M MAGNITUDE] [--window WINDOW] [--orig-edivisive ORIG_EDIVISIVE]
+                     [--output {log,json,regressions_only}]
                      tests [tests ...]
 
 positional arguments:
@@ -184,8 +184,6 @@ options:
   --cph-report-since DATE
                         Sets a limit on the date range of the Change Point History reported to
                         Slack. Same syntax as --since.
-  --output {log,json,regressions_only}
-                        Output format for the generated report.
   --branch [STRING]     name of the branch
   --metrics LIST        a comma-separated list of metrics to analyze
   --attrs LIST          a comma-separated list of attribute names associated with the runs (e.g.
@@ -220,12 +218,11 @@ usage: otava analyze [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_U
                      [--bigquery-credentials BIGQUERY_CREDENTIALS] [--update-grafana]
                      [--update-postgres] [--update-bigquery]
                      [--notify-slack NOTIFY_SLACK [NOTIFY_SLACK ...]] [--cph-report-since DATE]
-                     [--output {log,json,regressions_only}] [--branch [STRING]] [--metrics LIST]
-                     [--attrs LIST]
+                     [--branch [STRING]] [--metrics LIST] [--attrs LIST]
                      [--since-commit STRING | --since-version STRING | --since DATE]
                      [--until-commit STRING | --until-version STRING | --until DATE]
                      [--last COUNT] [-P, --p-value PVALUE] [-M MAGNITUDE] [--window WINDOW]
-                     [--orig-edivisive ORIG_EDIVISIVE]
+                     [--orig-edivisive ORIG_EDIVISIVE] [--output {log,json,regressions_only}]
                      tests [tests ...]
 
 positional arguments:
@@ -242,8 +239,6 @@ options:
   --cph-report-since DATE
                         Sets a limit on the date range of the Change Point History reported to
                         Slack. Same syntax as --since.
-  --output {log,json,regressions_only}
-                        Output format for the generated report.
   --branch [STRING]     name of the branch
   --metrics LIST        a comma-separated list of metrics to analyze
   --attrs LIST          a comma-separated list of attribute names associated with the runs (e.g.
@@ -268,7 +263,8 @@ options:
 
     assert (
         result.stdout
-        == usage_and_options + """
+        == usage_and_options
+        + """
                         minimum accepted magnitude of a change-point computed as abs(new_mean /
                         old_mean - 1.0); use it to filter out stupidly small changes like < 0.01
   --window WINDOW       the number of data points analyzed at once; the window size affects the
@@ -279,6 +275,8 @@ options:
   --orig-edivisive ORIG_EDIVISIVE
                         use the original edivisive algorithm with no windowing and weak change
                         points analysis improvements
+  --output {log,json,regressions_only}
+                        Output format for the generated report.
 
 Graphite Options:
   Options for Graphite configuration
@@ -355,7 +353,7 @@ usage: otava regressions [-h] [--ignore-direction] [--graphite-url GRAPHITE_URL]
                          --since-version STRING | --since DATE] [--until-commit STRING |
                          --until-version STRING | --until DATE] [--last COUNT]
                          [-P, --p-value PVALUE] [-M MAGNITUDE] [--window WINDOW]
-                         [--orig-edivisive ORIG_EDIVISIVE]
+                         [--orig-edivisive ORIG_EDIVISIVE] [--output {log,json,regressions_only}]
                          tests [tests ...]
 
 positional arguments:
@@ -401,7 +399,7 @@ usage: otava regressions [-h] [--ignore-direction] [--graphite-url GRAPHITE_URL]
                          [--since-commit STRING | --since-version STRING | --since DATE]
                          [--until-commit STRING | --until-version STRING | --until DATE]
                          [--last COUNT] [-P, --p-value PVALUE] [-M MAGNITUDE] [--window WINDOW]
-                         [--orig-edivisive ORIG_EDIVISIVE]
+                         [--orig-edivisive ORIG_EDIVISIVE] [--output {log,json,regressions_only}]
                          tests [tests ...]
 
 positional arguments:
@@ -434,7 +432,8 @@ options:
 
     assert (
         result.stdout
-        == usage_and_options + """
+        == usage_and_options
+        + """
                         minimum accepted magnitude of a change-point computed as abs(new_mean /
                         old_mean - 1.0); use it to filter out stupidly small changes like < 0.01
   --window WINDOW       the number of data points analyzed at once; the window size affects the
@@ -445,6 +444,8 @@ options:
   --orig-edivisive ORIG_EDIVISIVE
                         use the original edivisive algorithm with no windowing and weak change
                         points analysis improvements
+  --output {log,json,regressions_only}
+                        Output format for the generated report.
 
 Graphite Options:
   Options for Graphite configuration

@@ -19,7 +19,8 @@ import json
 
 import pytest
 
-from otava.report import Report, ReportType
+from otava.analysis import TTestStats
+from otava.report import ChangePointReport, RegressionsReport, ReportType
 from otava.series import Metric, Series
 
 
@@ -44,12 +45,12 @@ def change_points(series):
 
 
 @pytest.fixture(scope="module")
-def report(series, change_points):
-    return Report(series, change_points)
+def cp_report(series, change_points):
+    return ChangePointReport(series, change_points)
 
 
 def test_report(series, change_points):
-    report = Report(series, change_points)
+    report = ChangePointReport(series, change_points)
     output = report.produce_report("test", ReportType.LOG)
     assert "series1" in output
     assert "series2" in output
@@ -66,32 +67,64 @@ def test_report(series, change_points):
     assert len(output.split("\n")) == len(series.time) + 2 + 3 * len(change_points)
 
 
-def test_json_report(report):
-    output = report.produce_report("test_name_from_config", ReportType.JSON)
+def test_json_report(cp_report):
+    output = cp_report.produce_report("test_name_from_config", ReportType.JSON)
     obj = json.loads(output)
-    expected = {'test_name_from_config': [{'attributes': {},
-                                           'changes': [{'forward_change_percent': '-11',
-                                                        'index': 4,
-                                                        'magnitude': '0.124108',
-                                                        'mean_after': '1.801429',
-                                                        'mean_before': '2.025000',
-                                                        'metric': 'series2',
-                                                        'pvalue': '0.000000',
-                                                        'stddev_after': '0.026954',
-                                                        'stddev_before': '0.011180',
-                                                        'time': 4}],
-                                          'time': 4},
-                                          {'attributes': {},
-                                          'changes': [{'forward_change_percent': '-49',
-                                                       'index': 6,
-                                                       'magnitude': '0.977513',
-                                                       'mean_after': '0.504000',
-                                                       'mean_before': '0.996667',
-                                                       'metric': 'series1',
-                                                       'pvalue': '0.000000',
-                                                       'stddev_after': '0.025768',
-                                                       'stddev_before': '0.067495',
-                                                       'time': 6}],
-                                           'time': 6}]}
+    expected = {
+        "test_name_from_config": [
+            {
+                "attributes": {},
+                "changes": [
+                    {
+                        "forward_change_percent": "-11",
+                        "index": 4,
+                        "magnitude": "0.124108",
+                        "mean_after": "1.801429",
+                        "mean_before": "2.025000",
+                        "metric": "series2",
+                        "pvalue": "0.000000",
+                        "stddev_after": "0.026954",
+                        "stddev_before": "0.011180",
+                        "time": 4,
+                    }
+                ],
+                "time": 4,
+            },
+            {
+                "attributes": {},
+                "changes": [
+                    {
+                        "forward_change_percent": "-49",
+                        "index": 6,
+                        "magnitude": "0.977513",
+                        "mean_after": "0.504000",
+                        "mean_before": "0.996667",
+                        "metric": "series1",
+                        "pvalue": "0.000000",
+                        "stddev_after": "0.025768",
+                        "stddev_before": "0.067495",
+                        "time": 6,
+                    }
+                ],
+                "time": 6,
+            },
+        ]
+    }
     assert isinstance(obj, dict)
     assert obj == expected
+
+
+def test_regressions_report():
+    stats = TTestStats(0.5, 1, 2, 3, 4)
+    report = RegressionsReport([("metric1", stats)])
+    output = report.produce_report("test_name", ReportType.LOG)
+    assert "test_name" in output
+    assert "metric1" in output
+    assert "(+100.0%)" in output
+
+    output = report.produce_report("test_name", ReportType.JSON)
+    obj = json.loads(output)
+    assert "test_name" in obj
+    assert len(obj["test_name"]) == 1
+    assert obj["test_name"][0]["metric"] == "metric1"
+    assert float(obj["test_name"][0]["forward_change_percent"]) == 100.0
