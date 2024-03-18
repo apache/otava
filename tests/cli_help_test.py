@@ -341,10 +341,11 @@ def test_otava_regressions_help_output():
     # Python 3.13+ formats usage lines and option aliases differently
     if IS_PYTHON_313_PLUS:
         usage_and_options = """\
-usage: otava regressions [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_URL]
-                         [--grafana-user GRAFANA_USER] [--grafana-password GRAFANA_PASSWORD]
-                         [--slack-token SLACK_TOKEN] [--postgres-hostname POSTGRES_HOSTNAME]
-                         [--postgres-port POSTGRES_PORT] [--postgres-username POSTGRES_USERNAME]
+usage: otava regressions [-h] [--ignore-direction] [--graphite-url GRAPHITE_URL]
+                         [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
+                         [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
+                         [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
+                         [--postgres-username POSTGRES_USERNAME]
                          [--postgres-password POSTGRES_PASSWORD]
                          [--postgres-database POSTGRES_DATABASE]
                          [--bigquery-project-id BIGQUERY_PROJECT_ID]
@@ -362,6 +363,7 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
+  --ignore-direction    ignore the direction of the change in performance
   --branch [STRING]     name of the branch
   --metrics LIST        a comma-separated list of metrics to analyze
   --attrs LIST          a comma-separated list of attribute names associated with the runs (e.g.
@@ -385,10 +387,11 @@ options:
   -M, --magnitude MAGNITUDE"""
     else:
         usage_and_options = """\
-usage: otava regressions [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_URL]
-                         [--grafana-user GRAFANA_USER] [--grafana-password GRAFANA_PASSWORD]
-                         [--slack-token SLACK_TOKEN] [--postgres-hostname POSTGRES_HOSTNAME]
-                         [--postgres-port POSTGRES_PORT] [--postgres-username POSTGRES_USERNAME]
+usage: otava regressions [-h] [--ignore-direction] [--graphite-url GRAPHITE_URL]
+                         [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
+                         [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
+                         [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
+                         [--postgres-username POSTGRES_USERNAME]
                          [--postgres-password POSTGRES_PASSWORD]
                          [--postgres-database POSTGRES_DATABASE]
                          [--bigquery-project-id BIGQUERY_PROJECT_ID]
@@ -406,6 +409,7 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
+  --ignore-direction    ignore the direction of the change in performance
   --branch [STRING]     name of the branch
   --metrics LIST        a comma-separated list of metrics to analyze
   --attrs LIST          a comma-separated list of attribute names associated with the runs (e.g.
