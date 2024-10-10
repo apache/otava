@@ -32,7 +32,7 @@ See the [poetry docs](https://python-poetry.org/docs) for more.
 
 # Linting and formatting
 
-Code-style is enforced using [black](https://black.readthedocs.io/) and [flake8](https://flake8.pycqa.org/); import optimisation is handled by [isort](https://pycqa.github.io/isort/) and [autoflake](https://pypi.org/project/autoflake/).  Linting is automatically applied when tox runs tests; if linting fails, you can fix trivial problems with:
+Code-style is enforced using [ruff](https://docs.astral.sh/ruff/) and [flake8](https://flake8.pycqa.org/); import optimisation is handled by [isort](https://pycqa.github.io/isort/) and [autoflake](https://pypi.org/project/autoflake/).  Linting is automatically applied when tox runs tests; if linting fails, you can fix trivial problems with:
 
 ```
 ./toxw -e format
