@@ -62,45 +62,6 @@ Hunter supports publishing results to a CSV file, [Graphite](https://graphiteapp
 
 Tests are defined in the `tests` section.
 
-#### Importing results from Graphite
-
-To import data from Graphite, the test configuration must inform Hunter how the
-data are published in your history server. This is done by specifying the Graphite path prefix
-common for all the test's metrics and suffixes for each of the metrics recorded by the test run.
-
-```yaml
-tests:    
-  my-product.test:
-    type: graphite
-    tags: [perf-test, daily, my-product]
-    prefix: performance-tests.daily.my-product
-    metrics:
-      throughput: 
-        suffix: client.throughput
-      response-time:
-        suffix: client.p50
-        direction: -1    # lower is better
-      cpu-load: 
-        suffix: server.cpu
-        direction: -1    # lower is better
-```
-
-The optional `tags` property contains the tags that are used to query for Graphite events that store 
-additional test run metadata such as run identifier, commit, branch and product version information.
-
-The following command will post an event with the test run metadata:
-```shell
-$ curl -X POST "http://graphite_address/events/" \
-    -d '{ 
-      "what": "Performance Test", 
-      "tags": ["perf-test", "daily", "my-product"],   
-      "when": 1537884100,
-      "data": {"commit": "fe6583ab", "branch": "new-feature", "version": "0.0.1"}
-    }'
-```
-
-Posting those events is not mandatory, but when they are available, Hunter is able to 
-filter data by commit or version using `--since-commit` or `--since-version` selectors.
 
 #### Importing results from PostgreSQL
 

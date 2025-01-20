@@ -1,0 +1,62 @@
+services:
+  graphite:
+    image: graphiteapp/graphite-statsd
+    container_name: graphite
+    ports:
+      - "80:80"
+      - "2003-2004:2003-2004"
+      - "2023-2024:2023-2024"
+      - "8125:8125/udp"
+      - "8126:8126"
+    networks:
+      - hunter-graphite
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - graphite
+    ports:
+      - "3000:3000"
+    volumes:
+        - ./grafana:/etc/grafana/provisioning
+    networks:
+      - hunter-graphite
+
+  data-sender:
+    image: bash
+    container_name: data-sender
+    depends_on:
+      - graphite
+    volumes:
+      - ./datagen:/datagen
+    entrypoint: ["bash", "/datagen/datagen.sh"]
+    networks:
+      - hunter-graphite
+
+  hunter:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: hunter
+    depends_on:
+      - graphite
+    environment:
+      GRAPHITE_ADDRESS: http://graphite/
+      GRAFANA_ADDRESS: http://grafana:3000/
+      GRAFANA_USER: admin
+      GRAFANA_PASSWORD: admin
+      HUNTER_CONFIG: examples/graphite/hunter.yaml
+    networks:
+      - hunter-graphite
+
+networks:
+  hunter-graphite:
+    driver: bridge
+
+
+# TODO:
+# 3. make sure Hunter can connect to graphite and query the data
+# 4. make sure it annotates the dashboard correctly

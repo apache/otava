@@ -1,0 +1,31 @@
+# External systems connectors configuration:
+graphite:
+  url: ${GRAPHITE_ADDRESS}
+
+grafana:
+  url: ${GRAFANA_ADDRESS}
+  user: ${GRAFANA_USER}
+  password: ${GRAFANA_PASSWORD}
+
+# Define your tests here:
+tests:
+  my-product.test:
+    type: graphite
+    prefix: performance-tests.daily.my-product
+    tags: [perf-test, daily, my-product]
+    metrics:
+      throughput:
+        suffix: client.throughput
+        direction: 1   # higher is better
+        scale: 1
+      response_time:
+        suffix: client.p50
+        direction: -1  # lower is better
+        scale: 1
+      cpu_usage:
+        suffix: server.cpu
+        direction: -1  # lower is better
+        scale: 1
+
+
+
