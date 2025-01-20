@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: exampleuser
+      POSTGRES_PASSWORD: examplepassword
+      POSTGRES_DB: benchmark_results
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - hunter-postgres
+
+  hunter:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: hunter
+    depends_on:
+      - postgres
+    environment:
+      POSTGRES_HOSTNAME: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USERNAME: exampleuser
+      POSTGRES_PASSWORD: examplepassword
+      POSTGRES_DATABASE: benchmark_results
+      HUNTER_CONFIG: examples/psql/hunter.yaml
+      BRANCH: trunk
+    networks:
+      - hunter-postgres
+
+networks:
+  hunter-postgres:
+    driver: bridge
+
+
