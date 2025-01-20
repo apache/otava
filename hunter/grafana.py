@@ -100,7 +100,7 @@ class Grafana:
                 data = asdict(annotation)
                 data["time"] = int(annotation.time.timestamp() * 1000)
                 del data["id"]
-                response = requests.post(url=url, data=data, auth=(self.__user, self.__password))
+                response = requests.post(url=url, json=data, auth=(self.__user, self.__password))
                 response.raise_for_status()
         except HTTPError as err:
             raise GrafanaError(str(err))
