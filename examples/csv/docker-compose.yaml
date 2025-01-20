@@ -1,0 +1,12 @@
+services:
+  hunter:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: hunter
+    environment:
+      HUNTER_CONFIG: examples/csv/hunter.yaml
+    volumes:
+      - ./tests:/tests
+
+

@@ -1,0 +1,10 @@
+tests:
+  local.sample:
+    type: csv
+    file: /tests/local_sample.csv
+    time_column: time
+    attributes: [commit]
+    metrics: [metric1, metric2]
+    csv_options:
+      delimiter: ','
+      quotechar: "'"
