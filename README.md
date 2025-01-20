@@ -36,16 +36,6 @@ Backward compatibility may be broken any time.
 
 See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development instructions.
 
-## Installation
-
-Hunter requires Python 3.8.  If you don't have python 3.8, 
-use pyenv to install it.
-
-Use pipx to install hunter:
-
-```
-pipx install git+ssh://git@github.com/datastax-labs/hunter
-```
 
 ## Setup
 Copy the main configuration file `resources/hunter.yaml` to `~/.hunter/hunter.yaml` and adjust 
