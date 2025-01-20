@@ -34,7 +34,7 @@ Usability may be unsatisfactory.
 Documentation may be incomplete.
 Backward compatibility may be broken any time.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development instructions.
+See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development instructions.
 
 ## Installation
 
