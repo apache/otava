@@ -4,32 +4,32 @@ Hunter – Hunts Performance Regressions
 _This is an unsupported open source project created by DataStax employees._
 
 
-Hunter performs statistical analysis of performance test results stored 
-in CSV files or Graphite database. It finds change-points and notifies about 
-possible performance regressions.  
- 
-A typical use-case of hunter is as follows: 
+Hunter performs statistical analysis of performance test results stored
+in CSV files, PostgreSQL, BigQuery, or Graphite database. It finds change-points and notifies about
+possible performance regressions.
+
+A typical use-case of hunter is as follows:
 
 - A set of performance tests is scheduled repeatedly.
-- The resulting metrics of the test runs are stored in a time series database (Graphite) 
-   or appended to CSV files. 
-- Hunter is launched by a Jenkins/Cron job (or an operator) to analyze the recorded 
+- The resulting metrics of the test runs are stored in a time series database (Graphite)
+   or appended to CSV files.
+- Hunter is launched by a Jenkins/Cron job (or an operator) to analyze the recorded
   metrics regularly.
 - Hunter notifies about significant changes in recorded metrics by outputting text reports or
   sending Slack notifications.
-  
-Hunter is capable of finding even small, but systematic shifts in metric values, 
-despite noise in data.
-It adapts automatically to the level of noise in data and tries not to notify about changes that 
-can happen by random. Unlike in threshold-based performance monitoring systems, 
-there is no need to setup fixed warning threshold levels manually for each recorded metric.  
-The level of accepted probability of false-positives, as well as the 
-minimal accepted magnitude of changes are tunable. Hunter is also capable of comparing 
-the level of performance recorded in two different periods of time – which is useful for
-e.g. validating the performance of the release candidate vs the previous release of your product.    
 
-This is still work-in-progress, unstable code. 
-Features may be missing. 
+Hunter is capable of finding even small, but systematic shifts in metric values,
+despite noise in data.
+It adapts automatically to the level of noise in data and tries not to notify about changes that
+can happen by random. Unlike in threshold-based performance monitoring systems,
+there is no need to setup fixed warning threshold levels manually for each recorded metric.
+The level of accepted probability of false-positives, as well as the
+minimal accepted magnitude of changes are tunable. Hunter is also capable of comparing
+the level of performance recorded in two different periods of time – which is useful for
+e.g. validating the performance of the release candidate vs the previous release of your product.
+
+This is still work-in-progress, unstable code.
+Features may be missing.
 Usability may be unsatisfactory.
 Documentation may be incomplete.
 Backward compatibility may be broken any time.
