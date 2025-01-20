@@ -26,7 +26,7 @@ postgres:
   database: ${POSTGRES_DATABASE}
 ```
 
-## Tests 
+## Tests
 
 Test configuration contains queries selecting experiment data, a time column, and a list of columns to analyze:
 
@@ -45,14 +45,14 @@ tests:
         scale: 1
       process_cumulative_rate_diff:
         direction: -1
-        scale: 1    
+        scale: 1
     query: |
-      SELECT e.commit, 
-             e.commit_ts, 
-             r.process_cumulative_rate_mean, 
-             r.process_cumulative_rate_stderr, 
-             r.process_cumulative_rate_diff, 
-             r.experiment_id, 
+      SELECT e.commit,
+             e.commit_ts,
+             r.process_cumulative_rate_mean,
+             r.process_cumulative_rate_stderr,
+             r.process_cumulative_rate_diff,
+             r.experiment_id,
              r.config_id
       FROM results r
       INNER JOIN configs c ON r.config_id = c.id
@@ -74,13 +74,13 @@ tests:
 Start docker-compose with PostgreSQL in one tab:
 
 ```bash
-docker-compose up --force-recreate --always-recreate-deps --renew-anon-volumes
+docker-compose -f examples/postgresql/docker-compose.yaml up --force-recreate --always-recreate-deps --renew-anon-volumes
 ````
 
 Run Hunter in the other tab to show results for a single test `aggregate_mem` and update the database with newly found change points:
 
 ```bash
-docker-compose run --build hunter bin/hunter analyze aggregate_mem --update-postgres
+docker-compose -f examples/postgresql/docker-compose.yaml run --build hunter bin/hunter analyze aggregate_mem --update-postgres
 ```
 
 Expected output:

@@ -52,63 +52,6 @@ Hunter supports publishing results to a CSV file, [Graphite](https://graphiteapp
 
 Tests are defined in the `tests` section.
 
-
-#### Importing results from PostgreSQL
-
-To import data from PostgreSQL, Hunter configuration must contain the database connection details:
-
-```yaml
-# External systems connectors configuration:
-postgres:
-  hostname: ...
-  port: ...
-  username: ...
-  password: ...
-  database: ...
-```
-
-Test configurations must contain a query to select experiment data, a time column, and a list of columns to analyze:
-
-```yaml
-tests:
-  aggregate_mem:
-    type: postgres
-    time_column: commit_ts
-    attributes: [experiment_id, config_id, commit]
-    metrics:
-      process_cumulative_rate_mean:
-        direction: 1
-        scale: 1
-      process_cumulative_rate_stderr:
-        direction: -1
-        scale: 1
-      process_cumulative_rate_diff:
-        direction: -1
-        scale: 1    
-    query: |
-      SELECT e.commit, 
-             e.commit_ts, 
-             r.process_cumulative_rate_mean, 
-             r.process_cumulative_rate_stderr, 
-             r.process_cumulative_rate_diff, 
-             r.experiment_id, 
-             r.config_id
-      FROM results r
-      INNER JOIN configs c ON r.config_id = c.id
-      INNER JOIN experiments e ON r.experiment_id = e.id
-      WHERE e.exclude_from_analysis = false AND
-            e.branch = 'trunk' AND
-            e.username = 'ci' AND
-            c.store = 'MEM' AND
-            c.cache = true AND
-            c.benchmark = 'aggregate' AND
-            c.instance_type = 'ec2i3.large'
-      ORDER BY e.commit_ts ASC;
-```
-
-For more details, see the examples in [examples/psql](examples/psql).
-
-
 ## License
 
 Copyright 2021 DataStax Inc

@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -28,7 +28,7 @@ services:
       POSTGRES_USERNAME: exampleuser
       POSTGRES_PASSWORD: examplepassword
       POSTGRES_DATABASE: benchmark_results
-      HUNTER_CONFIG: examples/psql/hunter.yaml
+      HUNTER_CONFIG: examples/postgresql/hunter.yaml
       BRANCH: trunk
     networks:
       - hunter-postgres
@@ -36,5 +36,3 @@ services:
 networks:
   hunter-postgres:
     driver: bridge
-
-
