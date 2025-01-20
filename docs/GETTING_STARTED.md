@@ -1,0 +1,129 @@
+# Getting Started
+
+## Installation
+
+Hunter requires Python 3.8.  If you don't have python 3.8,
+use pyenv to install it.
+
+Use pipx to install hunter:
+
+```
+pipx install git+ssh://git@github.com/apache/hunter
+```
+
+## Setup
+
+Copy the main configuration file `resources/hunter.yaml` to `~/.hunter/hunter.yaml` and adjust data source configuration.
+
+> [!TIP]
+> See docs on specific data sources to learn more about their configuration - [CSV](CSV.md), [Graphite](GRAPHITE.md),
+[PostgreSQL](POSTGRESQL.md), or [BigQuery](BIGQUERY.md).
+
+Alternatively, it is possible to leave the config file as is, and provide credentials in the environment
+by setting appropriate environment variables.
+Environment variables are interpolated before interpreting the configuration file.
+
+## Defining tests
+
+All test configurations are defined in the main configuration file.
+Hunter supports reading data from and publishing results to a CSV file, [Graphite](https://graphiteapp.org/),
+[PostgreSQL](https://www.postgresql.org/), and [BigQuery](https://cloud.google.com/bigquery).
+
+Tests are defined in the `tests` section. For example, the following definition will import results of the test from a CSV file:
+
+```yaml
+tests:
+  local.sample:
+    type: csv
+    file: tests/resources/sample.csv
+    time_column: time
+    metrics: [metric1, metric2]
+    attributes: [commit]
+    csv_options:
+      delimiter: ","
+      quote_char: "'"
+```
+
+The `time_column` property points to the name of the column storing the timestamp
+of each test-run. The data points will be ordered by that column.
+
+The `metrics` property selects the columns tha hold the values to be analyzed. These values must
+be numbers convertible to floats. The `metrics` property can be not only a simple list of column
+names, but it can also be a dictionary configuring other properties of each metric,
+the column name or direction:
+
+```yaml
+metrics:
+  resp_time_p99:
+    direction: -1
+    column: p99
+```
+
+Direction can be 1 or -1. If direction is set to 1, this means that the higher the metric, the
+better the performance is. If it is set to -1, higher values mean worse performance.
+
+The `attributes` property describes any other columns that should be attached to the final
+report. Special attribute `version` and `commit` can be used to query for a given time-range.
+
+> [!TIP] To learn how to avoid repeating the same configuration in multiple tests, see [Avoiding test definition duplication](TEMPLATES.md).
+
+## Listing Available Tests
+
+```
+hunter list-groups
+hunter list-tests [group name]
+```
+
+## Listing Available Metrics for Tests
+
+To list all available metrics defined for the test:
+```
+hunter list-metrics <test>
+```
+
+## Finding Change Points
+
+> [!TIP]
+> For more details, see docs about [Finding Change Points](ANALYZE.md), [Validating Performance against Baseline](VALIDATING_PERF.md),
+> and [Validating Performance of a Feature Branch](FEATURE_BRANCH.md).
+
+```
+hunter analyze <test>...
+hunter analyze <group>...
+```
+
+This command prints interesting results of all runs of the test and a list of change-points.
+
+A change-point is a moment when a metric value starts to differ significantly from the values of the earlier runs and
+when the difference is consistent enough that it is unlikely to happen by chance.
+
+Hunter calculates the probability (P-value) that the change point was caused by chance - the closer to zero, the more
+"sure" it is about the regression or performance improvement. The smaller is the actual magnitude of the change, the
+more data points are needed to confirm the change, therefore Hunter may not notice the regression after the first run
+that regressed.
+
+The `analyze` command accepts multiple tests or test groups.
+The results are simply concatenated.
+
+## Example
+
+```
+$ hunter analyze local.sample
+INFO: Computing change points for test sample.csv...
+sample:
+time                         metric1    metric2
+-------------------------  ---------  ---------
+2021-01-01 02:00:00 +0000     154023      10.43
+2021-01-02 02:00:00 +0000     138455      10.23
+2021-01-03 02:00:00 +0000     143112      10.29
+2021-01-04 02:00:00 +0000     149190      10.91
+2021-01-05 02:00:00 +0000     132098      10.34
+2021-01-06 02:00:00 +0000     151344      10.69
+                                      ·········
+                                         -12.9%
+                                      ·········
+2021-01-07 02:00:00 +0000     155145       9.23
+2021-01-08 02:00:00 +0000     148889       9.11
+2021-01-09 02:00:00 +0000     149466       9.13
+2021-01-10 02:00:00 +0000     148209       9.03
+```

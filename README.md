@@ -37,21 +37,6 @@ Backward compatibility may be broken any time.
 See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development instructions.
 
 
-## Setup
-Copy the main configuration file `resources/hunter.yaml` to `~/.hunter/hunter.yaml` and adjust 
-Graphite and Grafana addresses and credentials. 
-
-Alternatively, it is possible to leave 
-the config file as is, and provide credentials in the environment
-by setting appropriate environment variables.
-Environment variables are interpolated before interpreting the configuration file.
-
-### Defining tests
-All test configurations are defined in the main configuration file.
-Hunter supports publishing results to a CSV file, [Graphite](https://graphiteapp.org/), and [PostgreSQL](https://www.postgresql.org/).
-
-Tests are defined in the `tests` section.
-
 ## License
 
 Copyright 2021 DataStax Inc
