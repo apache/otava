@@ -1,6 +1,6 @@
 ## Schema
 
-See [schema.sql](schema.sql) for the example schema.
+See [schema.sql](../examples/bigquery/schema.sql) for the example schema.
 
 ## Usage
 
@@ -13,7 +13,7 @@ export BIGQUERY_VAULT_SECRET=...
 ```
 or in `hunter.yaml`.
 
-Also configure the credentials. See [config_credentials.sh](config_credentials.sh) for an example.
+Also configure the credentials. See [config_credentials.sh](../examples/bigquery/config_credentials.sh) for an example.
 
 The following command shows results for a single test `aggregate_mem` and updates the database with newly found change points:
 
