@@ -1,3 +1,5 @@
+# BigQuery
+
 ## Schema
 
 See [schema.sql](../examples/bigquery/schema.sql) for the example schema.
