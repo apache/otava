@@ -172,7 +172,9 @@ $ hunter regressions <test or group> --branch <branch> --last 1
 
 Please beware that performance validation based on a single data point is quite weak
 and Hunter might miss a regression if the point is not too much different from
-the baseline.
+the baseline. However, accuracy improves as more data points accumulate, and it is
+a normal way of using Hunter to just merge a feature and then revert if it is
+flagged later.
 
 ## Validating Performance against Baseline
 
