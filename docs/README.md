@@ -7,9 +7,6 @@
 
 ## Basics
 - [Basics](docs/BASICS.md)
-- [Avoiding test definition duplication](docs/TEMPLATES.md)
-- [Validating Performance against Baseline](docs/VALIDATING_PERF.md)
-- [Validating Performance of a Feature Branch](docs/FEATURE_BRANCH.md)
 
 ## Data Sources
 - [Graphite](docs/GRAPHITE.md)
