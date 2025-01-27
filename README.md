@@ -30,7 +30,7 @@ e.g. validating the performance of the release candidate vs the previous release
 
 Backward compatibility may be broken any time.
 
-See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development instructions.
+See the documentation in [docs/README.md](docs/README.md).
 
 
 ## License
