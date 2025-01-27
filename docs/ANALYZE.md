@@ -22,7 +22,7 @@ The results are simply concatenated.
 #### Example
 
 > [!TIP]
-> See [hunter.yaml](../examples/csv/hunter.yaml) for the full example configuration.
+> See [hunter.yaml](../examples/csv/hunter.yaml) for the full example configuration and [local_samples.csv](../examples/csv/data/local_samples) for the data.
 
 ```
 $ hunter analyze local.sample --since=2024-01-01
