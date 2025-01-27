@@ -18,7 +18,7 @@ A typical use-case of hunter is as follows:
 - Hunter notifies about significant changes in recorded metrics by outputting text reports or
   sending Slack notifications.
 
-Hunter is capable of finding even small, but systematic shifts in metric values,
+Hunter is capable of finding even small, but persistent shifts in metric values,
 despite noise in data.
 It adapts automatically to the level of noise in data and tries not to notify about changes that
 can happen by random. Unlike in threshold-based performance monitoring systems,
