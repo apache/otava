@@ -28,10 +28,6 @@ minimal accepted magnitude of changes are tunable. Hunter is also capable of com
 the level of performance recorded in two different periods of time – which is useful for
 e.g. validating the performance of the release candidate vs the previous release of your product.
 
-This is still work-in-progress, unstable code.
-Features may be missing.
-Usability may be unsatisfactory.
-Documentation may be incomplete.
 Backward compatibility may be broken any time.
 
 See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development instructions.
