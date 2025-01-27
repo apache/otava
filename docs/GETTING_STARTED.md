@@ -17,7 +17,7 @@ Copy the main configuration file `resources/hunter.yaml` to `~/.hunter/hunter.ya
 
 > [!TIP]
 > See docs on specific data sources to learn more about their configuration - [CSV](CSV.md), [Graphite](GRAPHITE.md),
-[PostgreSQL](POSTGRESQL.md), or [BigQuery](BIGQUERY.md).
+[PostgreSQL](POSTGRESQL.md), or [BigQuery](BIG_QUERY.md).
 
 Alternatively, it is possible to leave the config file as is, and provide credentials in the environment
 by setting appropriate environment variables.
@@ -65,7 +65,7 @@ better the performance is. If it is set to -1, higher values mean worse performa
 The `attributes` property describes any other columns that should be attached to the final
 report. Special attribute `version` and `commit` can be used to query for a given time-range.
 
-> [!TIP] To learn how to avoid repeating the same configuration in multiple tests, see [Avoiding test definition duplication](TEMPLATES.md).
+> [!TIP] To learn how to avoid repeating the same configuration in multiple tests, see [Avoiding test definition duplication](BASICS.md#avoiding-test-definition-duplication).
 
 ## Listing Available Tests
 

@@ -60,7 +60,7 @@ The results are simply concatenated.
 
 > [!TIP]
 > See [hunter.yaml](../examples/csv/hunter.yaml) for the full
-> example configuration and [local_samples.csv](../examples/csv/data/local_samples)
+> example configuration and [local_samples.csv](../examples/csv/data/local_samples.csv)
 > for the data.
 
 ```
