@@ -50,6 +50,8 @@ by chance - the closer to zero, the more "sure" it is about the regression or
 performance improvement. The smaller is the actual magnitude of the change,
 the more data points are needed to confirm the change, therefore Hunter may
 not notice the regression immediately after the first run that regressed.
+However, it will eventually identify the specific commit that caused the regression,
+as it analyzes the history of changes rather than just the HEAD of a branch.
 
 The `analyze` command accepts multiple tests or test groups.
 The results are simply concatenated.
