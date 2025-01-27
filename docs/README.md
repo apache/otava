@@ -6,9 +6,7 @@
 - [Contributing](docs/CONTRIBUTING.md)
 
 ## Basics
-- [Finding Change Points](docs/ANALYZE.md)
-- [Listing Available Metrics](docs/LIST_METRICS.md)
-- [Listing Available Tests](docs/LIST_TESTS.md)
+- [Basics](docs/BASICS.md)
 - [Avoiding test definition duplication](docs/TEMPLATES.md)
 - [Validating Performance against Baseline](docs/VALIDATING_PERF.md)
 - [Validating Performance of a Feature Branch](docs/FEATURE_BRANCH.md)

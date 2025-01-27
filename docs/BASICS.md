@@ -1,4 +1,39 @@
-# Finding Change Points
+# Basics
+
+## Listing Available Tests
+
+```
+hunter list-groups
+```
+
+Lists all available test groups - high-level categories of tests.
+
+```
+hunter list-tests [group name]
+```
+
+Lists all tests or the tests within a given group, if the group name is provided.
+
+## Listing Available Metrics for Tests
+
+To list all available metrics defined for the test:
+
+```
+hunter list-metrics <test>
+```
+
+### Example
+
+> [!TIP]
+> See [hunter.yaml](../examples/csv/hunter.yaml) for the full example configuration.
+
+```
+$ hunter list-metrics local.sample
+metric1
+metric2
+```
+
+## Finding Change Points
 
 ```
 hunter analyze <test>...
@@ -19,10 +54,12 @@ not notice the regression immediately after the first run that regressed.
 The `analyze` command accepts multiple tests or test groups.
 The results are simply concatenated.
 
-#### Example
+### Example
 
 > [!TIP]
-> See [hunter.yaml](../examples/csv/hunter.yaml) for the full example configuration and [local_samples.csv](../examples/csv/data/local_samples) for the data.
+> See [hunter.yaml](../examples/csv/hunter.yaml) for the full
+> example configuration and [local_samples.csv](../examples/csv/data/local_samples)
+> for the data.
 
 ```
 $ hunter analyze local.sample --since=2024-01-01
