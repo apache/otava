@@ -95,7 +95,7 @@ hunter analyze <group>...
 This command prints interesting results of all runs of the test and a list of change-points.
 
 A change-point is a moment when a metric value starts to differ significantly from the values of the earlier runs and
-when the difference is consistent enough that it is unlikely to happen by chance.
+when the difference is statistically significant.
 
 Hunter calculates the probability (P-value) that the change point was caused by chance - the closer to zero, the more
 "sure" it is about the regression or performance improvement. The smaller is the actual magnitude of the change, the
