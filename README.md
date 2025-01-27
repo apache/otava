@@ -19,14 +19,15 @@ A typical use-case of hunter is as follows:
   sending Slack notifications.
 
 Hunter is capable of finding even small, but persistent shifts in metric values,
-despite noise in data.
-It adapts automatically to the level of noise in data and tries not to notify about changes that
-can happen by random. Unlike in threshold-based performance monitoring systems,
-there is no need to setup fixed warning threshold levels manually for each recorded metric.
-The level of accepted probability of false-positives, as well as the
-minimal accepted magnitude of changes are tunable. Hunter is also capable of comparing
-the level of performance recorded in two different periods of time – which is useful for
-e.g. validating the performance of the release candidate vs the previous release of your product.
+despite noise in data. It adapts automatically to the level of noise in data and
+tries to notify only about persistent, statistically significant changes, be it in the system
+under test or in the environment.
+
+Unlike in threshold-based performance monitoring systems, there is no need to setup fixed warning
+threshold levels manually for each recorded metric. The level of accepted probability of
+false-positives, as well as the minimal accepted magnitude of changes are tunable. Hunter is
+also capable of comparingthe level of performance recorded in two different periods of time – which
+is useful for e.g. validating the performance of the release candidate vs the previous release of your product.
 
 Backward compatibility may be broken any time.
 
