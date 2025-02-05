@@ -85,7 +85,7 @@ hunter list-metrics <test>
 
 > [!TIP]
 > For more details, see [Finding Change Points](BASICS.md#finding-change-points) and
-> [Validating Performance of a Feature Branch](FEATURE_BRANCH.md#validating-performance-of-a-feature-branch).
+> [Validating Performance of a Feature Branch](BASICS.md#validating-performance-of-a-feature-branch).
 
 ```
 hunter analyze <test>...
