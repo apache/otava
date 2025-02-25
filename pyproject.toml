@@ -6,7 +6,7 @@ authors = ["Piotr Kołaczkowski <pkolaczk@datastax.com>", "Austin Bennett <austi
 
 
 
-#typing_extensions = "^4.12.2"
+
 [tool.poetry.dependencies]
 dateparser = "^1.0.0"
 expandvars = "^0.6.5"
@@ -19,6 +19,7 @@ scipy = ">1.14.0"
 requests = "^2.25.1"
 pystache = "^0.6.0"
 tabulate = "^0.8.7"
+typing_extensions = "^4.12.2"
 validators = "^0.18.2"
 slack-sdk = "^3.4.2"
 google-cloud-bigquery = "^3.25.0"
