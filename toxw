@@ -6,8 +6,11 @@ source "$thisdir/ci-tools/wrappers.sh"
 
 requirements="$build_dir/requirements-tox.txt"
 
+poetry self add poetry-plugin-export
+
 test -f $requirements || (
     mkdir -p "$build_dir"
+    poetry self add poetry-plugin-export
     run "$thisdir/poetryw" export --verbose --dev --without-hashes | \
         grep -E -o 'tox==[0-9\.]+' > "$requirements"
 )

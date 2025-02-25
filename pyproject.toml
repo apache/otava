@@ -46,7 +46,7 @@ line-length = 100
 profile = "black"
 
 [tool.poetry.requires-plugins]
-poetry-plugin-export = ">=1.8"
+poetry-plugin-export = ">=1.9"
 
 [build-system]
 requires = ["poetry-core>=1.7.1"]
