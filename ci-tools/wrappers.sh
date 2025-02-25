@@ -35,6 +35,7 @@ install_tool()
     (
         run source "$venv/bin/activate"
         run "$python" -m pip install -qqq --upgrade pip
+        run "$python" -m pip install poetry-plugin-export==1.9.0
         run "$python" -m pip install -qqq $pip_spec
         run ln -fs "../../venvs/$tool/bin/$tool" "$bin_dir/$tool"
         run deactivate
