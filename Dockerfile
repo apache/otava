@@ -1,4 +1,4 @@
-FROM python:3.8.0-slim-buster
+FROM python:3.13.2-slim-bookworm
 # So that STDOUT/STDERR is printed
 ENV PYTHONUNBUFFERED="1"
 
@@ -25,17 +25,17 @@ RUN apt-get update --assume-yes && \
     && rm -rf /var/lib/apt/lists/*
 
 # Get poetry package
-RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.1.13
+RUN curl -sSL https://install.python-poetry.org | python3 - --version 2.1.1
 # Adding poetry to PATH
 ENV PATH="/root/.local/bin/:$PATH"
 
-# Copy the rest of the program over
+# # Copy the rest of the program over
 COPY --chown=hunter:hunter . ${HUNTER_HOME}
 
 ENV PATH="${HUNTER_HOME}/bin:$PATH"
 
 RUN  --mount=type=ssh \
-    virtualenv --python python3.8 venv && \
+    virtualenv --python python3.13 venv && \
     . venv/bin/activate && \
     poetry install -v && \
     mkdir -p bin && \
