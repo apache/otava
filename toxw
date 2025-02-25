@@ -6,11 +6,11 @@ source "$thisdir/ci-tools/wrappers.sh"
 
 requirements="$build_dir/requirements-tox.txt"
 
-pip install poetry-plugin-export
+pip install poetry-plugin-export==1.9.0
 
 test -f $requirements || (
     mkdir -p "$build_dir"
-    run "$thisdir/poetryw" export --verbose --dev --without-hashes | \
+    run "$thisdir/poetry" export --verbose --dev --without-hashes | \
         grep -E -o 'tox==[0-9\.]+' > "$requirements"
 )
 
