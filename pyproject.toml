@@ -45,6 +45,11 @@ line-length = 100
 [tool.isort]
 profile = "black"
 
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
+
 [build-system]
 requires = ["poetry-core>=1.7.1"]
 build-backend = "poetry.core.masonry.api"
+
+
