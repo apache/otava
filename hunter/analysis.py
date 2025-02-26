@@ -187,6 +187,7 @@ def merge(
         # the adjacent change points changed their properties.
         # Recompute the adjacent change point stats:
         window_endpoints = [0] + [cp.index for cp in change_points] + [len(series)]
+
         def recompute(index: int):
             if index < 0 or index >= len(change_points):
                 return
@@ -201,7 +202,7 @@ def split(series: np.array, window_len: int = 30, max_pvalue: float = 0.001,
           new_points=None, old_cp=None) -> List[ChangePoint]:
     """
     Finds change points by splitting the series top-down.
-    
+
     Internally it uses the EDivisive algorithm from mongodb-signal-processing
     that recursively splits the series in a way to maximize some measure of
     dissimilarity (denoted qhat) between the chunks.
@@ -250,7 +251,7 @@ def split(series: np.array, window_len: int = 30, max_pvalue: float = 0.001,
     return [tester.change_point(i, series, window_endpoints) for i in indexes]
 
 
-def compute_change_points_orig(series: np.array, max_pvalue: float = 0.001) -> List[ChangePoint]:    
+def compute_change_points_orig(series: np.array, max_pvalue: float = 0.001) -> List[ChangePoint]:
     """Uses the e-divisive algorithm directly"""
     change_points = e_divisive(series, alpha=max_pvalue)
     new_indexes = [p.index for p in change_points]
