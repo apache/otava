@@ -1,15 +1,11 @@
 from dataclasses import dataclass
-from typing import Iterable, List, Reversible
+from typing import Iterable, List, Reversible, Optional, Tuple
 
 import numpy as np
 from scipy.stats import ttest_ind_from_stats
-from signal_processing_algorithms.e_divisive import EDivisive
-from signal_processing_algorithms.e_divisive.base import SignificanceTester
-from signal_processing_algorithms.e_divisive.calculators import cext_calculator
-from signal_processing_algorithms.e_divisive.change_points import EDivisiveChangePoint
-from signal_processing_algorithms.e_divisive.significance_test import (
-    QHatPermutationsSignificanceTester,
-)
+from signal_processing_algorithms.change_point import ChangePoint as SPChangePoint
+from signal_processing_algorithms.edivisive import EDivisive
+from signal_processing_algorithms.significance import SignificanceTester, TTest
 
 
 @dataclass
@@ -85,7 +81,8 @@ class ExtendedSignificanceTester(SignificanceTester):
     and the pvalue (strength) of the split.
     """
 
-    pvalue: float
+    def __init__(self, pvalue: float):
+        self.pvalue = pvalue
 
     def change_point(self, index: int, series: np.ndarray, windows: Iterable[int]) -> ChangePoint:
         """
@@ -108,7 +105,7 @@ class ExtendedSignificanceTester(SignificanceTester):
         return start, end
 
     def is_significant(
-        self, candidate: EDivisiveChangePoint, series: np.ndarray, windows: Iterable[int]
+        self, candidate: SPChangePoint, series: np.ndarray, windows: Iterable[int]
     ) -> bool:
         try:
             cp = self.change_point(candidate.index, series, windows)
@@ -278,12 +275,9 @@ def split(series: np.array, window_len: int = 30, max_pvalue: float = 0.001,
     return [tester.change_point(i, series, window_endpoints) for i in indexes]
 
 
-def compute_change_points_orig(series: np.array, max_pvalue: float = 0.001) -> List[ChangePoint]:
-    calculator = cext_calculator
-    tester = QHatPermutationsSignificanceTester(calculator, pvalue=max_pvalue, permutations=100)
-    algo = EDivisive(seed=None, calculator=calculator, significance_tester=tester)
-    pts = algo.get_change_points(series)
-    return pts, None
+def compute_change_points_orig(series: List[float], max_pvalue: float = 0.001) -> Tuple[List[ChangePoint], List]:
+    algo = EDivisive(TTest(max_pvalue))
+    return algo.get_change_points(np.array(series)), []
 
 
 def compute_change_points(

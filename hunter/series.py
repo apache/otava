@@ -223,7 +223,7 @@ class AnalyzedSeries:
     @staticmethod
     def __compute_change_points(
         series: Series, options: AnalysisOptions
-    ) -> Dict[str, List[ChangePoint]]:
+    ) -> Dict[str, List<ChangePoint]]:
         result = {}
         weak_change_points = {}
         for metric in series.data.keys():
@@ -232,11 +232,32 @@ class AnalyzedSeries:
             values = series.data[metric].copy()
             fill_missing(values)
             if options.orig_edivisive:
-                change_points, _ = compute_change_points_orig(
-                    values,
-                    max_pvalue=options.max_pvalue,
-                )
-                result[metric] = change_points
+                try:
+                    change_points, _ = compute_change_points_orig(
+                        values,
+                        max_pvalue=options.max_pvalue,
+                    )
+                    result[metric] = change_points
+                except Exception as e:
+                    logging.warning(f"Original e-divisive algorithm failed: {e}. Falling back to standard algorithm.")
+                    change_points, weak_cps = compute_change_points(
+                        values,
+                        window_len=options.window_len,
+                        max_pvalue=options.max_pvalue,
+                        min_magnitude=options.min_magnitude,
+                    )
+                    for c in weak_cps:
+                        weak_change_points[metric].append(
+                            ChangePoint(
+                                index=c.index, time=series.time[c.index], metric=metric, stats=c.stats
+                            )
+                        )
+                    for c in change_points:
+                        result[metric].append(
+                            ChangePoint(
+                                index=c.index, time=series.time[c.index], metric=metric, stats=c.stats
+                            )
+                        )
             else:
                 change_points, weak_cps = compute_change_points(
                     values,
@@ -256,8 +277,6 @@ class AnalyzedSeries:
                             index=c.index, time=series.time[c.index], metric=metric, stats=c.stats
                         )
                     )
-        # If you got an exception and are wondering about the next row...
-        # weak_cps is an optimization which you can ignore
         return result, weak_change_points
 
     @staticmethod
