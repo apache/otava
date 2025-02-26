@@ -16,7 +16,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
 name = "attrs"
-version = "24.3.0"
+version = "25.1.0"
 description = "Classes Without Boilerplate"
 category = "dev"
 optional = false
@@ -55,7 +55,7 @@ tzdata = ["tzdata"]
 
 [[package]]
 name = "cachetools"
-version = "5.5.0"
+version = "5.5.2"
 description = "Extensible memoizing collections and decorators"
 category = "main"
 optional = false
@@ -63,7 +63,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "certifi"
-version = "2024.12.14"
+version = "2025.1.31"
 description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
 optional = false
@@ -106,11 +106,11 @@ langdetect = ["langdetect"]
 
 [[package]]
 name = "decorator"
-version = "5.1.1"
+version = "5.2.1"
 description = "Decorators for Humans"
 category = "main"
 optional = false
-python-versions = ">=3.5"
+python-versions = ">=3.8"
 
 [[package]]
 name = "distlib"
@@ -156,7 +156,7 @@ pyflakes = ">=2.4.0,<2.5.0"
 
 [[package]]
 name = "google-api-core"
-version = "2.24.0"
+version = "2.24.1"
 description = "Google API client core library"
 category = "main"
 optional = false
@@ -185,7 +185,7 @@ grpcio-gcp = ["grpcio-gcp (>=0.2.2,<1.0.dev0)"]
 
 [[package]]
 name = "google-auth"
-version = "2.37.0"
+version = "2.38.0"
 description = "Google Authentication Library"
 category = "main"
 optional = false
@@ -206,7 +206,7 @@ requests = ["requests (>=2.20.0,<3.0.0.dev0)"]
 
 [[package]]
 name = "google-cloud-bigquery"
-version = "3.27.0"
+version = "3.29.0"
 description = "Google BigQuery API client library"
 category = "main"
 optional = false
@@ -222,10 +222,10 @@ python-dateutil = ">=2.7.3,<3.0dev"
 requests = ">=2.21.0,<3.0.0dev"
 
 [package.extras]
-all = ["google-cloud-bigquery-storage (>=2.6.0,<3.0.0dev)", "grpcio (>=1.47.0,<2.0dev)", "pyarrow (>=3.0.0)", "pandas (>=1.1.0)", "db-dtypes (>=0.3.0,<2.0.0dev)", "ipywidgets (>=7.7.0)", "ipykernel (>=6.0.0)", "geopandas (>=0.9.0,<1.0dev)", "Shapely (>=1.8.4,<3.0.0dev)", "bigquery-magics (>=0.1.0)", "tqdm (>=4.7.4,<5.0.0dev)", "opentelemetry-api (>=1.1.0)", "opentelemetry-sdk (>=1.1.0)", "opentelemetry-instrumentation (>=0.20b0)", "proto-plus (>=1.22.3,<2.0.0dev)", "protobuf (>=3.20.2,!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<6.0.0dev)", "importlib-metadata (>=1.0.0)", "grpcio (>=1.49.1,<2.0dev)"]
+all = ["google-cloud-bigquery"]
 bigquery-v2 = ["proto-plus (>=1.22.3,<2.0.0dev)", "protobuf (>=3.20.2,!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<6.0.0dev)"]
 bqstorage = ["google-cloud-bigquery-storage (>=2.6.0,<3.0.0dev)", "grpcio (>=1.47.0,<2.0dev)", "pyarrow (>=3.0.0)", "grpcio (>=1.49.1,<2.0dev)"]
-geopandas = ["geopandas (>=0.9.0,<1.0dev)", "Shapely (>=1.8.4,<3.0.0dev)"]
+geopandas = ["geopandas (>=0.9.0,<2.0dev)", "Shapely (>=1.8.4,<3.0.0dev)"]
 ipython = ["bigquery-magics (>=0.1.0)"]
 ipywidgets = ["ipywidgets (>=7.7.0)", "ipykernel (>=6.0.0)"]
 opentelemetry = ["opentelemetry-api (>=1.1.0)", "opentelemetry-sdk (>=1.1.0)", "opentelemetry-instrumentation (>=0.20b0)"]
@@ -234,7 +234,7 @@ tqdm = ["tqdm (>=4.7.4,<5.0.0dev)"]
 
 [[package]]
 name = "google-cloud-core"
-version = "2.4.1"
+version = "2.4.2"
 description = "Google Cloud API client core library"
 category = "main"
 optional = false
@@ -275,7 +275,7 @@ requests = ["requests (>=2.18.0,<3.0.0dev)"]
 
 [[package]]
 name = "googleapis-common-protos"
-version = "1.66.0"
+version = "1.68.0"
 description = "Common protobufs used in Google APIs"
 category = "main"
 optional = false
@@ -289,18 +289,18 @@ grpc = ["grpcio (>=1.44.0,<2.0.0.dev0)"]
 
 [[package]]
 name = "grpcio"
-version = "1.69.0"
+version = "1.70.0"
 description = "HTTP/2-based RPC framework"
 category = "main"
 optional = false
 python-versions = ">=3.8"
 
 [package.extras]
-protobuf = ["grpcio-tools (>=1.69.0)"]
+protobuf = ["grpcio-tools (>=1.70.0)"]
 
 [[package]]
 name = "grpcio-status"
-version = "1.69.0"
+version = "1.70.0"
 description = "Status proto mapping for gRPC"
 category = "main"
 optional = false
@@ -308,7 +308,7 @@ python-versions = ">=3.8"
 
 [package.dependencies]
 googleapis-common-protos = ">=1.5.5"
-grpcio = ">=1.69.0"
+grpcio = ">=1.70.0"
 protobuf = ">=5.26.1,<6.0dev"
 
 [[package]]
@@ -432,8 +432,8 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "proto-plus"
-version = "1.25.0"
-description = "Beautiful, Pythonic protocol buffers."
+version = "1.26.0"
+description = "Beautiful, Pythonic protocol buffers"
 category = "main"
 optional = false
 python-versions = ">=3.7"
@@ -673,11 +673,11 @@ asn1crypto = ">=1.5.1"
 
 [[package]]
 name = "signal-processing-algorithms"
-version = "1.3.5"
+version = "2.0.1"
 description = "Signal Processing Algorithms from MongoDB"
 category = "main"
 optional = false
-python-versions = ">=3.7,<4.0"
+python-versions = ">=3.8,<4.0"
 
 [package.dependencies]
 more-itertools = ">=8.2.0,<9.0.0"
@@ -781,7 +781,7 @@ python-versions = "*"
 
 [[package]]
 name = "tzdata"
-version = "2024.2"
+version = "2025.1"
 description = "Provider of IANA time zone data"
 category = "main"
 optional = false
@@ -833,7 +833,7 @@ test = ["pytest (>=2.2.3)", "flake8 (>=2.4.0)", "isort (>=4.2.2)"]
 
 [[package]]
 name = "virtualenv"
-version = "20.28.1"
+version = "20.29.2"
 description = "Virtual Python Environment builder"
 category = "dev"
 optional = false
@@ -867,7 +867,7 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.13"
-content-hash = "ebf55f19bcb901f1b099d17b37fed9b20e7367d8354704cf01c89d616c0c0e9e"
+content-hash = "c41fd8884568a2bdbd1f58328f159cac3df128b126c1beab9ea51b7b0b8797d1"
 
 [metadata.files]
 asn1crypto = []
