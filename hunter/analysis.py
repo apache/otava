@@ -238,7 +238,7 @@ def split(series: np.array, window_len: int = 30, max_pvalue: float = 0.001,
     while start < len(series):
         end = min(start + window_len, len(series))
         # Use e_divisive directly instead of the old EDivisive class
-        new_points = e_divisive(series[start:end], alpha=max_pvalue)
+        new_points = e_divisive(series[start:end], pvalue=max_pvalue)
         new_indexes = [p.index + start for p in new_points]
         new_indexes.sort()
         last_new_change_point_index = next(iter(new_indexes[-1:]), 0)
@@ -253,7 +253,7 @@ def split(series: np.array, window_len: int = 30, max_pvalue: float = 0.001,
 
 def compute_change_points_orig(series: np.array, max_pvalue: float = 0.001) -> List[ChangePoint]:
     """Uses the e-divisive algorithm directly"""
-    change_points = e_divisive(series, alpha=max_pvalue)
+    change_points = e_divisive(series, pvalue=max_pvalue)
     new_indexes = [p.index for p in change_points]
 
     # Convert indices to ChangePoints with basic stats
