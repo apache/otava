@@ -274,7 +274,7 @@ def compute_change_points_orig(series: np.array, max_pvalue: float = 0.001) -> L
 def compute_change_points(
     series: np.array, window_len: int = 50, max_pvalue: float = 0.001, min_magnitude: float = 0.0,
     new_data=None, old_weak_cp=None
-) -> List<ChangePoint]:
+) -> List[ChangePoint]:
     """Compute change points"""
     first_pass_pvalue = max_pvalue * 10 if max_pvalue < 0.05 else (max_pvalue * 2 if max_pvalue < 0.5 else max_pvalue)
     weak_change_points = split(series, window_len, first_pass_pvalue, new_points=new_data, old_cp=old_weak_cp)
