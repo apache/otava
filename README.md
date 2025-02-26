@@ -1,7 +1,7 @@
 Hunter – Hunts Performance Regressions
 ======================================
 
-_This is open source project was created by DataStax employees._
+_This open source project was created by DataStax employees._
 
 
 Hunter performs statistical analysis of performance test results stored
