@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from typing import Iterable, List, Reversible, Tuple
+from typing import Iterable, List, Reversible, Optional, Tuple
 
 import numpy as np
 from scipy.stats import ttest_ind_from_stats
 from signal_processing_algorithms.change_point import ChangePoint as SPChangePoint
-from signal_processing_algorithms.edivisive import EDivisive
+from signal_processing_algorithms.energy_statistics.energy_statistics import e_divisive
+from signal_processing_algorithms.energy_statistics.calculators import cext_calculator
 from signal_processing_algorithms.significance import SignificanceTester, TTest
 
 
@@ -260,7 +261,7 @@ def split(series: np.array, window_len: int = 30, max_pvalue: float = 0.001,
         end = min(start + window_len, len(series))
         calculator = cext_calculator
 
-        algo = EDivisive(seed=None, calculator=calculator, significance_tester=tester)
+        algo = e_divisive(seed=None, calculator=calculator, significance_tester=tester)
         pts = algo.get_change_points(series[start:end])
         new_indexes = [p.index + start for p in pts]
         new_indexes.sort()
@@ -276,7 +277,7 @@ def split(series: np.array, window_len: int = 30, max_pvalue: float = 0.001,
 
 
 def compute_change_points_orig(series: List[float], max_pvalue: float = 0.001) -> Tuple[List[ChangePoint], List]:
-    algo = EDivisive(TTest(max_pvalue))
+    algo = e_divisive(TTest(max_pvalue))
     return algo.get_change_points(np.array(series)), []
 
 
