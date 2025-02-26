@@ -28,7 +28,7 @@ RUN apt-get update --assume-yes && \
 
 
 # # Get poetry package
-RUN pipx install poetry==1.8.5
+RUN pipx install poetry==1.1.13
 # # Adding poetry to PATH
 ENV PATH="/root/.local/bin/:$PATH"
 # ALT: pipx ensurepath!?
