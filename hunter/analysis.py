@@ -246,19 +246,21 @@ def split(series: np.array, window_len: int = 30, max_pvalue: float = 0.001,
 
 def compute_change_points_orig(series: np.array, max_pvalue: float = 0.001) -> List[ChangePoint]:    
     """Uses the e-divisive algorithm directly"""
-    change_points_indices = e_divisive(series, alpha=max_pvalue)
+    change_points = e_divisive(series, alpha=max_pvalue)
+    new_indexes = [p.index + start for p in change_points]
+
     # Convert indices to ChangePoints with basic stats
     change_points = [
         ChangePoint(
             index=idx,
             stats=ComparativeStats(
-                mean_1=float(np.mean(series[:idx])),
-                mean_2=float(np.mean(series[idx:])),
-                std_1=float(np.std(series[:idx])) if len(series[:idx]) >= 2 else 0.0,
-                std_2=float(np.std(series[idx:])) if len(series[idx:]) >= 2 else 0.0,
+                mean_1=float(np.mean(change_points[:idx])),
+                mean_2=float(np.mean(change_points[idx:])),
+                std_1=float(np.std(change_points[:idx])) if len(change_points[:idx]) >= 2 else 0.0,
+                std_2=float(np.std(change_points[idx:])) if len(change_points[idx:]) >= 2 else 0.0,
                 pvalue=max_pvalue
             )
-        ) for idx in change_points_indices
+        ) for idx in new_indexes
     ]
     return change_points, None
 
