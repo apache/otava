@@ -1,7 +1,11 @@
 import numpy as np
 
-from hunter.analysis import TTestSignificanceTester, ChangePoint, compute_change_points, fill_missing
-
+from hunter.analysis import (
+    ChangePoint,
+    TTestSignificanceTester,
+    compute_change_points,
+    fill_missing,
+)
 
 def test_fill_missing():
     list1 = [None, None, 1.0, 1.2, 0.5]
