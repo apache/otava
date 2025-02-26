@@ -5,6 +5,7 @@ import numpy as np
 from scipy.stats import ttest_ind_from_stats
 from signal_processing_algorithms.energy_statistics.energy_statistics import e_divisive
 
+
 @dataclass
 class ComparativeStats:
     """
