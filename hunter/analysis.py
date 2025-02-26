@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Iterable, List, Reversible
+from typing import Iterable, List, Reversible, Tuple
 
 import numpy as np
 from scipy.stats import ttest_ind_from_stats
@@ -233,7 +233,7 @@ def split(series: np.array, window_len: int = 30, max_pvalue: float = 0.001,
         end = min(start + window_len, len(series))
         # Use e_divisive directly instead of the old EDivisive class
         new_points = e_divisive(series[start:end], alpha=max_pvalue)
-        new_indexes = [p + start for p in new_points]
+        new_indexes = [p.index + start for p in new_points]
         new_indexes.sort()
         last_new_change_point_index = next(iter(new_indexes[-1:]), 0)
         start = max(last_new_change_point_index, start + step)
@@ -244,10 +244,23 @@ def split(series: np.array, window_len: int = 30, max_pvalue: float = 0.001,
     window_endpoints = [0] + indexes + [len(series)]
     return [tester.change_point(i, series, window_endpoints) for i in indexes]
 
-def compute_change_points_orig(series: np.array, max_pvalue: float = 0.001) -> List[ChangePoint]:
+def compute_change_points_orig(series: np.array, max_pvalue: float = 0.001) -> List[ChangePoint]:    
     """Uses the e-divisive algorithm directly"""
-    change_points = e_divisive(np.array(series), alpha=max_pvalue)
-    return [ChangePoint(p, ComparativeStats(0, 0, 0, 0, max_pvalue)) for p in change_points]
+    change_points_indices = e_divisive(series, alpha=max_pvalue)
+    # Convert indices to ChangePoints with basic stats
+    change_points = [
+        ChangePoint(
+            index=idx,
+            stats=ComparativeStats(
+                mean_1=float(np.mean(series[:idx])),
+                mean_2=float(np.mean(series[idx:])),
+                std_1=float(np.std(series[:idx])) if len(series[:idx]) >= 2 else 0.0,
+                std_2=float(np.std(series[idx:])) if len(series[idx:]) >= 2 else 0.0,
+                pvalue=max_pvalue
+            )
+        ) for idx in change_points_indices
+    ]
+    return change_points, None
 
 def compute_change_points(
     series: np.array, window_len: int = 50, max_pvalue: float = 0.001, min_magnitude: float = 0.0,
