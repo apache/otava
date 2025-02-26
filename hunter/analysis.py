@@ -65,10 +65,12 @@ class ComparativeStats:
             "pvalue": f"{self.pvalue:-0f}",
         }
 
+
 @dataclass
 class ChangePoint:
     index: int
     stats: ComparativeStats
+
 
 class ExtendedSignificanceTester:
     """
@@ -104,6 +106,7 @@ class ExtendedSignificanceTester:
         except ValueError:
             return False
 
+
 class TTestSignificanceTester(ExtendedSignificanceTester):
     """
     Uses two-sided Student's T-test to decide if a candidate change point
@@ -138,6 +141,7 @@ class TTestSignificanceTester(ExtendedSignificanceTester):
             p = 1.0
         return ComparativeStats(mean_l, mean_r, std_l, std_r, p)
 
+
 def fill_missing(data: List[float]):
     """
     Forward-fills None occurrences with nearest previous non-None values.
@@ -153,6 +157,7 @@ def fill_missing(data: List[float]):
         if data[i] is None and prev is not None:
             data[i] = prev
         prev = data[i]
+
 
 def merge(
     change_points: List[ChangePoint], series: np.array, max_pvalue: float, min_magnitude: float
@@ -190,6 +195,7 @@ def merge(
         recompute(weakest_cp_index)
         recompute(weakest_cp_index + 1)
     return change_points
+
 
 def split(series: np.array, window_len: int = 30, max_pvalue: float = 0.001,
           new_points=None, old_cp=None) -> List[ChangePoint]:
@@ -243,10 +249,11 @@ def split(series: np.array, window_len: int = 30, max_pvalue: float = 0.001,
     window_endpoints = [0] + indexes + [len(series)]
     return [tester.change_point(i, series, window_endpoints) for i in indexes]
 
+
 def compute_change_points_orig(series: np.array, max_pvalue: float = 0.001) -> List[ChangePoint]:    
     """Uses the e-divisive algorithm directly"""
     change_points = e_divisive(series, alpha=max_pvalue)
-    new_indexes = [p.index + start for p in change_points]
+    new_indexes = [p.index for p in change_points]
 
     # Convert indices to ChangePoints with basic stats
     change_points = [
@@ -263,10 +270,12 @@ def compute_change_points_orig(series: np.array, max_pvalue: float = 0.001) -> L
     ]
     return change_points, None
 
+
 def compute_change_points(
     series: np.array, window_len: int = 50, max_pvalue: float = 0.001, min_magnitude: float = 0.0,
     new_data=None, old_weak_cp=None
-) -> List[ChangePoint]:
+) -> List<ChangePoint]:
+    """Compute change points"""
     first_pass_pvalue = max_pvalue * 10 if max_pvalue < 0.05 else (max_pvalue * 2 if max_pvalue < 0.5 else max_pvalue)
     weak_change_points = split(series, window_len, first_pass_pvalue, new_points=new_data, old_cp=old_weak_cp)
     return merge(weak_change_points, series, max_pvalue, min_magnitude), weak_change_points
