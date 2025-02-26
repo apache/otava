@@ -4,8 +4,8 @@ from typing import Iterable, List, Reversible, Tuple
 import numpy as np
 from scipy.stats import ttest_ind_from_stats
 from signal_processing_algorithms.change_point import ChangePoint as SPChangePoint
-from signal_processing_algorithms.energy_statistics.energy_statistics import e_divisive
 from signal_processing_algorithms.energy_statistics.calculators import cext_calculator
+from signal_processing_algorithms.energy_statistics.energy_statistics import e_divisive
 from signal_processing_algorithms.significance import SignificanceTester, TTest
 
 
