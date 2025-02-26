@@ -7,6 +7,7 @@ from hunter.analysis import (
     fill_missing,
 )
 
+
 def test_fill_missing():
     list1 = [None, None, 1.0, 1.2, 0.5]
     list2 = [1.0, 1.2, None, None, 4.3]
