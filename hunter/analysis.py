@@ -81,14 +81,12 @@ class ExtendedSignificanceTester:
         Computes properties of the change point if the change point gets
         inserted at the given index into the series array.
         """
-        pass
 
     def compare(self, left: np.ndarray, right: np.ndarray) -> ComparativeStats:
         """
         Compares two sets of points for similarity / difference.
         Computes basic stats and probability both sets come from the same distribution/
         """
-        pass
 
     @staticmethod
     def find_window(candidate: int, window_endpoints: Reversible[int]) -> (int, int):
