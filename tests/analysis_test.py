@@ -1,7 +1,6 @@
 import numpy as np
-from signal_processing_algorithms.e_divisive.change_points import EDivisiveChangePoint
 
-from hunter.analysis import TTestSignificanceTester, compute_change_points, fill_missing
+from hunter.analysis import TTestSignificanceTester, ChangePoint, compute_change_points, fill_missing
 
 
 def test_fill_missing():
@@ -49,10 +48,10 @@ def test_significance_tester():
 
     series = np.array([1.00, 1.02, 1.05, 0.95, 0.98, 1.00, 1.02, 1.05, 0.95, 0.98])
     cp = tester.change_point(5, series, [0, len(series)])
-    assert not tester.is_significant(EDivisiveChangePoint(5), series, [0, len(series)])
+    assert not tester.is_significant(ChangePoint(5), series, [0, len(series)])
     assert 0.99 < cp.stats.pvalue < 1.01
 
     series = np.array([1.00, 1.02, 1.05, 0.95, 0.98, 0.80, 0.82, 0.85, 0.79, 0.77])
     cp = tester.change_point(5, series, [0, len(series)])
-    assert tester.is_significant(EDivisiveChangePoint(5), series, [0, len(series)])
+    assert tester.is_significant(ChangePoint(5), series, [0, len(series)])
     assert 0.00 < cp.stats.pvalue < 0.001
