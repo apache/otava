@@ -223,7 +223,7 @@ class AnalyzedSeries:
     @staticmethod
     def __compute_change_points(
         series: Series, options: AnalysisOptions
-    ) -> Dict[str, List<ChangePoint]]:
+    ) -> Dict[str, List[ChangePoint]]:
         result = {}
         weak_change_points = {}
         for metric in series.data.keys():
