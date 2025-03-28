@@ -37,7 +37,7 @@ RUN apt-get update --assume-yes && \
     && rm -rf /var/lib/apt/lists/*
 
 # Get poetry package
-RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.1.13
+RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.3
 # Adding poetry to PATH
 ENV PATH="/root/.local/bin/:$PATH"
 
