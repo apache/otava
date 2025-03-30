@@ -92,5 +92,4 @@ repos:
           - --license-filepath
           - ci-tools/license-templates/LICENSE.txt
           - --fuzzy-match-generates-todo
-        files: >
-          \.ini$|poetryw$|toxw$|Dockerfile.*$
+        files: \.ini$|poetryw$|toxw$|Dockerfile.*$
