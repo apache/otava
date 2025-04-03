@@ -16,7 +16,7 @@
 # under the License.
 
 github:
-  description: "Apache Otava (incubating) performs statistical analysis of performance test results. It finds change-points and notifies about possible performance regressions."
+  description: "Change Detection for Continuous Performance Engineering"
   homepage: https://otava.apache.org/
   features:
     issues: true
