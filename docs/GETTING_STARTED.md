@@ -66,7 +66,7 @@ tests:
 The `time_column` property points to the name of the column storing the timestamp
 of each test-run. The data points will be ordered by that column.
 
-The `metrics` property selects the columns tha hold the values to be analyzed. These values must
+The `metrics` property selects the columns that hold the values to be analyzed. These values must
 be numbers convertible to floats. The `metrics` property can be not only a simple list of column
 names, but it can also be a dictionary configuring other properties of each metric,
 the column name or direction:

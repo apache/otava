@@ -36,3 +36,13 @@ To build the Docker container, run the following command:
 ```bash
 docker build -t otava .
 ```
+
+> [!NOTE]
+> The Dockerfile contains a `--mount` option that requires BuildKit [^1].
+> The BuildKit can be installed with the following commands:
+>
+> Debian and Ubuntu: `apt install -y docker-buildx`
+>
+> Fedora: `dnf install docker-buildx`
+>
+> [^1]: https://docs.docker.com/go/buildkit/
