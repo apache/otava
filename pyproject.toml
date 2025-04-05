@@ -18,7 +18,7 @@
 [tool.poetry]
 name = "otava"
 version = "0.6.0"
-description = ""
+description = "Change Detection for Continuous Performance Engineering"
 authors = ["Piotr Kołaczkowski <pkolaczk@datastax.com>"]
 
 [tool.poetry.dependencies]
