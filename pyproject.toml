@@ -17,7 +17,7 @@
 
 [tool.poetry]
 name = "otava"
-version = "0.6.0-incubating"
+version = "0.6.0+incubating"
 description = "Change Detection for Continuous Performance Engineering"
 authors = [
     "Alexander Sorokoumov <aleksandr.sorokoumov@gmail.com>",
