@@ -17,9 +17,17 @@
 
 [tool.poetry]
 name = "otava"
-version = "0.6.0"
-description = ""
-authors = ["Piotr Kołaczkowski <pkolaczk@datastax.com>"]
+version = "0.6.0+incubating"
+description = "Change Detection for Continuous Performance Engineering"
+authors = [
+    "Alexander Sorokoumov <aleksandr.sorokoumov@gmail.com>",
+    "Guy Bolton King <guy@waftex.com>",
+    "Henrik Ingo <henrik@nyrkio.com>",
+    "Matt Fleming <matt@nyrkio.com>",
+    "Piotr Kołaczkowski <pkolaczk@datastax.com>",
+    "Sean McCarthy <sean.mccarthy.dev@gmail.com>",
+    "Shaunak Das <ShaunakDas88@users.noreply.github.com>"
+]
 
 [tool.poetry.dependencies]
 dateparser = "^1.0.0"
