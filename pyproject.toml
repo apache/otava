@@ -26,14 +26,14 @@ authors = [
     "Matt Fleming <matt@nyrkio.com>",
     "Piotr Kołaczkowski <pkolaczk@datastax.com>",
     "Sean McCarthy <sean.mccarthy.dev@gmail.com>",
-    "Shaunak Das <ShaunakDas88@users.noreply.github.com>"
+    "Shaunak Das <ShaunakDas88@users.noreply.github.com>",
 ]
 
 [tool.poetry.dependencies]
 dateparser = "^1.0.0"
 expandvars = "^0.6.5"
 numpy = "1.24"
-python = ">=3.8,<3.13"
+python = ">=3.8,<3.11"
 python-dateutil = "^2.8.1"
 signal-processing-algorithms = "^1.3.2"
 "ruamel.yaml" = "=0.17.21"
