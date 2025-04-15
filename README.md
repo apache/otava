@@ -29,6 +29,10 @@ integrated with a pull request.
 
 See the documentation in [docs/README.md](docs/README.md).
 
+## Python Versions
+
+Apache Otava is tested against Python 3.8, 3.9, and 3.10.
+
 
 ## License
 
