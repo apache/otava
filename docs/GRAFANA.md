@@ -81,4 +81,4 @@ time                       run    branch    version    commit      throughput   
 ```
 
 Open local [Grafana](http://localhost:3000) in your browser (use default `admin/admin` credentials), open
-`Benchmarks` dashboard, and see your data points and annotations on both charts.:
+`Benchmarks` dashboard, and see your data points and annotations on both charts.
