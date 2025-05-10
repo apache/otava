@@ -21,6 +21,7 @@ version = "0.6.0+incubating"
 description = "Change Detection for Continuous Performance Engineering"
 authors = ["Apache Otava Developers <dev@otava.apache.org>"]
 include = ["DISCLAIMER"]
+packages = [{include = "otava"}]
 
 [tool.poetry.dependencies]
 dateparser = "^1.0.0"
