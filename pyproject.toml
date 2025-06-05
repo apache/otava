@@ -17,11 +17,11 @@
 
 [tool.poetry]
 name = "apache-otava"
-version = "0.6.0+incubating"
-description = "Change Detection for Continuous Performance Engineering"
-authors = ["Apache Otava Developers <dev@otava.apache.org>"]
+version = "0.6.0"
+description = "Apache Otava (Incubating): Change Detection for Continuous Performance Engineering"
+authors = ["Apache Otava (Incubating) Developers <dev@otava.apache.org>"]
 include = ["DISCLAIMER"]
-packages = [{include = "otava"}]
+packages = [{ include = "otava" }]
 
 [tool.poetry.dependencies]
 dateparser = "^1.0.0"
