@@ -1,6 +1,11 @@
 Otava – Change Detection for Continuous Performance Engineering
 ===============================================================
 
+[![License](https://img.shields.io/:license-Apache%202-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0.txt)
+[![PyPI version](https://img.shields.io/pypi/v/apache-otava.svg)](https://pypi.org/project/apache-otava/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/apache-otava.svg)](https://pypi.org/project/apache-otava/)
+
+
 Apache Otava (incubating) performs statistical analysis of performance test results stored
 in CSV files, PostgreSQL, BigQuery, or Graphite database. It finds change-points and notifies about
 possible performance regressions.
