@@ -27,7 +27,7 @@ also capable of comparing the level of performance recorded in two different git
 This can be used for example to validate a feature branch against the main branch, perhaps
 integrated with a pull request.
 
-See the documentation in [docs/README.md](docs/README.md).
+See the documentation in https://otava.apache.org/docs/overview/.
 
 ## Python Versions
 

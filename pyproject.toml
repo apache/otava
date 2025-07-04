@@ -20,8 +20,25 @@ name = "apache-otava"
 version = "0.6.0"
 description = "Apache Otava (Incubating): Change Detection for Continuous Performance Engineering"
 authors = ["Apache Otava (Incubating) <dev@otava.apache.org>"]
+maintainers = ["Apache Otava (Incubating) <dev@otava.apache.org>"]
 include = ["DISCLAIMER"]
 packages = [{ include = "otava" }]
+readme = "README.md"
+homepage = "https://otava.apache.org"
+repository = "https://github.com/apache/otava"
+license = "Apache-2.0"
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+
+[tool.poetry.urls]
+"Homepage" = "https://otava.apache.org"
+"Documentation" = "https://otava.apache.org/docs/overview"
+"Bug Tracker" = "https://github.com/apache/otava/issues"
+"Repository" = "https://github.com/apache/otava"
 
 [tool.poetry.dependencies]
 dateparser = "^1.0.0"
