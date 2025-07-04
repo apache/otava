@@ -17,7 +17,7 @@
 
 [tool.poetry]
 name = "apache-otava"
-version = "0.6.0"
+version = "0.6.1"
 description = "Apache Otava (Incubating): Change Detection for Continuous Performance Engineering"
 authors = ["Apache Otava (Incubating) <dev@otava.apache.org>"]
 maintainers = ["Apache Otava (Incubating) <dev@otava.apache.org>"]
