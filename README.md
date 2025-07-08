@@ -1,4 +1,4 @@
-Otava – Change Detection for Continuous Performance Engineering
+Apache Otava – Change Detection for Continuous Performance Engineering
 ===============================================================
 
 [![License](https://img.shields.io/:license-Apache%202-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0.txt)
