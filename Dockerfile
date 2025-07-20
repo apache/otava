@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM python:3.8.0-slim-buster
+FROM python:3.8-slim-bookworm
 # So that STDOUT/STDERR is printed
 ENV PYTHONUNBUFFERED="1"
 
