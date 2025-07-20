@@ -27,7 +27,7 @@ use pyenv to install it.
 Use pipx to install otava:
 
 ```
-pipx install git+ssh://git@github.com/apache/otava
+pip install apache-otava
 ```
 
 ## Setup
