@@ -24,6 +24,4 @@ services:
     environment:
       OTAVA_CONFIG: examples/csv/otava.yaml
     volumes:
-      - ./tests:/tests
-
-
+      - ./data:/data
