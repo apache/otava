@@ -18,6 +18,8 @@
 FROM python:3.8-slim-bookworm
 # So that STDOUT/STDERR is printed
 ENV PYTHONUNBUFFERED="1"
+ARG UV_VERSION=0.8.3
+ENV UV_VERSION=${UV_VERSION}
 
 # We create the default user and group to run unprivileged
 ENV OTAVA_HOME /srv/otava
@@ -37,23 +39,14 @@ RUN apt-get update --assume-yes && \
     clang \
     build-essential \
     make \
-    curl \
-    virtualenv \
     && rm -rf /var/lib/apt/lists/*
-
-# Get poetry package
-RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.3
-# Adding poetry to PATH
-ENV PATH="/root/.local/bin/:$PATH"
 
 # Copy the rest of the program over
 COPY --chown=otava:otava . ${OTAVA_HOME}
 
 ENV PATH="${OTAVA_HOME}/bin:$PATH"
 
-RUN  --mount=type=ssh \
-    virtualenv --python python3.8 venv && \
-    . venv/bin/activate && \
-    poetry install -v && \
+RUN --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv --mount=type=ssh \
+    uv pip install --system -e ".[dev]" && \
     mkdir -p bin && \
     ln -s ../venv/bin/otava ${OTAVA_HOME}/bin

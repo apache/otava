@@ -19,34 +19,32 @@
 
 # Setting up for development
 
-* Ensure that `python3` points to a version of python >= 3.8 (`python3 --version` will tell you).  If it does not, use [pyenv](https://github.com/pyenv/pyenv) to both install a recent python version and make it your current python.
+* The project uses [uv](https://docs.astral.sh/uv/) for dependency management and [tox](https://tox.wiki) for testing environments.
 
-* There are two wrappers (`poetryw` and `toxw`) that install and run the correct versions of [poetry](https://python-poetry.org) and [tox](https://tox.wiki) for you.
-
-* Run poetry to install dependencies:
+* Install dependencies using uv:
 
 ```
-./poetryw install
+uv sync --all-extras --dev
 ```
 
-* Run the development version of otava using poetry:
+* Run the development version of otava using uv:
 
 ```
-./poetryw run otava ...
+uv run otava ...
 ```
 
-See the [poetry docs](https://python-poetry.org/docs) for more.
+See the [uv docs](https://docs.astral.sh/uv/) for more.
 
 # Running tests
 
 ```
-./poetryw run pytest
+uv run pytest
 ```
 
 ...or using [tox](https://tox.readthedocs.io/):
 
 ```
-./toxw
+uv run tox
 ```
 
 # Linting and formatting
@@ -54,7 +52,7 @@ See the [poetry docs](https://python-poetry.org/docs) for more.
 Code-style is enforced using [ruff](https://docs.astral.sh/ruff/) and [flake8](https://flake8.pycqa.org/); import optimisation is handled by [isort](https://pycqa.github.io/isort/) and [autoflake](https://pypi.org/project/autoflake/).  Linting is automatically applied when tox runs tests; if linting fails, you can fix trivial problems with:
 
 ```
-./toxw -e format
+uv run tox -e format
 ```
 
 # Changing the LICENSE header
@@ -63,17 +61,17 @@ To change the license header:
 1. Add the `--remove-header` arg to `.pre-commit-config.yaml`
 2. Run formatting (this will remove the license header entirely)
 ```
-./toxw -e format
+uv run tox -e format
 ```
 3. Remove the `--remove-header` arg from `.pre-commit-config.yaml`
 4. Update `ci-tools/license-templates/LICENSE.txt`
 5. Run formatting
 ```
-./toxw -e format
+uv run tox -e format
 ```
 
 # Build a docker image
 
 ```
-./toxw -e docker-build
+uv run tox -e docker-build
 ```
