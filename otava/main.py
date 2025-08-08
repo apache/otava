@@ -515,16 +515,17 @@ def analysis_options_from_args(args: argparse.Namespace) -> AnalysisOptions:
 
 
 def main():
+    script_main()
+
+
+def script_main(args: List[str] = None):
+    logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
+
     try:
         conf = config.load_config()
     except ConfigError as err:
         logging.error(err.message)
         exit(1)
-    script_main(conf)
-
-
-def script_main(conf: Config, args: List[str] = None):
-    logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 
     parser = argparse.ArgumentParser(description="Hunts performance regressions in Fallout results")
 

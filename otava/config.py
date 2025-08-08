@@ -14,7 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -192,11 +192,12 @@ def load_config() -> Config:
     paths = [
         Path().home() / ".otava/otava.yaml",
         Path().home() / ".otava/conf.yaml",
-        Path(os.path.realpath(__file__)).parent / "resources/otava.yaml",
     ]
 
     for p in paths:
         if p.exists():
             return load_config_from(p)
 
-    raise ConfigError(f"No configuration file found. Checked $OTAVA_CONFIG and searched: {paths}")
+    # No configuration specified, return empty configuration
+    logging.warning(f"Otava configuration file not found")
+    return Config(grafana=None, graphite=None, slack=None, postgres=None, bigquery=None, tests={}, test_groups={})
