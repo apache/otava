@@ -20,7 +20,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from expandvars import expandvars
 from ruamel.yaml import YAML
 
 from otava.bigquery import BigQueryConfig
@@ -99,9 +98,8 @@ def load_test_groups(config: Dict, tests: Dict[str, TestConfig]) -> Dict[str, Li
 def load_config_from(config_file: Path) -> Config:
     """Loads config from the specified location"""
     try:
-        content = expandvars(config_file.read_text(), nounset=True)
         yaml = YAML(typ="safe")
-        config = yaml.load(content)
+        config = yaml.load(config_file.read_text())
         """
         if Grafana configs not explicitly set in yaml file, default to same as Graphite
         server at port 3000
