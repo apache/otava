@@ -33,6 +33,24 @@ class PostgresConfig:
     password: str
     database: str
 
+    @staticmethod
+    def add_parser_args(arg_group):
+        arg_group.add_argument("--postgres-hostname", help="PostgreSQL server hostname", env_var="POSTGRES_HOSTNAME")
+        arg_group.add_argument("--postgres-port", type=int, help="PostgreSQL server port", env_var="POSTGRES_PORT")
+        arg_group.add_argument("--postgres-username", help="PostgreSQL username", env_var="POSTGRES_USERNAME")
+        arg_group.add_argument("--postgres-password", help="PostgreSQL password", env_var="POSTGRES_PASSWORD")
+        arg_group.add_argument("--postgres-database", help="PostgreSQL database name", env_var="POSTGRES_DATABASE")
+
+    @staticmethod
+    def from_parser_args(args):
+        return PostgresConfig(
+            hostname=getattr(args, 'postgres_hostname', None),
+            port=getattr(args, 'postgres_port', None),
+            username=getattr(args, 'postgres_username', None),
+            password=getattr(args, 'postgres_password', None),
+            database=getattr(args, 'postgres_database', None)
+        )
+
 
 @dataclass
 class PostgresError(Exception):

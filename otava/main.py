@@ -514,20 +514,12 @@ def analysis_options_from_args(args: configargparse.Namespace) -> AnalysisOption
     return conf
 
 
-def main():
-    script_main()
-
-
-def script_main(args: List[str] = None):
-    logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
-
-    try:
-        conf = config.load_config()
-    except ConfigError as err:
-        logging.error(err.message)
-        exit(1)
-
-    parser = configargparse.get_argument_parser(description="Hunts performance regressions in Fallout results")
+def create_otava_cli_parser() -> configargparse.ArgumentParser:
+    parser = configargparse.ArgumentParser(
+        description="Hunts performance regressions in Fallout results",
+        parents=[config.create_config_parser()],
+        allow_abbrev=False,  # required for correct parsing of nested values from config file
+    )
 
     subparsers = parser.add_subparsers(dest="command")
     list_tests_parser = subparsers.add_parser("list-tests", help="list available tests")
@@ -602,8 +594,17 @@ def script_main(args: List[str] = None):
         "validate", help="validates the tests and metrics defined in the configuration"
     )
 
+    return parser
+
+
+def script_main(conf: Config = None, args: List[str] = None):
+    logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
+    parser = create_otava_cli_parser()
+
     try:
-        args = parser.parse_args(args=args)
+        args, _ = parser.parse_known_args(args=args)
+        if conf is None:
+            conf = config.load_config_from_parser_args(args)
         otava = Otava(conf)
 
         if args.command == "list-groups":
@@ -726,6 +727,10 @@ def script_main(args: List[str] = None):
     except NotificationError as err:
         logging.error(err.message)
         exit(1)
+
+
+def main():
+    script_main()
 
 
 if __name__ == "__main__":

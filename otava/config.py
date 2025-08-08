@@ -15,11 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 import logging
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import configargparse
 from ruamel.yaml import YAML
 
 from otava.bigquery import BigQueryConfig
@@ -95,107 +95,86 @@ def load_test_groups(config: Dict, tests: Dict[str, TestConfig]) -> Dict[str, Li
     return result
 
 
-def load_config_from(config_file: Path) -> Config:
-    """Loads config from the specified location"""
-    try:
+def load_config_from_parser_args(args: configargparse.Namespace) -> Config:
+    config_file = getattr(args, "config_file", None)
+    if config_file is not None:
         yaml = YAML(typ="safe")
-        config = yaml.load(config_file.read_text())
-        """
-        if Grafana configs not explicitly set in yaml file, default to same as Graphite
-        server at port 3000
-        """
-        graphite_config = None
-        grafana_config = None
-        if "graphite" in config:
-            if "url" not in config["graphite"]:
-                raise ValueError("graphite.url")
-            graphite_config = GraphiteConfig(url=config["graphite"]["url"])
-            if config.get("grafana") is None:
-                config["grafana"] = {}
-                config["grafana"]["url"] = f"{config['graphite']['url'].strip('/')}:3000/"
-                config["grafana"]["user"] = os.environ.get("GRAFANA_USER", "admin")
-                config["grafana"]["password"] = os.environ.get("GRAFANA_PASSWORD", "admin")
-            grafana_config = GrafanaConfig(
-                url=config["grafana"]["url"],
-                user=config["grafana"]["user"],
-                password=config["grafana"]["password"],
-            )
-
-        slack_config = None
-        if config.get("slack") is not None:
-            if not config["slack"]["token"]:
-                raise ValueError("slack.token")
-            slack_config = SlackConfig(
-                bot_token=config["slack"]["token"],
-            )
-
-        postgres_config = None
-        if config.get("postgres") is not None:
-            if not config["postgres"]["hostname"]:
-                raise ValueError("postgres.hostname")
-            if not config["postgres"]["port"]:
-                raise ValueError("postgres.port")
-            if not config["postgres"]["username"]:
-                raise ValueError("postgres.username")
-            if not config["postgres"]["password"]:
-                raise ValueError("postgres.password")
-            if not config["postgres"]["database"]:
-                raise ValueError("postgres.database")
-
-            postgres_config = PostgresConfig(
-                hostname=config["postgres"]["hostname"],
-                port=config["postgres"]["port"],
-                username=config["postgres"]["username"],
-                password=config["postgres"]["password"],
-                database=config["postgres"]["database"],
-            )
-
-        bigquery_config = None
-        if config.get("bigquery") is not None:
-            bigquery_config = BigQueryConfig(
-                project_id=config["bigquery"]["project_id"],
-                dataset=config["bigquery"]["dataset"],
-                credentials=config["bigquery"]["credentials"],
-            )
+        config = yaml.load(Path(config_file).read_text())
 
         templates = load_templates(config)
         tests = load_tests(config, templates)
         groups = load_test_groups(config, tests)
+    else:
+        logging.warning("Otava configuration file not found or not specified")
+        tests = {}
+        groups = {}
 
-        return Config(
-            graphite=graphite_config,
-            grafana=grafana_config,
-            slack=slack_config,
-            postgres=postgres_config,
-            bigquery=bigquery_config,
-            tests=tests,
-            test_groups=groups,
-        )
-
-    except FileNotFoundError as e:
-        raise ConfigError(f"Configuration file not found: {e.filename}")
-    except KeyError as e:
-        raise ConfigError(f"Configuration key not found: {e.args[0]}")
-    except ValueError as e:
-        raise ConfigError(f"Value for configuration key not found: {e.args[0]}")
+    return Config(
+        graphite=GraphiteConfig.from_parser_args(args),
+        grafana=GrafanaConfig.from_parser_args(args),
+        slack=SlackConfig.from_parser_args(args),
+        postgres=PostgresConfig.from_parser_args(args),
+        bigquery=BigQueryConfig.from_parser_args(args),
+        tests=tests,
+        test_groups=groups,
+    )
 
 
-def load_config() -> Config:
-    """Loads config from one of the default locations"""
+class NestedYAMLConfigFileParser(configargparse.ConfigFileParser):
+    """
+    Custom YAML config file parser that supports nested YAML structures.
+    Maps nested keys like 'slack: {token: value}' to 'slack-token=value', i.e. CLI argument style.
+    Recasts values from YAML inferred types to strings as expected for CLI arguments.
+    """
 
-    env_config_path = os.environ.get("OTAVA_CONFIG")
-    if env_config_path:
-        return load_config_from(Path(env_config_path).absolute())
+    def parse(self, stream):
+        yaml = YAML(typ="safe")
+        config_data = yaml.load(stream)
+        if config_data is None:
+            return {}
+        flattened_dict = {}
+        self._flatten_dict(config_data, flattened_dict)
+        return flattened_dict
 
-    paths = [
-        Path().home() / ".otava/otava.yaml",
-        Path().home() / ".otava/conf.yaml",
-    ]
+    def _flatten_dict(self, nested_dict, flattened_dict, prefix=''):
+        """Recursively flatten nested dictionaries using CLI dash-separated notation for keys."""
+        if not isinstance(nested_dict, dict):
+            return
 
-    for p in paths:
-        if p.exists():
-            return load_config_from(p)
+        for key, value in nested_dict.items():
+            new_key = f"{prefix}{key}" if prefix else key
 
-    # No configuration specified, return empty configuration
-    logging.warning(f"Otava configuration file not found")
-    return Config(grafana=None, graphite=None, slack=None, postgres=None, bigquery=None, tests={}, test_groups={})
+            if isinstance(value, dict):
+                # Recursively process nested dictionaries
+                self._flatten_dict(value, flattened_dict, f"{new_key}-")
+            else:
+                # Add leaf values to the flattened dictionary
+                # Value must be cast to string here, so arg parser can cast from string to expected type later
+                flattened_dict[new_key] = str(value)
+
+
+def create_config_parser() -> configargparse.ArgumentParser:
+    parser = configargparse.ArgumentParser(
+        add_help=False,
+        config_file_parser_class=NestedYAMLConfigFileParser,
+        default_config_files=[
+            Path().home() / ".otava/conf.yaml",
+            Path().home() / ".otava/otava.yaml",
+        ],
+        allow_abbrev=False,  # required for correct parsing of nested values from config file
+    )
+    parser.add_argument('--config-file', is_config_file=True, help='Otava config file path', env_var="OTAVA_CONFIG")
+    GraphiteConfig.add_parser_args(parser.add_argument_group('Graphite Options', 'Options for Graphite configuration'))
+    GrafanaConfig.add_parser_args(parser.add_argument_group('Grafana Options', 'Options for Grafana configuration'))
+    SlackConfig.add_parser_args(parser.add_argument_group('Slack Options', 'Options for Slack configuration'))
+    PostgresConfig.add_parser_args(parser.add_argument_group('Postgres Options', 'Options for Postgres configuration'))
+    BigQueryConfig.add_parser_args(parser.add_argument_group('BigQuery Options', 'Options for BigQuery configuration'))
+    return parser
+
+
+def load_config_from_file(config_file: str, arg_overrides: Optional[List[str]] = None) -> Config:
+    if arg_overrides is None:
+        arg_overrides = []
+    arg_overrides.extend(["--config-file", config_file])
+    args, _ = create_config_parser().parse_known_args(args=arg_overrides)
+    return load_config_from_parser_args(args)

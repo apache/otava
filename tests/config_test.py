@@ -14,15 +14,14 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+import os
 
-from pathlib import Path
-
-from otava.config import load_config_from
+from otava.config import load_config_from_file
 from otava.test_config import CsvTestConfig, GraphiteTestConfig, HistoStatTestConfig
 
 
 def test_load_graphite_tests():
-    config = load_config_from(Path("tests/resources/sample_config.yaml"))
+    config = load_config_from_file("tests/resources/sample_config.yaml")
     tests = config.tests
     assert len(tests) == 4
     test = tests["remote1"]
@@ -39,7 +38,7 @@ def test_load_graphite_tests():
 
 
 def test_load_csv_tests():
-    config = load_config_from(Path("tests/resources/sample_config.yaml"))
+    config = load_config_from_file("tests/resources/sample_config.yaml")
     tests = config.tests
     assert len(tests) == 4
     test = tests["local1"]
@@ -60,17 +59,45 @@ def test_load_csv_tests():
 
 
 def test_load_test_groups():
-    config = load_config_from(Path("tests/resources/sample_config.yaml"))
+    config = load_config_from_file("tests/resources/sample_config.yaml")
     groups = config.test_groups
     assert len(groups) == 2
     assert len(groups["remote"]) == 2
 
 
 def test_load_histostat_config():
-    config = load_config_from(Path("tests/resources/histostat_test_config.yaml"))
+    config = load_config_from_file("tests/resources/histostat_test_config.yaml")
     tests = config.tests
     assert len(tests) == 1
     test = tests["histostat-sample"]
     assert isinstance(test, HistoStatTestConfig)
     # 14 tags * 12 tag_metrics == 168 unique metrics
     assert len(test.fully_qualified_metric_names()) == 168
+
+
+def test_load_config_without_substitutions():
+    config = load_config_from_file("tests/resources/substitution_test_config.yaml")
+    assert config.slack.bot_token == "config_slack_token"
+
+
+def test_load_config_with_env_var_substitutions():
+    os.environ["SLACK_BOT_TOKEN"] = "env_slack_token"
+    try:
+        config = load_config_from_file("tests/resources/substitution_test_config.yaml")
+        assert config.slack.bot_token == "env_slack_token"
+    finally:
+        os.environ.pop("SLACK_BOT_TOKEN")
+
+
+def test_load_config_with_cli_substitutions():
+    config = load_config_from_file("tests/resources/substitution_test_config.yaml", arg_overrides=["--slack-token", "cli_slack_token"])
+    assert config.slack.bot_token == "cli_slack_token"
+
+
+def test_load_config_cli_precedence_over_env_var():
+    os.environ["SLACK_BOT_TOKEN"] = "env_slack_token"
+    try:
+        config = load_config_from_file("tests/resources/substitution_test_config.yaml", arg_overrides=["--slack-token", "cli_slack_token"])
+        assert config.slack.bot_token == "cli_slack_token"
+    finally:
+        os.environ.pop("SLACK_BOT_TOKEN")

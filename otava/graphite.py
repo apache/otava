@@ -31,6 +31,16 @@ from otava.util import parse_datetime
 class GraphiteConfig:
     url: str
 
+    @staticmethod
+    def add_parser_args(arg_group):
+        arg_group.add_argument("--graphite-url", help="Graphite server URL", env_var="GRAPHITE_ADDRESS")
+
+    @staticmethod
+    def from_parser_args(args):
+        return GraphiteConfig(
+            url=getattr(args, 'graphite_url', None)
+        )
+
 
 @dataclass
 class DataPoint:
