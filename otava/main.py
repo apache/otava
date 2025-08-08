@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import argparse
+import configargparse
 import copy
 import logging
 import sys
@@ -366,7 +366,7 @@ class Otava:
             exit(1)
 
 
-def setup_data_selector_parser(parser: argparse.ArgumentParser):
+def setup_data_selector_parser(parser: configargparse.ArgumentParser):
     parser.add_argument(
         "--branch", metavar="STRING", dest="branch", help="name of the branch", nargs="?"
     )
@@ -432,7 +432,7 @@ def setup_data_selector_parser(parser: argparse.ArgumentParser):
     )
 
 
-def data_selector_from_args(args: argparse.Namespace) -> DataSelector:
+def data_selector_from_args(args: configargparse.Namespace) -> DataSelector:
     data_selector = DataSelector()
     if args.branch:
         data_selector.branch = args.branch
@@ -457,7 +457,7 @@ def data_selector_from_args(args: argparse.Namespace) -> DataSelector:
     return data_selector
 
 
-def setup_analysis_options_parser(parser: argparse.ArgumentParser):
+def setup_analysis_options_parser(parser: configargparse.ArgumentParser):
     parser.add_argument(
         "-P, --p-value",
         dest="pvalue",
@@ -501,7 +501,7 @@ def setup_analysis_options_parser(parser: argparse.ArgumentParser):
     )
 
 
-def analysis_options_from_args(args: argparse.Namespace) -> AnalysisOptions:
+def analysis_options_from_args(args: configargparse.Namespace) -> AnalysisOptions:
     conf = AnalysisOptions()
     if args.pvalue is not None:
         conf.max_pvalue = args.pvalue
@@ -527,7 +527,7 @@ def script_main(args: List[str] = None):
         logging.error(err.message)
         exit(1)
 
-    parser = argparse.ArgumentParser(description="Hunts performance regressions in Fallout results")
+    parser = configargparse.get_argument_parser(description="Hunts performance regressions in Fallout results")
 
     subparsers = parser.add_subparsers(dest="command")
     list_tests_parser = subparsers.add_parser("list-tests", help="list available tests")
@@ -543,7 +543,7 @@ def script_main(args: List[str] = None):
     analyze_parser = subparsers.add_parser(
         "analyze",
         help="analyze performance test results",
-        formatter_class=argparse.RawTextHelpFormatter,
+        formatter_class=configargparse.RawTextHelpFormatter,
     )
     analyze_parser.add_argument("tests", help="name of the test or group of the tests", nargs="+")
     analyze_parser.add_argument(
