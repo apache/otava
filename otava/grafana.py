@@ -44,6 +44,7 @@ class GrafanaConfig:
             password=getattr(args, 'grafana_password', None)
         )
 
+
 @dataclass
 class GrafanaError(Exception):
     message: str

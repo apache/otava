@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import configargparse
 import copy
 import logging
 import sys
@@ -23,13 +22,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
+import configargparse
 import pytz
 from slack_sdk import WebClient
 
 from otava import config
 from otava.attributes import get_back_links
 from otava.bigquery import BigQuery, BigQueryError
-from otava.config import Config, ConfigError
+from otava.config import Config
 from otava.data_selector import DataSelector
 from otava.grafana import Annotation, Grafana, GrafanaError
 from otava.graphite import GraphiteError
