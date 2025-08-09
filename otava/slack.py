@@ -36,6 +36,20 @@ class NotificationError(Exception):
 class SlackConfig:
     bot_token: str
 
+    @staticmethod
+    def add_parser_args(parser):
+        parser.add_argument(
+            "--slack-token",
+            help="Slack bot token to use for sending notifications",
+            env_var="SLACK_BOT_TOKEN",
+        )
+
+    @staticmethod
+    def from_parser_args(args):
+        return SlackConfig(
+            bot_token=getattr(args, "slack_token", None)
+        )
+
 
 class SlackNotification:
     tests_with_insufficient_data: List[str]

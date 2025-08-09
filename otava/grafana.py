@@ -30,6 +30,20 @@ class GrafanaConfig:
     user: str
     password: str
 
+    @staticmethod
+    def add_parser_args(arg_group):
+        arg_group.add_argument("--grafana-url", help="Grafana server URL", env_var="GRAFANA_ADDRESS")
+        arg_group.add_argument("--grafana-user", help="Grafana server user", env_var="GRAFANA_USER", default="admin")
+        arg_group.add_argument("--grafana-password", help="Grafana server password", env_var="GRAFANA_PASSWORD", default="admin")
+
+    @staticmethod
+    def from_parser_args(args):
+        return GrafanaConfig(
+            url=getattr(args, 'grafana_url', None),
+            user=getattr(args, 'grafana_user', None),
+            password=getattr(args, 'grafana_password', None)
+        )
+
 
 @dataclass
 class GrafanaError(Exception):

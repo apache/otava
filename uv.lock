@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.8, <3.11"
 resolution-markers = [
     "python_full_version >= '3.10'",
@@ -13,8 +13,8 @@ name = "apache-otava"
 version = "0.6.1"
 source = { editable = "." }
 dependencies = [
+    { name = "configargparse" },
     { name = "dateparser" },
-    { name = "expandvars" },
     { name = "google-cloud-bigquery", version = "3.30.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "google-cloud-bigquery", version = "3.35.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "numpy" },
@@ -53,8 +53,8 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "autoflake", marker = "extra == 'dev'", specifier = ">=1.4" },
+    { name = "configargparse", specifier = ">=1.7.1" },
     { name = "dateparser", specifier = ">=1.0.0" },
-    { name = "expandvars", specifier = ">=0.6.5" },
     { name = "flake8", marker = "extra == 'dev'", specifier = ">=4.0.1" },
     { name = "google-cloud-bigquery", specifier = ">=3.25.0" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.10.1" },
@@ -219,6 +219,15 @@ wheels = [
 ]
 
 [[package]]
+name = "configargparse"
+version = "1.7.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/85/4d/6c9ef746dfcc2a32e26f3860bb4a011c008c392b83eabdfb598d1a8bbe5d/configargparse-1.7.1.tar.gz", hash = "sha256:79c2ddae836a1e5914b71d58e4b9adbd9f7779d4e6351a637b7d2d9b6c46d3d9", size = 43958, upload-time = "2025-05-23T14:26:17.369Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/31/28/d28211d29bcc3620b1fece85a65ce5bb22f18670a03cd28ea4b75ede270c/configargparse-1.7.1-py3-none-any.whl", hash = "sha256:8b586a31f9d873abd1ca527ffbe58863c99f36d896e2829779803125e83be4b6", size = 25607, upload-time = "2025-05-23T14:26:15.923Z" },
+]
+
+[[package]]
 name = "dateparser"
 version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -250,15 +259,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/09/35/2495c4ac46b980e4ca1f6ad6db102322ef3ad2410b79fdde159a4b0f3b92/exceptiongroup-1.2.2.tar.gz", hash = "sha256:47c2edf7c6738fafb49fd34290706d1a1a2f4d1c6df275526b62cbb4aa5393cc", size = 28883, upload-time = "2024-07-12T22:26:00.161Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/02/cc/b7e31358aac6ed1ef2bb790a9746ac2c69bcb3c8588b41616914eb106eaf/exceptiongroup-1.2.2-py3-none-any.whl", hash = "sha256:3111b9d131c238bec2f8f516e123e14ba243563fb135d3fe885990585aa7795b", size = 16453, upload-time = "2024-07-12T22:25:58.476Z" },
-]
-
-[[package]]
-name = "expandvars"
-version = "1.1.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/dc/c9/c0a46f462058446aafe953bf76a957c17f78550216a95fbded2270f83117/expandvars-1.1.1.tar.gz", hash = "sha256:98add8268b760dfee457bde1c17bf745795fdebc22b7ddab75fd3278653f1e05", size = 70787, upload-time = "2025-07-12T07:46:22.308Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2b/ca/0753ba3a81255ac49748ec8b665ab01f8efcf711f74bbccb5457a6193acc/expandvars-1.1.1-py3-none-any.whl", hash = "sha256:09ca39e6bfcb0d899db8778a00dd3d89cfeb0080795c54f16f6279afd0ef8c5b", size = 7522, upload-time = "2025-07-12T07:46:18.984Z" },
 ]
 
 [[package]]
@@ -707,7 +707,7 @@ resolution-markers = [
     "python_full_version == '3.9.*'",
 ]
 dependencies = [
-    { name = "zipp", version = "3.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "zipp", version = "3.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/76/66/650a33bd90f786193e4de4b3ad86ea60b53c89b669a5c7be931fac31cdb0/importlib_metadata-8.7.0.tar.gz", hash = "sha256:d13b81ad223b890aa16c5471f2ac3056cf76c5f10f82d6f9292f0b415f389000", size = 56641, upload-time = "2025-04-27T15:29:01.736Z" }
 wheels = [

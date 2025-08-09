@@ -36,7 +36,6 @@ classifiers = [
 ]
 dependencies = [
     "dateparser>=1.0.0",
-    "expandvars>=0.6.5",
     "numpy==1.24.*",
     "python-dateutil>=2.8.1",
     "signal-processing-algorithms==1.3.5",
@@ -48,6 +47,7 @@ dependencies = [
     "slack-sdk>=3.4.2",
     "google-cloud-bigquery>=3.25.0",
     "pg8000>=1.31.2",
+    "configargparse>=1.7.1",
 ]
 
 [project.optional-dependencies]
