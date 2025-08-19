@@ -16,6 +16,8 @@
 # under the License.
 import os
 
+import pytest
+
 from otava.config import load_config_from_file
 from otava.test_config import CsvTestConfig, GraphiteTestConfig, HistoStatTestConfig
 
@@ -75,29 +77,59 @@ def test_load_histostat_config():
     assert len(test.fully_qualified_metric_names()) == 168
 
 
-def test_load_config_without_substitutions():
-    config = load_config_from_file("tests/resources/substitution_test_config.yaml")
-    assert config.slack.bot_token == "config_slack_token"
+@pytest.mark.parametrize(
+    "config_property",
+    [
+        # property, accessor, env_var, cli_flag, [config value, env value, cli value]
+        ("slack_token", lambda c: c.slack.bot_token, "SLACK_BOT_TOKEN", "--slack-token"),
+        ("bigquery_project_id", lambda c: c.bigquery.project_id, "BIGQUERY_PROJECT_ID", "--bigquery-project-id"),
+        ("bigquery_dataset", lambda c: c.bigquery.dataset, "BIGQUERY_DATASET", "--bigquery-dataset"),
+        ("bigquery_credentials", lambda c: c.bigquery.credentials, "BIGQUERY_VAULT_SECRET", "--bigquery-credentials"),
+        ("grafana_url", lambda c: c.grafana.url, "GRAFANA_ADDRESS", "--grafana-url"),
+        ("grafana_user", lambda c: c.grafana.user, "GRAFANA_USER", "--grafana-user"),
+        ("grafana_password", lambda c: c.grafana.password, "GRAFANA_PASSWORD", "--grafana-password"),
+        ("graphite_url", lambda c: c.graphite.url, "GRAPHITE_ADDRESS", "--graphite-url"),
+        ("postgres_hostname", lambda c: c.postgres.hostname, "POSTGRES_HOSTNAME", "--postgres-hostname"),
+        ("postgres_port", lambda c: c.postgres.port, "POSTGRES_PORT", "--postgres-port", 1111, 2222, 3333),
+        ("postgres_username", lambda c: c.postgres.username, "POSTGRES_USERNAME", "--postgres-username"),
+        ("postgres_password", lambda c: c.postgres.password, "POSTGRES_PASSWORD", "--postgres-password"),
+        ("postgres_database", lambda c: c.postgres.database, "POSTGRES_DATABASE", "--postgres-database"),
+    ],
+    ids=lambda v: v[0],  # use the property name for the parameterized test name
+)
+def test_configuration_substitutions(config_property):
+    config_file = "tests/resources/substitution_test_config.yaml"
+    accessor = config_property[1]
 
+    if len(config_property) == 4:
+        config_value = f"config_{config_property[0]}"
+        env_config_value = f"env_{config_property[0]}"
+        cli_config_value = f"cli_{config_property[0]}"
+    else:
+        config_value = config_property[4]
+        env_config_value = config_property[5]
+        cli_config_value = config_property[6]
 
-def test_load_config_with_env_var_substitutions():
-    os.environ["SLACK_BOT_TOKEN"] = "env_slack_token"
+    # test value from config file
+    config = load_config_from_file(config_file)
+    assert accessor(config) == config_value
+
+    # test env var overrides values from config file
+    os.environ[config_property[2]] = str(env_config_value)
     try:
-        config = load_config_from_file("tests/resources/substitution_test_config.yaml")
-        assert config.slack.bot_token == "env_slack_token"
+        config = load_config_from_file(config_file)
+        assert accessor(config) == env_config_value
     finally:
-        os.environ.pop("SLACK_BOT_TOKEN")
+        os.environ.pop(config_property[2])
 
+    # test cli values override values from config file
+    config = load_config_from_file(config_file, arg_overrides=[config_property[3], str(cli_config_value)])
+    assert accessor(config) == cli_config_value
 
-def test_load_config_with_cli_substitutions():
-    config = load_config_from_file("tests/resources/substitution_test_config.yaml", arg_overrides=["--slack-token", "cli_slack_token"])
-    assert config.slack.bot_token == "cli_slack_token"
-
-
-def test_load_config_cli_precedence_over_env_var():
-    os.environ["SLACK_BOT_TOKEN"] = "env_slack_token"
+    # test cli values override values from config file and env var
+    os.environ[config_property[2]] = str(env_config_value)
     try:
-        config = load_config_from_file("tests/resources/substitution_test_config.yaml", arg_overrides=["--slack-token", "cli_slack_token"])
-        assert config.slack.bot_token == "cli_slack_token"
+        config = load_config_from_file(config_file, arg_overrides=[config_property[3], str(cli_config_value)])
+        assert accessor(config) == cli_config_value
     finally:
-        os.environ.pop("SLACK_BOT_TOKEN")
+        os.environ.pop(config_property[2])

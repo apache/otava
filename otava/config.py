@@ -144,6 +144,10 @@ class NestedYAMLConfigFileParser(configargparse.ConfigFileParser):
         for key, value in nested_dict.items():
             new_key = f"{prefix}{key}" if prefix else key
 
+            # yaml keys typically use snake case
+            # replace underscore with dash to convert snake case to CLI dash-separated style
+            new_key = new_key.replace("_", "-")
+
             if isinstance(value, dict):
                 # Recursively process nested dictionaries
                 self._flatten_dict(value, flattened_dict, f"{new_key}-")
