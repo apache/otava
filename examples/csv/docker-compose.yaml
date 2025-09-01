@@ -22,6 +22,7 @@ services:
       dockerfile: Dockerfile
     container_name: otava
     environment:
-      OTAVA_CONFIG: examples/csv/otava.yaml
+      OTAVA_CONFIG: /config/otava.yaml
     volumes:
       - ./data:/data
+      - ./config:/config

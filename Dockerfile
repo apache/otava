@@ -15,7 +15,30 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM python:3.8-slim-bookworm
+# Builder stage - build the wheel
+FROM ghcr.io/astral-sh/uv:debian AS builder
+
+# Install build dependencies
+RUN apt-get update --assume-yes && \
+    apt-get install -o 'Dpkg::Options::=--force-confnew' -y --force-yes -q \
+    gcc \
+    clang \
+    build-essential \
+    make \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /build
+
+# Copy source code
+COPY . /build
+
+# Build the wheel using uv
+RUN uv build --wheel
+
+# Runtime stage - install and run the package
+FROM python:3.10-slim-bookworm AS runtime
+
 # So that STDOUT/STDERR is printed
 ENV PYTHONUNBUFFERED="1"
 ARG UV_VERSION=0.8.3
@@ -29,24 +52,22 @@ RUN groupadd --gid 8192 otava && \
     useradd --uid 8192 --shell /bin/false --create-home --no-log-init --gid otava otava && \
     chown otava:otava ${OTAVA_HOME}
 
-# First let's just get things updated.
-# Install System dependencies
+
+# Install build dependencies needed for native extensions
 RUN apt-get update --assume-yes && \
     apt-get install -o 'Dpkg::Options::=--force-confnew' -y --force-yes -q \
-    git \
-    openssh-client \
     gcc \
-    clang \
     build-essential \
-    make \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the rest of the program over
-COPY --chown=otava:otava . ${OTAVA_HOME}
+# Copy the wheel from builder stage
+COPY --from=builder /build/dist/*.whl /tmp/
 
-ENV PATH="${OTAVA_HOME}/bin:$PATH"
+# Install the wheel using uv
+RUN pip install /tmp/apache_otava-*.whl && rm /tmp/apache_otava-*.whl
 
-RUN --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv --mount=type=ssh \
-    uv pip install --system -e ".[dev]" && \
-    mkdir -p bin && \
-    ln -s ../venv/bin/otava ${OTAVA_HOME}/bin
+# Switch to otava user
+USER otava
+
+# The otava command should now be available in PATH via the installed package
+ENTRYPOINT ["otava"]
