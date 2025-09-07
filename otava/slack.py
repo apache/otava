@@ -34,6 +34,8 @@ class NotificationError(Exception):
 
 @dataclass
 class SlackConfig:
+    NAME = "slack"
+
     bot_token: str
 
     @staticmethod

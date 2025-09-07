@@ -15,10 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 import os
+from io import StringIO
 
 import pytest
 
-from otava.config import load_config_from_file
+from otava.config import NestedYAMLConfigFileParser, load_config_from_file
 from otava.test_config import CsvTestConfig, GraphiteTestConfig, HistoStatTestConfig
 
 
@@ -133,3 +134,78 @@ def test_configuration_substitutions(config_property):
         assert accessor(config) == cli_config_value
     finally:
         os.environ.pop(config_property[2])
+
+
+def test_config_section_yaml_parser_flattens_only_config_sections():
+    """Test that NestedYAMLConfigFileParser only flattens the specified config sections."""
+
+    parser = NestedYAMLConfigFileParser()
+    test_yaml = """
+graphite:
+  url: http://example.com
+  timeout: 30
+slack:
+  bot_token: test-token
+  channel: "#alerts"
+postgres:
+  hostname: localhost
+  port: 5432
+templates:
+    aggregate_mem:
+      type: postgres
+      time_column: commit_ts
+      attributes: [experiment_id, config_id, commit]
+      metrics:
+        process_cumulative_rate_mean:
+          direction: 1
+          scale: 1
+        process_cumulative_rate_stderr:
+          direction: -1
+          scale: 1
+        process_cumulative_rate_diff:
+          direction: -1
+          scale: 1
+      query: |
+        SELECT e.commit,
+               e.commit_ts,
+               r.process_cumulative_rate_mean,
+               r.process_cumulative_rate_stderr,
+               r.process_cumulative_rate_diff,
+               r.experiment_id,
+               r.config_id
+        FROM results r
+        INNER JOIN configs c ON r.config_id = c.id
+        INNER JOIN experiments e ON r.experiment_id = e.id
+        WHERE e.exclude_from_analysis = false AND
+              e.branch = 'trunk' AND
+              e.username = 'ci' AND
+              c.store = 'MEM' AND
+              c.cache = true AND
+              c.benchmark = 'aggregate' AND
+              c.instance_type = 'ec2i3.large'
+        ORDER BY e.commit_ts ASC;
+"""
+
+    stream = StringIO(test_yaml)
+    result = parser.parse(stream)
+
+    # Should flatten config sections
+    expected_keys = {
+        'graphite-url', 'graphite-timeout',
+        'slack-bot-token', 'slack-channel',
+        'postgres-hostname', 'postgres-port'
+    }
+
+    assert set(result.keys()) == expected_keys
+    assert result['graphite-url'] == 'http://example.com'
+    assert result['graphite-timeout'] == '30'
+    assert result['slack-bot-token'] == 'test-token'
+    assert result['slack-channel'] == '#alerts'
+    assert result['postgres-hostname'] == 'localhost'
+    assert result['postgres-port'] == '5432'
+
+    # Should NOT contain any keys from ignored sections
+    ignored_sections = {'templates', 'tests', 'test_groups'}
+    for key in result.keys():
+        section = key.split('-')[0]
+        assert section not in ignored_sections, f"Found key '{key}' from ignored section '{section}'"

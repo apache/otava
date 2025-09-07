@@ -127,13 +127,26 @@ class NestedYAMLConfigFileParser(configargparse.ConfigFileParser):
     Recasts values from YAML inferred types to strings as expected for CLI arguments.
     """
 
+    CLI_CONFIG_SECTIONS = [
+        GraphiteConfig.NAME,
+        GrafanaConfig.NAME,
+        SlackConfig.NAME,
+        PostgresConfig.NAME,
+        BigQueryConfig.NAME,
+    ]
+
     def parse(self, stream):
         yaml = YAML(typ="safe")
         config_data = yaml.load(stream)
         if config_data is None:
             return {}
+
         flattened_dict = {}
-        self._flatten_dict(config_data, flattened_dict)
+        for key, value in config_data.items():
+            if key in self.CLI_CONFIG_SECTIONS:
+                # Flatten only the config sections that correspond to CLI arguments
+                self._flatten_dict(value, flattened_dict, f"{key}-")
+            # Ignore other sections like 'templates' and 'tests' - they shouldn't become CLI arguments
         return flattened_dict
 
     def _flatten_dict(self, nested_dict, flattened_dict, prefix=''):

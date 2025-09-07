@@ -29,6 +29,8 @@ from otava.util import parse_datetime
 
 @dataclass
 class GraphiteConfig:
+    NAME = "graphite"
+
     url: str
 
     @staticmethod

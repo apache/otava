@@ -27,6 +27,8 @@ from otava.test_config import PostgresTestConfig
 
 @dataclass
 class PostgresConfig:
+    NAME = "postgres"
+
     hostname: str
     port: int
     username: str
