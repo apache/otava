@@ -14,9 +14,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-version: "3.8"
-
 services:
   postgres:
     image: postgres:latest
@@ -45,10 +42,12 @@ services:
       POSTGRES_USERNAME: exampleuser
       POSTGRES_PASSWORD: examplepassword
       POSTGRES_DATABASE: benchmark_results
-      OTAVA_CONFIG: examples/postgresql/otava.yaml
+      OTAVA_CONFIG: /config/otava.yaml
       BRANCH: trunk
     networks:
       - otava-postgres
+    volumes:
+      - ./config:/config
 
 networks:
   otava-postgres:
