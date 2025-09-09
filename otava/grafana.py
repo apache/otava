@@ -26,6 +26,8 @@ from requests.exceptions import HTTPError
 
 @dataclass
 class GrafanaConfig:
+    NAME = "grafana"
+
     url: str
     user: str
     password: str
