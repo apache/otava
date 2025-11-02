@@ -29,5 +29,6 @@ __pycache__/
 build/
 dist/
 venv/
+.venv/
 .tox/
 .docker/
