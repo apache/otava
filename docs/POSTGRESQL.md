@@ -99,7 +99,7 @@ docker-compose -f examples/postgresql/docker-compose.yaml up --force-recreate --
 Run Otava in the other tab to show results for a single test `aggregate_mem` and update the database with newly found change points:
 
 ```bash
-docker-compose -f examples/postgresql/docker-compose.yaml run --build otava bin/otava analyze aggregate_mem --update-postgres
+docker-compose -f examples/postgresql/docker-compose.yaml run --build otava analyze aggregate_mem --update-postgres
 ```
 
 Expected output:
