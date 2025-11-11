@@ -59,14 +59,7 @@ def compute_Q_and_candidate_slow(sequence):
             C *= 2 * n / (m + n) / (m - 1) if m > 1 else 0
 
             Q[tau - 1, kappa - 2] = A - B - C
-            # TODO: Figure out why tests are failing with the proper solution.
-            #       See otava/change_point_divisive/calculator.py for details
-            #
-            # ============== Implementation from paper ======================
-            # if Q[tau - 1, kappa - 2] > Q_max:
-            #
-            # ============== Current implementation =========================
-            if kappa == N and Q[tau - 1, kappa - 2] > Q_max:
+            if Q[tau - 1, kappa - 2] > Q_max:
                 Q_max = Q[tau - 1, kappa - 2]
                 candidate_ind = tau
 

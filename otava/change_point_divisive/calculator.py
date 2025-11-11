@@ -185,14 +185,5 @@ class PairDistanceCalculator(Calculator):
         assert start < end, f"start={start} must be less than end={end}"
 
         Q = self._get_Q_vals(start, end)
-        # TODO: Figure out why tests are failing with the proper solution.
-        #       Limiting κ=interval.stop solves the issue. However, this isn't a correct approach
-        #       as specifically discussed in https://arxiv.org/abs/1306.4933 . Specifically, κ should vary.
-        #
-        # ============== Implementation from paper ======================
-        # i, j = np.unravel_index(np.argmax(Q), Q.shape)
-        # return CandidateChangePoint(index=i + 1 + start, qhat=Q[i][j])
-        #
-        # ============== Current implementation =========================
-        i = np.argmax(Q[:, -1])
-        return CandidateChangePoint(index=i + 1 + start, qhat=Q[i, -1])
+        i, j = np.unravel_index(np.argmax(Q), Q.shape)
+        return CandidateChangePoint(index=i + 1 + start, qhat=Q[i][j])
