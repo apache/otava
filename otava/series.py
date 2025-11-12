@@ -262,13 +262,13 @@ class AnalyzedSeries:
                 for c in weak_cps:
                     weak_change_points[metric].append(
                         ChangePoint(
-                            index=c.index, time=series.time[c.index], metric=metric, stats=c.stats
+                            index=c.index, qhat=0.0, time=series.time[c.index], metric=metric, stats=c.stats
                         )
                     )
                 for c in change_points:
                     result[metric].append(
                         ChangePoint(
-                            index=c.index, time=series.time[c.index], metric=metric, stats=c.stats
+                            index=c.index, qhat=0.0, time=series.time[c.index], metric=metric, stats=c.stats
                         )
                     )
         # If you got an exception and are wondering about the next row...
@@ -385,14 +385,14 @@ class AnalyzedSeries:
             for c in change_points:
                 result[metric].append(
                     ChangePoint(
-                        index=c.index, time=self.__series.time[c.index], metric=metric, stats=c.stats
+                        index=c.index, qhat=0.0, time=self.__series.time[c.index], metric=metric, stats=c.stats
                     )
                 )
             weak_change_points[metric] = []
             for c in weak_cps:
                 weak_change_points[metric].append(
                     ChangePoint(
-                        index=c.index, time=self.__series.time[c.index], metric=metric, stats=c.stats
+                        index=c.index, qhat=0.0, time=self.__series.time[c.index], metric=metric, stats=c.stats
                     )
                 )
             fill_missing(self.__series.data[metric])

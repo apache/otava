@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, fields
 from typing import Generic, List, Optional, TypeVar
 
 from numpy.typing import NDArray
@@ -25,7 +25,7 @@ from numpy.typing import NDArray
 class CandidateChangePoint:
     '''Candidate for a change point. The point that maximizes Q-hat function on [start:end+1] slice'''
     index: int
-    qhat: float = field(default=0.0, kw_only=True)
+    qhat: float
 
 
 @dataclass

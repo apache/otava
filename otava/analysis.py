@@ -16,7 +16,7 @@
 # under the License.
 
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, SupportsFloat, Tuple, TypeAlias
+from typing import List, Optional, Sequence, SupportsFloat, Tuple
 
 import numpy as np
 from scipy.stats import ttest_ind_from_stats
@@ -97,11 +97,11 @@ class TTestStats(BaseStats):
 
 
 # Generic Change Point List
-GenCPList : TypeAlias = List[ChangePoint[GenericStats]]
+GenCPList = List[ChangePoint[GenericStats]]
 # Permutation Change Point List
-PermCPList : TypeAlias = List[ChangePoint[PermutationStats]]
+PermCPList = List[ChangePoint[PermutationStats]]
 # T-test Change Point List
-TtestCPList : TypeAlias = List[ChangePoint[TTestStats]]
+TtestCPList = List[ChangePoint[TTestStats]]
 
 
 class TTestSignificanceTester(SignificanceTester):
