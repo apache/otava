@@ -39,13 +39,13 @@ class PermutationStats(BaseStats):
 
 
 class PermutationsSignificanceTester(SignificanceTester):
-    def __init__(self, alpha: float, permurations: int, calculator: Type[Calculator], seed: Optional[int]):
-        '''alpha - significance level
+    def __init__(self, max_pvalue: float, permutations: int, calculator: Type[Calculator], seed: Optional[int]):
+        '''max_pvalue - significance level
         permutations - number of permutations to run to test significance
         calculator - Calculator class to perform permutations (and compute new qhat value)
         '''
-        super().__init__(alpha)
-        self.permutations = permurations
+        super().__init__(max_pvalue)
+        self.permutations = permutations
         self.calculator = calculator
         self.seed = seed
         self.rng = np.random.default_rng(seed)

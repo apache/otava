@@ -134,11 +134,11 @@ class TTestSignificanceTester(SignificanceTester):
         """
         Computes properties of the change point if the Candidate Change Point based on the provided intervals.
 
-        The method works for two cases:
-        1. Divisive algorithm.
+        The method works in both steps of the algorithm:
+        1. Split step:
            if the candidate is a new potential change point, i.e., its index is inside any interval, then
            we split the interval by the candidate's index to get left and right subseries.
-        2. Merge step in t-test algorithm.
+        2. Merge step:
            if the candidate is an existing change point, i.e., it matches the end of two intervals, then
            it's a potential weak change point, and we don't need to split the intervals anymore (just take
            both intervals as left and right subseries).
@@ -146,10 +146,19 @@ class TTestSignificanceTester(SignificanceTester):
         """
         for i, interval in enumerate(intervals):
             if interval.stop == candidate.index:
+                # Merge step
                 left_interval = interval
                 right_interval = intervals[i + 1]
                 break
             elif (interval.start is None or interval.start < candidate.index) and (interval.stop is None or candidate.index < interval.stop):
+                # Split step
+                # Note: handles slices with omitted indexes:
+                #
+                #       array[0 : i] == array[:i] == array[slice(None, i)] == array[slice(0, i)],
+                #       i.e., interval.start == None and interval.start == 0 are equivalent.
+                #
+                #       array[i: len(array)] == array[i:] == array[slice(i, None)] == array[slice(i, len(array))],
+                #       i.e., interval.stop == None and interval.stop == len(array) are equivalent.
                 left_interval = slice(interval.start, candidate.index)
                 right_interval = slice(candidate.index, interval.stop)
                 break
@@ -183,9 +192,8 @@ def merge(
     change_points: TtestCPList, series: Sequence[SupportsFloat], max_pvalue: float, min_magnitude: float
 ) -> TtestCPList:
     """
-    Removes weak change points recursively going bottom-up
-    until we get only high-quality change points
-    that meet the P-value and rel_change criteria.
+    Merge step of the change point detection process from "Hunter: Using Change Point Detection
+    to Hunt for Performance Regressions" by Fleming et al. (https://doi.org/10.1145/3578244.3583719).
 
     Parameters:
         :param max_pvalue: maximum accepted pvalue
@@ -227,30 +235,16 @@ def merge(
 def split(series: Sequence[SupportsFloat], window_len: int = 30, max_pvalue: float = 0.001,
           new_points: Optional[int] = None, old_cp: Optional[TtestCPList] = None) -> TtestCPList:
     """
-    Finds change points by splitting the series top-down.
-
-    Internally it uses the EDivisive algorithm from mongodb-signal-processing
-    that recursively splits the series in a way to maximize some measure of
-    dissimilarity (denoted qhat) between the chunks.
-    Splitting happens as long as the dissimilarity is statistically significant.
-
-    Unfortunately this algorithms has a few downsides:
-    - the complexity is O(n^2), where n is the length of the series
-    - if there are too many change points and too much data, the change points in the middle
-      of the series may be missed
-
-    This function tries to address these issues by invoking EDivisive on smaller
-    chunks (windows) of the input data instead of the full series and then merging the results.
-    Each window should be large enough to contain enough points to detect a change-point.
-    Consecutive windows overlap so that we won't miss changes happening between them.
+    Split step of the change point detection process from "Hunter: Using Change Point Detection
+    to Hunt for Performance Regressions" by Fleming et al. (https://doi.org/10.1145/3578244.3583719).
     """
-    assert "Window length must be at least 2", window_len >= 2
+    assert window_len >= 2, "Window length must be at least 2"
     start = 0
     step = int(window_len / 2)
     change_points = []
     # N new_points are appended to the end of series. Typically N=1.
     # old_cp are the weak change points from before new points were added.
-    # We now just compute e-e_divisive for the tail of the series, beginning at
+    # We now just identify change points in the tail of the series, beginning at
     # max(old_cp[-1], a step that is over 2 window_len from the end)
     if new_points is not None and old_cp is not None:
         change_points = old_cp[:]
@@ -265,6 +259,7 @@ def split(series: Sequence[SupportsFloat], window_len: int = 30, max_pvalue: flo
 
     tester = TTestSignificanceTester(max_pvalue)
     while start < len(series):
+        # Sliding window series[start : end]
         end = min(start + window_len, len(series))
 
         algo = ChangePointDetector(significance_tester=tester, calculator=PairDistanceCalculator)
@@ -281,7 +276,14 @@ def split(series: Sequence[SupportsFloat], window_len: int = 30, max_pvalue: flo
 
 
 def compute_change_points_orig(series: Sequence[SupportsFloat], max_pvalue: float = 0.001, seed: Optional[int] = None) -> Tuple[PermCPList, Optional[PermCPList]]:
-    tester = PermutationsSignificanceTester(alpha=max_pvalue, permurations=100, calculator=PairDistanceCalculator, seed=seed)
+    """
+    The original algorithm presented in "A Nonparametric Approach for Multiple Change Point
+    Analysis of Multivariate Data" by Matteson and James (https://doi.org/10.48550/arXiv.1306.4933).
+
+    The algorithm recursively splits the series in a way to maximize some measure of dissimilarity (denoted qhat)
+    between the chunks. Splitting happens as long as the dissimilarity is statistically significant.
+    """
+    tester = PermutationsSignificanceTester(max_pvalue=max_pvalue, permutations=100, calculator=PairDistanceCalculator, seed=seed)
     detector = ChangePointDetector(significance_tester=tester, calculator=PairDistanceCalculator)
     change_points = detector.get_change_points(series=series)
     return change_points, None
@@ -291,6 +293,32 @@ def compute_change_points(
     series: Sequence[SupportsFloat], window_len: int = 50, max_pvalue: float = 0.001, min_magnitude: float = 0.0,
     new_data: Optional[int] = None, old_weak_cp: Optional[GenCPList] = None
 ) -> Tuple[GenCPList, Optional[GenCPList]]:
+    """
+    Change Point detection algorithm described in "Hunter: Using Change Point Detection to Hunt for Performance
+    Regressions" by Fleming et al. (https://doi.org/10.1145/3578244.3583719).
+
+    The algorithm consist of two steps:
+        1. Split step:
+            - splitting a series into subseries via sliding windows
+
+            - applying original change point detection algorithm to each window (https://doi.org/10.48550/arXiv.1306.4933)
+              with first-pass significance threshold max_pvalue (see clarification regarding this threshold below)
+
+            - make a set union operation over all detected change points, so-called weak change points. They are "weak"
+              change points because the algorithm uses modified (relaxed) max_pvalue for this step. In the current
+              implementation the first-pass significance threshold is 10x of the original max_pvalue. For example, if we want
+              to detect all change points at significance threshold 0.001, a threshold of 0.01 will be used at this step. Since
+              it's a higher threshold for p-values, the algorithm will find more points. However, these points are just POTENTIAL
+              change points, because some of them are significant at 0.01 but not at 0.001. In statistical terms, the evidence
+              that they are change points is weak (only 0.01 compared to 0.001). Hence, the term "weak" change points. They will
+              be filtered down to the final change points (with correct significance threshold) at the next step (Merge step)
+              of the algorithm. For the reasoning on why change points cannot be computed right away (and the need for
+              [weak change points -> change points] process) read Fleming et al. paper.
+
+        2. Merge step:
+            - Filters out weak change points recursively going bottom-up, keeping only high-quality change points, i.e., the
+              ones that meet either a p-value threshold criteria or relative magnitude change criteria.
+    """
     first_pass_pvalue = max_pvalue * 10 if max_pvalue < 0.05 else (max_pvalue * 2 if max_pvalue < 0.5 else max_pvalue)
     weak_change_points = split(series, window_len, first_pass_pvalue, new_points=new_data, old_cp=old_weak_cp)
     return merge(weak_change_points, series, max_pvalue, min_magnitude), weak_change_points

@@ -69,7 +69,7 @@ def compute_Q_and_candidate_slow(sequence):
 def test_calculator_candidate():
     sequence = SEQUENCE.copy()
     calc = PairDistanceCalculator(sequence)
-    Q = calc._get_Q_vals(start=0, end=len(sequence) - 1)
+    Q = calc._get_Q_vals(start=0, end=len(sequence))
 
     test_Q, test_Q_max, test_candidate_ind = compute_Q_and_candidate_slow(sequence)
     assert np.allclose(test_Q, Q)
@@ -87,7 +87,7 @@ def test_permutation_calculation():
     candidate = calc.get_candidate_change_point(whole_interval)
 
     seed = 1
-    st = PermutationsSignificanceTester(alpha=0.05, permurations=1, calculator=PairDistanceCalculator, seed=seed)
+    st = PermutationsSignificanceTester(max_pvalue=0.05, permutations=1, calculator=PairDistanceCalculator, seed=seed)
     change_point = st.change_point(candidate=candidate, series=sequence, intervals=[whole_interval])
 
     test_rng = np.random.default_rng(seed)
@@ -101,7 +101,7 @@ def test_permutation_calculation():
 def test_permutation_test():
     seed = 1
     sequence = SEQUENCE.copy()
-    st = PermutationsSignificanceTester(alpha=0.01, permurations=100, calculator=PairDistanceCalculator, seed=seed)
+    st = PermutationsSignificanceTester(max_pvalue=0.01, permutations=100, calculator=PairDistanceCalculator, seed=seed)
     cpd = ChangePointDetector(significance_tester=st, calculator=PairDistanceCalculator)
     cps = cpd.get_change_points(series=sequence)
     assert [cp.index for cp in cps] == CHANGE_POINTS_INDS
@@ -109,7 +109,7 @@ def test_permutation_test():
 
 def test_ttest():
     sequence = SEQUENCE.copy()
-    st = TTestSignificanceTester(alpha=0.01)
+    st = TTestSignificanceTester(max_pvalue=0.01)
     cpd = ChangePointDetector(significance_tester=st, calculator=PairDistanceCalculator)
     cps = cpd.get_change_points(series=sequence)
     assert [cp.index for cp in cps] == CHANGE_POINTS_INDS

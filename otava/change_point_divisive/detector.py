@@ -33,6 +33,7 @@ class ChangePointDetector:
         self.calculator = calculator
 
     def get_change_points(self, series: Sequence[SupportsFloat], start: Optional[int] = None, end: Optional[int] = None) -> List[ChangePoint[GenericStats]]:
+        '''Finds change points in `series[start : end]`.'''
         if not isinstance(series, np.ndarray):
             series = np.array(series[start : end], dtype=np.float64)
         if not np.issubdtype(series.dtype, np.floating):

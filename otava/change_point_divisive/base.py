@@ -34,6 +34,7 @@ class BaseStats:
     pvalue: float
 
 
+# Abstract variable type for statistics, corresponds to BaseStats class and its subclasses.
 GenericStats = TypeVar("GenericStats", bound=BaseStats)
 
 
@@ -63,8 +64,8 @@ class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
 class SignificanceTester(Generic[GenericStats]):
     '''Abstract class for significance tester'''
 
-    def __init__(self, alpha: float):
-        self.alpha = alpha
+    def __init__(self, max_pvalue: float):
+        self.max_pvalue = max_pvalue
 
     def get_intervals(self, change_points: List[ChangePoint[GenericStats]]) -> List[slice]:
         '''Returns list of slices of the series'''
@@ -78,8 +79,8 @@ class SignificanceTester(Generic[GenericStats]):
         return [interval for interval in intervals if interval.start != interval.stop]
 
     def is_significant(self, point: ChangePoint[GenericStats]) -> bool:
-        '''Compares ChangePoint to level of significance alpha'''
-        return point.stats.pvalue <= self.alpha
+        '''Compares ChangePoint to level of significance max_pvalue'''
+        return point.stats.pvalue <= self.max_pvalue
 
     def change_point(self, candidate: CandidateChangePoint, series: NDArray, intervals: List[slice]) -> ChangePoint[GenericStats]:
         '''Computes stats for a change point candidate and wraps it into ChangePoint class'''
