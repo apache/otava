@@ -10,12 +10,11 @@ resolution-markers = [
 
 [[package]]
 name = "apache-otava"
-version = "0.7.0"
+version = "0.6.1"
 source = { editable = "." }
 dependencies = [
     { name = "configargparse" },
     { name = "dateparser" },
-    { name = "expandvars" },
     { name = "google-cloud-bigquery", version = "3.30.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "google-cloud-bigquery", version = "3.35.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "numpy" },
@@ -56,7 +55,6 @@ requires-dist = [
     { name = "autoflake", marker = "extra == 'dev'", specifier = ">=1.4" },
     { name = "configargparse", specifier = ">=1.7.1" },
     { name = "dateparser", specifier = ">=1.0.0" },
-    { name = "expandvars", specifier = ">=0.12.0" },
     { name = "flake8", marker = "extra == 'dev'", specifier = ">=4.0.1" },
     { name = "google-cloud-bigquery", specifier = ">=3.25.0" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.10.1" },
@@ -261,15 +259,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/09/35/2495c4ac46b980e4ca1f6ad6db102322ef3ad2410b79fdde159a4b0f3b92/exceptiongroup-1.2.2.tar.gz", hash = "sha256:47c2edf7c6738fafb49fd34290706d1a1a2f4d1c6df275526b62cbb4aa5393cc", size = 28883, upload-time = "2024-07-12T22:26:00.161Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/02/cc/b7e31358aac6ed1ef2bb790a9746ac2c69bcb3c8588b41616914eb106eaf/exceptiongroup-1.2.2-py3-none-any.whl", hash = "sha256:3111b9d131c238bec2f8f516e123e14ba243563fb135d3fe885990585aa7795b", size = 16453, upload-time = "2024-07-12T22:25:58.476Z" },
-]
-
-[[package]]
-name = "expandvars"
-version = "1.1.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/9c/64/a9d8ea289d663a44b346203a24bf798507463db1e76679eaa72ee6de1c7a/expandvars-1.1.2.tar.gz", hash = "sha256:6c5822b7b756a99a356b915dd1267f52ab8a4efaa135963bd7f4bd5d368f71d7", size = 70842, upload-time = "2025-09-12T10:55:20.929Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/e6/79c43f7a55264e479a9fbf21ddba6a73530b3ea8439a8bb7fa5a281721af/expandvars-1.1.2-py3-none-any.whl", hash = "sha256:d1652fe4e61914f5b88ada93aaedb396446f55ae4621de45c8cb9f66e5712526", size = 7526, upload-time = "2025-09-12T10:55:18.779Z" },
 ]
 
 [[package]]
