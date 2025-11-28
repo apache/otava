@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import argparse
 import copy
 import logging
 import sys
@@ -22,14 +23,13 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-import configargparse as argparse
 import pytz
 from slack_sdk import WebClient
 
 from otava import config
 from otava.attributes import get_back_links
 from otava.bigquery import BigQuery, BigQueryError
-from otava.config import Config
+from otava.config import Config, ConfigError
 from otava.data_selector import DataSelector
 from otava.grafana import Annotation, Grafana, GrafanaError
 from otava.graphite import GraphiteError
@@ -514,13 +514,10 @@ def analysis_options_from_args(args: argparse.Namespace) -> AnalysisOptions:
     return conf
 
 
-def create_otava_cli_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Hunts performance regressions in Fallout results",
-        parents=[config.create_config_parser()],
-        config_file_parser_class=config.NestedYAMLConfigFileParser,
-        allow_abbrev=False,  # required for correct parsing of nested values from config file
-    )
+def main():
+    logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
+
+    parser = argparse.ArgumentParser(description="Change Detection for Continuous Performance Engineering")
 
     subparsers = parser.add_subparsers(dest="command")
     list_tests_parser = subparsers.add_parser("list-tests", help="list available tests")
@@ -595,17 +592,22 @@ def create_otava_cli_parser() -> argparse.ArgumentParser:
         "validate", help="validates the tests and metrics defined in the configuration"
     )
 
-    return parser
+    # Parse arguments first, before loading config
+    args = parser.parse_args()
 
+    # If no command provided, just print usage and exit (no config needed)
+    if args.command is None:
+        parser.print_usage()
+        return
 
-def script_main(conf: Config = None, args: List[str] = None):
-    logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
-    parser = create_otava_cli_parser()
+    # Now load the config only when we actually need it
+    try:
+        conf = config.load_config()
+    except ConfigError as err:
+        logging.error(err.message)
+        exit(1)
 
     try:
-        args, _ = parser.parse_known_args(args=args)
-        if conf is None:
-            conf = config.load_config_from_parser_args(args)
         otava = Otava(conf)
 
         if args.command == "list-groups":
@@ -728,10 +730,6 @@ def script_main(conf: Config = None, args: List[str] = None):
     except NotificationError as err:
         logging.error(err.message)
         exit(1)
-
-
-def main():
-    script_main()
 
 
 if __name__ == "__main__":

@@ -15,25 +15,34 @@
 # specific language governing permissions and limitations
 # under the License.
 
-slack:
-  token: config_slack_token
-
+# External systems connectors configuration:
 graphite:
-  url: config_graphite_url
+  url: ${GRAPHITE_ADDRESS}
 
 grafana:
-  url: config_grafana_url
-  user: config_grafana_user
-  password: config_grafana_password
+  url: ${GRAFANA_ADDRESS}
+  user: ${GRAFANA_USER}
+  password: ${GRAFANA_PASSWORD}
 
-bigquery:
-  project_id: config_bigquery_project_id
-  dataset: config_bigquery_dataset
-  credentials: config_bigquery_credentials
+slack:
+  token: ${SLACK_BOT_TOKEN}
 
-postgres:
-  hostname: config_postgres_hostname
-  port: 1111
-  username: config_postgres_username
-  password: config_postgres_password
-  database: config_postgres_database
+# Templates define common bits shared between test definitions:
+templates:
+
+# Define your tests here:
+tests:
+  local.sample:
+    type: csv
+    file: tests/resources/sample.csv
+    time_column: time
+    metrics: [metric1, metric2]
+    attributes: [commit]
+    csv_options:
+      delimiter: ','
+      quote_char: "'"
+
+
+test_groups:
+  local:
+    - local.sample

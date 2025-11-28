@@ -28,25 +28,9 @@ from otava.test_config import BigQueryTestConfig
 
 @dataclass
 class BigQueryConfig:
-    NAME = "bigquery"
-
     project_id: str
     dataset: str
     credentials: str
-
-    @staticmethod
-    def add_parser_args(arg_group):
-        arg_group.add_argument("--bigquery-project-id", help="BigQuery project ID", env_var="BIGQUERY_PROJECT_ID")
-        arg_group.add_argument("--bigquery-dataset", help="BigQuery dataset", env_var="BIGQUERY_DATASET")
-        arg_group.add_argument("--bigquery-credentials", help="BigQuery credentials file", env_var="BIGQUERY_VAULT_SECRET")
-
-    @staticmethod
-    def from_parser_args(args):
-        return BigQueryConfig(
-            project_id=getattr(args, 'bigquery_project_id', None),
-            dataset=getattr(args, 'bigquery_dataset', None),
-            credentials=getattr(args, 'bigquery_credentials', None)
-        )
 
 
 @dataclass
