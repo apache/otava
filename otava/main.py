@@ -526,7 +526,7 @@ def main():
 def script_main(conf: Config, args: List[str] = None):
     logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 
-    parser = argparse.ArgumentParser(description="Hunts performance regressions in Fallout results")
+    parser = argparse.ArgumentParser(description="Change Detection for Continuous Performance Engineering")
 
     subparsers = parser.add_subparsers(dest="command")
     list_tests_parser = subparsers.add_parser("list-tests", help="list available tests")
