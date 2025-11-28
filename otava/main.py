@@ -518,7 +518,6 @@ def create_otava_cli_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Hunts performance regressions in Fallout results",
         parents=[config.create_config_parser()],
-        config_file_parser_class=config.NestedYAMLConfigFileParser,
         allow_abbrev=False,  # required for correct parsing of nested values from config file
     )
 

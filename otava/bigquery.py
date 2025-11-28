@@ -28,8 +28,6 @@ from otava.test_config import BigQueryTestConfig
 
 @dataclass
 class BigQueryConfig:
-    NAME = "bigquery"
-
     project_id: str
     dataset: str
     credentials: str
