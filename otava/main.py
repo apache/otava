@@ -515,15 +515,6 @@ def analysis_options_from_args(args: argparse.Namespace) -> AnalysisOptions:
 
 
 def main():
-    try:
-        conf = config.load_config()
-    except ConfigError as err:
-        logging.error(err.message)
-        exit(1)
-    script_main(conf)
-
-
-def script_main(conf: Config, args: List[str] = None):
     logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 
     parser = argparse.ArgumentParser(description="Change Detection for Continuous Performance Engineering")
@@ -601,8 +592,22 @@ def script_main(conf: Config, args: List[str] = None):
         "validate", help="validates the tests and metrics defined in the configuration"
     )
 
+    # Parse arguments first, before loading config
+    args = parser.parse_args()
+
+    # If no command provided, just print usage and exit (no config needed)
+    if args.command is None:
+        parser.print_usage()
+        return
+
+    # Now load the config only when we actually need it
     try:
-        args = parser.parse_args(args=args)
+        conf = config.load_config()
+    except ConfigError as err:
+        logging.error(err.message)
+        exit(1)
+
+    try:
         otava = Otava(conf)
 
         if args.command == "list-groups":
