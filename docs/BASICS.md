@@ -44,7 +44,7 @@ otava list-metrics <test>
 ### Example
 
 > [!TIP]
-> See [otava.yaml](../examples/csv/otava.yaml) for the full example configuration.
+> See [otava.yaml](../examples/csv/config/otava.yaml) for the full example configuration.
 
 ```
 $ otava list-metrics local.sample
@@ -78,7 +78,7 @@ The results are simply concatenated.
 ### Example
 
 > [!TIP]
-> See [otava.yaml](../examples/csv/otava.yaml) for the full
+> See [otava.yaml](../examples/csv/config/otava.yaml) for the full
 > example configuration and [local_samples.csv](../examples/csv/data/local_samples.csv)
 > for the data.
 

@@ -20,7 +20,7 @@
 # Importing results from PostgreSQL
 
 > [!TIP]
-> See [otava.yaml](../examples/postgresql/otava.yaml) for the full example configuration.
+> See [otava.yaml](../examples/postgresql/config/otava.yaml) for the full example configuration.
 
 ## PostgreSQL Connection
 The following block contains PostgreSQL connection details:
@@ -120,7 +120,7 @@ time                       experiment_id       commit      process_cumulative_ra
 
 ### Configuration
 
-See [otava.yaml](../examples/postgresql/otava.yaml) for the example configuration:
+See [otava.yaml](../examples/postgresql/config/otava.yaml) for the example configuration:
 * Block `postgres` contains connection details to the PostgreSQL database.
 * Block `templates` contains common pieces of configuration used by all tests - time column and a list of attributes and metrics.
 * Block `tests` contains configuration for the individual tests, specifically a query that fetches analyzed columns sorted by commit timestamp.

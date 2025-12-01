@@ -49,7 +49,7 @@ of the path instead of the path
 ## Example
 
 > [!TIP]
-> See [otava.yaml](../examples/graphite/otava.yaml) for the full Graphite & Grafana example.
+> See [otava.yaml](../examples/graphite/config/otava.yaml) for the full Graphite & Grafana example.
 
 Start docker-compose with Graphite in one tab:
 
