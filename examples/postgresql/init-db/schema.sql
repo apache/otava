@@ -75,12 +75,12 @@ INSERT INTO configs (id, benchmark, store, instance_type, cache) VALUES
 INSERT INTO experiments
     (id, ts, branch, commit, commit_ts, username, details_url)
 VALUES
-    ('aggregate-36e5ccd2', '2024-03-14 12:03:02+00', 'trunk', '36e5ccd2', '2024-03-13 10:03:02+00', 'ci', 'https://example.com/experiments/aggregate-36e5ccd2'),
-    ('aggregate-d5460f38', '2024-03-27 12:03:02+00', 'trunk', 'd5460f38', '2024-03-25 10:03:02+00', 'ci', 'https://example.com/experiments/aggregate-d5460f38'),
-    ('aggregate-bc9425cb', '2024-04-01 12:03:02+00', 'trunk', 'bc9425cb', '2024-04-02 10:03:02+00', 'ci', 'https://example.com/experiments/aggregate-bc9425cb'),
-    ('aggregate-14df1b11', '2024-04-07 12:03:02+00', 'trunk', '14df1b11', '2024-04-06 10:03:02+00', 'ci', 'https://example.com/experiments/aggregate-14df1b11'),
-    ('aggregate-ac40c0d8', '2024-04-14 12:03:02+00', 'trunk', 'ac40c0d8', '2024-04-13 10:03:02+00', 'ci', 'https://example.com/experiments/aggregate-ac40c0d8'),
-    ('aggregate-0af4ccbc', '2024-04-28 12:03:02+00', 'trunk', '0af4ccbc', '2024-04-27 10:03:02+00', 'ci', 'https://example.com/experiments/aggregate-0af4ccbc');
+    ('aggregate-36e5ccd2', '2025-03-14 12:03:02+00', 'trunk', '36e5ccd2', '2025-03-13 10:03:02+00', 'ci', 'https://example.com/experiments/aggregate-36e5ccd2'),
+    ('aggregate-d5460f38', '2025-03-27 12:03:02+00', 'trunk', 'd5460f38', '2025-03-25 10:03:02+00', 'ci', 'https://example.com/experiments/aggregate-d5460f38'),
+    ('aggregate-bc9425cb', '2025-04-01 12:03:02+00', 'trunk', 'bc9425cb', '2025-04-02 10:03:02+00', 'ci', 'https://example.com/experiments/aggregate-bc9425cb'),
+    ('aggregate-14df1b11', '2025-04-07 12:03:02+00', 'trunk', '14df1b11', '2025-04-06 10:03:02+00', 'ci', 'https://example.com/experiments/aggregate-14df1b11'),
+    ('aggregate-ac40c0d8', '2025-04-14 12:03:02+00', 'trunk', 'ac40c0d8', '2025-04-13 10:03:02+00', 'ci', 'https://example.com/experiments/aggregate-ac40c0d8'),
+    ('aggregate-0af4ccbc', '2025-04-28 12:03:02+00', 'trunk', '0af4ccbc', '2025-04-27 10:03:02+00', 'ci', 'https://example.com/experiments/aggregate-0af4ccbc');
 
 
 INSERT INTO results (experiment_id, config_id, process_cumulative_rate_mean, process_cumulative_rate_stderr, process_cumulative_rate_diff)

@@ -61,7 +61,7 @@ docker-compose -f examples/graphite/docker-compose.yaml up --force-recreate --al
 Run otava in another tab:
 
 ```bash
-docker-compose -f examples/graphite/docker-compose.yaml run otava otava analyze my-product.test --since=-10m --update-grafana
+docker-compose -f examples/graphite/docker-compose.yaml run otava analyze my-product.test --since=-10m --update-grafana
 ```
 
 Expected output:

@@ -20,7 +20,7 @@
 # Importing results from CSV
 
 > [!TIP]
-> See [otava.yaml](../examples/csv/otava.yaml) for the full example configuration.
+> See [otava.yaml](../examples/csv/config/otava.yaml) for the full example configuration.
 
 ## Tests
 

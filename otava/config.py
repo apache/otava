@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import configargparse
+from expandvars import expandvars
 from ruamel.yaml import YAML
 
 from otava.bigquery import BigQueryConfig
@@ -60,7 +61,7 @@ def load_tests(config: Dict, templates: Dict) -> Dict[str, TestConfig]:
         raise ConfigError("Property `tests` is not a dictionary")
 
     result = {}
-    for (test_name, test_config) in tests.items():
+    for test_name, test_config in tests.items():
         template_names = test_config.get("inherit", [])
         if not isinstance(template_names, List):
             template_names = [templates]
@@ -80,7 +81,7 @@ def load_test_groups(config: Dict, tests: Dict[str, TestConfig]) -> Dict[str, Li
         raise ConfigError("Property `test_groups` is not a dictionary")
 
     result = {}
-    for (group_name, test_names) in groups.items():
+    for group_name, test_names in groups.items():
         test_list = []
         if not isinstance(test_names, List):
             raise ConfigError(f"Test group {group_name} must be a list")
@@ -95,11 +96,32 @@ def load_test_groups(config: Dict, tests: Dict[str, TestConfig]) -> Dict[str, Li
     return result
 
 
+def expand_env_vars_recursive(obj):
+    """Recursively expand environment variables in all string values within a nested structure.
+
+    Raises ConfigError if any environment variables remain undefined after expansion.
+    """
+    if isinstance(obj, dict):
+        return {key: expand_env_vars_recursive(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [expand_env_vars_recursive(item) for item in obj]
+    elif isinstance(obj, str):
+        return expandvars(obj, nounset=True)
+    else:
+        return obj
+
+
 def load_config_from_parser_args(args: configargparse.Namespace) -> Config:
     config_file = getattr(args, "config_file", None)
     if config_file is not None:
         yaml = YAML(typ="safe")
         config = yaml.load(Path(config_file).read_text())
+
+        # Expand environment variables in the entire config after CLI argument replacement
+        try:
+            config = expand_env_vars_recursive(config)
+        except Exception as e:
+            raise ConfigError(f"Error expanding environment variables: {e}")
 
         templates = load_templates(config)
         tests = load_tests(config, templates)

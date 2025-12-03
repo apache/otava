@@ -17,7 +17,7 @@
 
 [project]
 name = "apache-otava"
-version = "0.6.1"
+version = "0.7.0"
 description = "Apache Otava (Incubating): Change Detection for Continuous Performance Engineering"
 readme = "README.md"
 requires-python = ">=3.8,<3.11"
@@ -49,6 +49,7 @@ dependencies = [
     "pg8000>=1.31.2",
     "configargparse>=1.7.1",
     "pydantic>=1.9.0,<1.10.0",
+    "expandvars>=0.12.0",
 ]
 
 [project.optional-dependencies]
