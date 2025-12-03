@@ -16,12 +16,14 @@
 # under the License.
 
 import logging
-from dataclasses import dataclass
+from dataclasses import asdict
 from datetime import datetime, timezone
 from itertools import groupby
 from typing import Any, Dict, Iterable, List, Optional
 
 import numpy as np
+from pydantic import BaseModel, validator
+from pydantic.dataclasses import dataclass
 
 from otava.analysis import (
     ComparativeStats,
@@ -32,55 +34,35 @@ from otava.analysis import (
 )
 
 
-@dataclass
-class AnalysisOptions:
-    window_len: int
-    max_pvalue: float
-    min_magnitude: float
-    orig_edivisive: bool
-
-    def __init__(self):
-        self.window_len = 50
-        self.max_pvalue = 0.001
-        self.min_magnitude = 0.0
-        self.orig_edivisive = False
+class AnalysisOptions(BaseModel):
+    window_len: int = 50
+    max_pvalue: float = 0.001
+    min_magnitude: float = 0.0
+    orig_edivisive: bool = False
 
     def to_json(self):
-        return {
-            "window_len": self.window_len,
-            "max_pvalue": self.max_pvalue,
-            "min_magnitude": self.min_magnitude,
-            "orig_edivisive": self.orig_edivisive
-        }
-
+        return self.dict()
 
 @dataclass
 class Metric:
-    direction: int
-    scale: float
-    unit: str
-
-    def __init__(self, direction: int = 1, scale: float = 1.0, unit: str = ""):
-        self.direction = direction
-        self.scale = scale
-        self.unit = ""
+    direction: int = 1
+    scale: float = 1.0
+    unit: str = ""
 
     def to_json(self):
-        return {
-            "direction": self.direction,
-            "scale": self.scale,
-            "unit": self.unit
-        }
+        #return self.dict()
+        return asdict(self)
 
-
-@dataclass
-class ChangePoint:
+class ChangePoint(BaseModel):
     """A change-point for a single metric"""
 
     metric: str
     index: int
     time: int
     stats: ComparativeStats
+
+    class Config:
+        arbitrary_types_allowed = True
 
     def forward_change_percent(self) -> float:
         return self.stats.forward_rel_change() * 100.0
@@ -136,8 +118,8 @@ class ChangePoint:
             }
 
 
-@dataclass
-class ChangePointGroup:
+
+class ChangePointGroup(BaseModel):
     """A group of change points on multiple metrics, at the same time"""
 
     index: int
@@ -145,8 +127,17 @@ class ChangePointGroup:
     prev_time: int
     attributes: Dict[str, str]
     prev_attributes: Dict[str, str]
-    changes: List[ChangePoint]
+    changes: List[Any]
 
+    class Config:
+        arbitrary_types_allowed = True
+
+    @validator('changes', pre=True)
+    def validate_changes(cls, v):
+        # 이미 리스트라면 그대로 반환
+        if isinstance(v, list):
+            return v
+        return [v]
     def to_json(self, rounded=False):
         return {
             "time": self.time,
@@ -490,11 +481,19 @@ class AnalyzedSeries:
         for metric, change_points in analyzed_json["change_points"].items():
             new_list = list()
             for cp in change_points:
-                stat = ComparativeStats(cp["mean_before"], cp["mean_after"], cp["stddev_before"],
-                                        cp["stddev_after"], cp["pvalue"])
+                stat = ComparativeStats(
+                    mean_1 = cp["mean_before"],
+                    mean_2 = cp["mean_after"],
+                    std_1 = cp["stddev_before"],
+                    std_2 = cp["stddev_after"],
+                    pvalue = cp["pvalue"]
+                )
                 new_list.append(
                     ChangePoint(
-                        index=cp["index"], time=cp["time"], metric=cp["metric"], stats=stat
+                        index=cp["index"],
+                        time=cp["time"],
+                        metric=cp["metric"],
+                        stats=stat
                     )
                 )
             new_change_points[metric] = new_list
@@ -503,11 +502,19 @@ class AnalyzedSeries:
         for metric, change_points in analyzed_json.get("weak_change_points", {}).items():
             new_list = list()
             for cp in change_points:
-                stat = ComparativeStats(cp["mean_before"], cp["mean_after"], cp["stddev_before"],
-                                        cp["stddev_after"], cp["pvalue"])
+                stat = ComparativeStats(
+                    mean_1 = cp["mean_before"],
+                    mean_2 = cp["mean_after"],
+                    std_1 = cp["stddev_before"],
+                    std_2 = cp["stddev_after"],
+                    pvalue = cp["pvalue"]
+                )
                 new_list.append(
                     ChangePoint(
-                        index=cp["index"], time=cp["time"], metric=cp["metric"], stats=stat
+                        index=cp["index"],
+                        time=cp["time"],
+                        metric=cp["metric"],
+                        stats=stat
                     )
                 )
             new_weak_change_points[metric] = new_list
@@ -522,14 +529,14 @@ class AnalyzedSeries:
         return analyzed_series
 
 
-@dataclass
-class SeriesComparison:
+class SeriesComparison(BaseModel):
     series_1: AnalyzedSeries
     series_2: AnalyzedSeries
     index_1: int
     index_2: int
     stats: Dict[str, ComparativeStats]  # keys: metric name
-
+    class Config:
+        arbitrary_types_allowed = True
 
 def compare(
     series_1: AnalyzedSeries,
@@ -557,4 +564,10 @@ def compare(
 
         stats[metric] = tester.compare(np.array(data_1), np.array(data_2))
 
-    return SeriesComparison(series_1, series_2, index_1, index_2, stats)
+    return SeriesComparison(
+        series_1=series_1,
+        series_2=series_2,
+        index_1=index_1,
+        index_2=index_2,
+        stats=stats
+    )

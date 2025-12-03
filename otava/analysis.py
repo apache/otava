@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from typing import Iterable, List, Reversible
 
 import numpy as np
+from pydantic import BaseModel
 from scipy.stats import ttest_ind_from_stats
 from signal_processing_algorithms.e_divisive import EDivisive
 from signal_processing_algorithms.e_divisive.base import SignificanceTester
@@ -29,8 +30,7 @@ from signal_processing_algorithms.e_divisive.significance_test import (
 )
 
 
-@dataclass
-class ComparativeStats:
+class ComparativeStats(BaseModel):
     """
     Keeps statistics of two series of data and the probability both series
     have the same distribution.
@@ -170,8 +170,13 @@ class TTestSignificanceTester(ExtendedSignificanceTester):
             )
         else:
             p = 1.0
-        return ComparativeStats(mean_l, mean_r, std_l, std_r, p)
-
+        return ComparativeStats(
+            mean_1=mean_l,
+            mean_2=mean_r,
+            std_1=std_l,
+            std_2=std_r,
+            pvalue=p
+        )
 
 def fill_missing(data: List[float]):
     """
