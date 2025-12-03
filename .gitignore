@@ -32,3 +32,4 @@ venv/
 .venv/
 .tox/
 .docker/
+.DS_Store

@@ -16,12 +16,14 @@
 # under the License.
 
 import logging
+from dataclasses import asdict
 from datetime import datetime, timezone
 from itertools import groupby
 from typing import Any, Dict, Iterable, List, Optional
 
 import numpy as np
 from pydantic import BaseModel, validator
+from pydantic.dataclasses import dataclass
 
 from otava.analysis import (
     ComparativeStats,
@@ -41,15 +43,15 @@ class AnalysisOptions(BaseModel):
     def to_json(self):
         return self.dict()
 
-
-class Metric(BaseModel):
+@dataclass
+class Metric:
     direction: int = 1
     scale: float = 1.0
     unit: str = ""
 
     def to_json(self):
-        return self.dict()
-
+        #return self.dict()
+        return asdict(self)
 
 class ChangePoint(BaseModel):
     """A change-point for a single metric"""
@@ -125,7 +127,7 @@ class ChangePointGroup(BaseModel):
     prev_time: int
     attributes: Dict[str, str]
     prev_attributes: Dict[str, str]
-    changes: List[ChangePoint]
+    changes: List[Any]
 
     class Config:
         arbitrary_types_allowed = True

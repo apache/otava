@@ -31,7 +31,7 @@ def test_change_point_detection():
         "test",
         branch=None,
         time=time,
-        metrics={"series1": Metric(direction=1, scale=1.0), "series2": Metric(direction=1, scale=1.0)},
+        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
         data={"series1": series_1, "series2": series_2},
         attributes={},
     )
@@ -52,7 +52,7 @@ def test_change_point_min_magnitude():
         "test",
         branch=None,
         time=time,
-        metrics={"series1": Metric(direction=1, scale=1.0), "series2": Metric(direction=1, scale=1.0)},
+        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
         data={"series1": series_1, "series2": series_2},
         attributes={},
     )
@@ -80,7 +80,7 @@ def test_div_by_zero():
         "test",
         branch=None,
         time=time,
-        metrics={"series1": Metric(direction=1, scale=1.0)},
+        metrics={"series1": Metric(1, 1.0)},
         data={"series1": series_1},
         attributes={},
     )
@@ -103,7 +103,7 @@ def test_change_point_detection_performance():
             "test",
             branch=None,
             time=list(timestamps),
-            metrics={"series": Metric(direction=1, scale=1.0)},
+            metrics={"series": Metric(1, 1.0)},
             data={"series": series},
             attributes={},
         )
@@ -120,7 +120,7 @@ def test_get_stable_range():
         "test",
         branch=None,
         time=time,
-        metrics={"series1": Metric(direction=1, scale=1.0), "series2": Metric(direction=1, scale=1.0)},
+        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
         data={"series1": series_1, "series2": series_2},
         attributes={},
     ).analyze()
@@ -202,7 +202,7 @@ def test_incremental_otava():
         "test",
         branch=None,
         time=time,
-        metrics={"series1": Metric(direction=1, scale=1.0), "series2": Metric(direction=1, scale=1.0)},
+        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
         data={"series1": series_1, "series2": series_2},
         attributes={},
     )
@@ -232,7 +232,7 @@ def test_validate():
         "test",
         branch=None,
         time=time,
-        metrics={"series1": Metric(direction=1, scale=1.0), "series2": Metric(direction=1, scale=1.0)},
+        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
         data={"series1": series_1, "series2": series_2},
         attributes={},
     )
@@ -240,7 +240,7 @@ def test_validate():
         "test",
         branch=None,
         time=time,
-        metrics={"series1": Metric(direction=1, scale=1.0), "series2": Metric(direction=1, scale=1.0)},
+        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
         data={"series1": series_1, "series2": series_2},
         attributes={},
     )
@@ -271,7 +271,7 @@ def test_can_append():
         "test",
         branch=None,
         time=time,
-        metrics={"series1": Metric(direction=1, scale=1.0), "series2": Metric(direction=1, scale=1.0)},
+        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
         data={"series1": series_1, "series2": series_2},
         attributes={},
     )
@@ -294,7 +294,7 @@ def test_orig_edivisive():
         "test",
         branch=None,
         time=time,
-        metrics={"series1": Metric(direction=1, scale=1.0), "series2": Metric(direction=1, scale=1.0)},
+        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
         data={"series1": series_1, "series2": series_2},
         attributes={},
     )
