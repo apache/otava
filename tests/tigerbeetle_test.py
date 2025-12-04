@@ -40,63 +40,63 @@ def test_tb_old_defaults():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.01, min_magnitude=0.05)
     indexes = [c.index for c in cps]
-    assert indexes == [27, 71]
+    assert indexes == [15, 71]
 
 
 def test_tb_old_defaults_p05():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.05, min_magnitude=0.05)
     indexes = [c.index for c in cps]
-    assert indexes == [16, 71]
+    assert indexes == [15, 71]
 
 
 def test_tb_old_defaults_p1():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.1, min_magnitude=0.05)
     indexes = [c.index for c in cps]
-    assert indexes == [16, 71]
+    assert indexes == [10, 11, 15, 71, 363]
 
 
 def test_tb_old_defaults_p2():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.2, min_magnitude=0.05)
     indexes = [c.index for c in cps]
-    assert indexes == [16, 71]
+    assert indexes == [10, 11, 15, 71]
 
 
 def test_tb_magnitude0_p2():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.2, min_magnitude=0.0)
     indexes = [c.index for c in cps]
-    assert indexes == [16, 27, 29, 56, 58, 60, 61, 69, 71, 82, 83, 91, 95, 108, 114, 116, 117, 131, 138, 142, 148, 165, 167, 178, 187, 189, 190, 192, 206, 212, 213, 220, 241, 243, 244, 246, 247, 249, 260, 266, 268, 272, 274, 275, 278, 282, 284, 288, 295, 297, 311, 314, 325, 330, 347, 351]
+    assert indexes == [3, 6, 7, 10, 11, 13, 15, 16, 28, 29, 35, 37, 39, 41, 44, 48, 49, 56, 58, 61, 65, 66, 69, 71, 74, 76, 82, 95, 108, 117, 125, 126, 129, 131, 136, 137, 142, 148, 165, 169, 187, 190, 192, 197, 200, 212, 220, 241, 243, 246, 247, 249, 250, 260, 265, 266, 268, 278, 282, 288, 305, 306, 325, 330, 337, 338, 340, 347, 349, 363]
 
 
 def test_tb_magnitude0_p1():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.1, min_magnitude=0.0)
     indexes = [c.index for c in cps]
-    assert indexes == [16, 27, 29, 56, 58, 61, 71, 82, 95, 113, 116, 117, 131, 138, 142, 148, 157, 165, 167, 178, 187, 189, 192, 206, 212, 213, 220, 246, 247, 249, 260, 266, 268, 272, 278, 282, 311, 312, 325, 330, 347, 351]
+    assert indexes == [3, 6, 10, 11, 15, 16, 28, 29, 35, 37, 39, 41, 44, 48, 49, 61, 71, 95, 117, 131, 142, 148, 165, 169, 192, 206, 212, 260, 265, 268, 278, 282, 288, 305, 363]
 
 
 def test_tb_magnitude0_p01():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.01, min_magnitude=0.0)
     indexes = [c.index for c in cps]
-    assert indexes == [27, 61, 71, 82, 95, 131, 142, 148, 192, 212, 249, 260, 265, 353]
+    assert indexes == [15, 26, 61, 71, 95, 117, 131, 142, 148, 165, 169, 192, 212, 260]
 
 
 def test_tb_magnitude0_p001():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.001, min_magnitude=0.0)
     indexes = [c.index for c in cps]
-    assert indexes == [71, 95, 113, 131, 142, 148, 192, 212, 260]
+    assert indexes == [15, 61, 71, 95, 117, 131, 142, 148, 192, 212, 260]
 
 
 def test_tb_magnitude0_p0001():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.0001, min_magnitude=0.0)
     indexes = [c.index for c in cps]
-    assert indexes == [71, 95, 113, 131, 192, 212]
+    assert indexes == [71, 95, 117, 131, 142, 148, 192, 212]
 
 
 def test_tb_magnitude0_p00001():

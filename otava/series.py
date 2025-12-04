@@ -24,12 +24,13 @@ from typing import Any, Dict, Iterable, List, Optional
 import numpy as np
 
 from otava.analysis import (
-    ComparativeStats,
     TTestSignificanceTester,
+    TTestStats,
     compute_change_points,
     compute_change_points_orig,
     fill_missing,
 )
+from otava.change_point_divisive.base import ChangePoint as _ChangePoint
 
 
 @dataclass
@@ -74,13 +75,10 @@ class Metric:
 
 
 @dataclass
-class ChangePoint:
+class ChangePoint(_ChangePoint[TTestStats]):
     """A change-point for a single metric"""
-
     metric: str
-    index: int
     time: int
-    stats: ComparativeStats
 
     def forward_change_percent(self) -> float:
         return self.stats.forward_rel_change() * 100.0
@@ -264,13 +262,13 @@ class AnalyzedSeries:
                 for c in weak_cps:
                     weak_change_points[metric].append(
                         ChangePoint(
-                            index=c.index, time=series.time[c.index], metric=metric, stats=c.stats
+                            index=c.index, qhat=0.0, time=series.time[c.index], metric=metric, stats=c.stats
                         )
                     )
                 for c in change_points:
                     result[metric].append(
                         ChangePoint(
-                            index=c.index, time=series.time[c.index], metric=metric, stats=c.stats
+                            index=c.index, qhat=0.0, time=series.time[c.index], metric=metric, stats=c.stats
                         )
                     )
         # If you got an exception and are wondering about the next row...
@@ -387,14 +385,14 @@ class AnalyzedSeries:
             for c in change_points:
                 result[metric].append(
                     ChangePoint(
-                        index=c.index, time=self.__series.time[c.index], metric=metric, stats=c.stats
+                        index=c.index, qhat=0.0, time=self.__series.time[c.index], metric=metric, stats=c.stats
                     )
                 )
             weak_change_points[metric] = []
             for c in weak_cps:
                 weak_change_points[metric].append(
                     ChangePoint(
-                        index=c.index, time=self.__series.time[c.index], metric=metric, stats=c.stats
+                        index=c.index, qhat=0.0, time=self.__series.time[c.index], metric=metric, stats=c.stats
                     )
                 )
             fill_missing(self.__series.data[metric])
@@ -490,8 +488,13 @@ class AnalyzedSeries:
         for metric, change_points in analyzed_json["change_points"].items():
             new_list = list()
             for cp in change_points:
-                stat = ComparativeStats(cp["mean_before"], cp["mean_after"], cp["stddev_before"],
-                                        cp["stddev_after"], cp["pvalue"])
+                stat = TTestStats(
+                    mean_1=cp["mean_before"],
+                    mean_2=cp["mean_after"],
+                    std_1=cp["stddev_before"],
+                    std_2=cp["stddev_after"],
+                    pvalue=cp["pvalue"],
+                )
                 new_list.append(
                     ChangePoint(
                         index=cp["index"], time=cp["time"], metric=cp["metric"], stats=stat
@@ -503,8 +506,13 @@ class AnalyzedSeries:
         for metric, change_points in analyzed_json.get("weak_change_points", {}).items():
             new_list = list()
             for cp in change_points:
-                stat = ComparativeStats(cp["mean_before"], cp["mean_after"], cp["stddev_before"],
-                                        cp["stddev_after"], cp["pvalue"])
+                stat = TTestStats(
+                    mean_1=cp["mean_before"],
+                    mean_2=cp["mean_after"],
+                    std_1=cp["stddev_before"],
+                    std_2=cp["stddev_after"],
+                    pvalue=cp["pvalue"],
+                )
                 new_list.append(
                     ChangePoint(
                         index=cp["index"], time=cp["time"], metric=cp["metric"], stats=stat
@@ -528,7 +536,7 @@ class SeriesComparison:
     series_2: AnalyzedSeries
     index_1: int
     index_2: int
-    stats: Dict[str, ComparativeStats]  # keys: metric name
+    stats: Dict[str, TTestStats]  # keys: metric name
 
 
 def compare(
