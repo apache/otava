@@ -20,7 +20,7 @@
 # Importing results from Graphite
 
 > [!TIP]
-> See [otava.yaml](../examples/graphite/otava.yaml) for the full example configuration.
+> See [otava.yaml](../examples/graphite/config/otava.yaml) for the full example configuration.
 
 ## Graphite and Grafana Connection
 
