@@ -79,7 +79,13 @@ time                       experiment_id       commit      config_id    process_
 2025-04-27 10:03:02 +0000  aggregate-0af4ccbc  0af4ccbc            1                           56950                              2052                           13532
         """
         )
-        assert _remove_trailing_whitespaces(proc.stdout) == expected_output.rstrip("\n")
+
+        # Python 3.9 complains about importlib.metadata.packages_distributions...
+        output = proc.stdout.replace(
+            "An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'\n",
+            "",
+        )
+        assert _remove_trailing_whitespaces(output) == expected_output.rstrip("\n")
 
         # Verify the DB was updated with the detected change.
         # Query the updated change metric at the detected change point.
@@ -174,7 +180,12 @@ def test_analyze_and_update_postgres():
     2025-04-27 10:03:02 +0000  aggregate-0af4ccbc  0af4ccbc            1                           56950                              2052                           13532
             """
         )
-        assert _remove_trailing_whitespaces(proc.stdout) == expected_output.rstrip("\n")
+        # Python 3.9 complains about importlib.metadata.packages_distributions...
+        output = proc.stdout.replace(
+            "An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'\n",
+            "",
+        )
+        assert _remove_trailing_whitespaces(output) == expected_output.rstrip("\n")
 
         # Verify the DB was updated with the detected change.
         # Query the updated change metric at the detected change point.
@@ -268,7 +279,12 @@ def test_regressions():
             Regressions in 1 test found
             """
         )
-        assert proc.stdout == expected_output
+        # Python 3.9 complains about importlib.metadata.packages_distributions...
+        output = proc.stdout.replace(
+            "An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'\n",
+            "",
+        )
+        assert output == expected_output
 
         # Verify the DB was NOT updated since --update-postgres was not specified
         query_proc = subprocess.run(
