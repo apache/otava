@@ -17,10 +17,10 @@
 
 [project]
 name = "apache-otava"
-version = "0.7.0"
+version = "1.0.0"
 description = "Apache Otava (Incubating): Change Detection for Continuous Performance Engineering"
 readme = "README.md"
-requires-python = ">=3.8,<3.11"
+requires-python = ">=3.10,<3.15"
 license = { text = "Apache-2.0" }
 authors = [
     { name = "Apache Otava (Incubating)", email = "dev@otava.apache.org" }
@@ -30,38 +30,45 @@ maintainers = [
 ]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "dateparser>=1.0.0",
-    "numpy==1.24.*",
-    "python-dateutil>=2.8.1",
-    "scipy==1.10.*",
-    "ruamel.yaml==0.17.21",
-    "requests>=2.25.1",
-    "pystache>=0.6.0",
-    "tabulate>=0.8.7",
-    "validators>=0.18.2",
-    "slack-sdk>=3.4.2",
-    "google-cloud-bigquery>=3.25.0",
-    "pg8000>=1.31.2",
+    "numpy==2.2.0.*",
+    "python-dateutil>=2.9.0",
+    "ruamel.yaml==0.18.16",
+    "requests>=2.32.5",
+    "pystache>=0.6.8",
+    "tabulate>=0.9.0",
+    "validators>=0.35.0",
+    "slack-sdk>=3.39.0",
+    "google-cloud-bigquery>=3.38.0",
+    "pg8000>=1.31.5",
     "configargparse>=1.7.1",
     "expandvars>=0.12.0",
+
+    # For Python 3.10: last series that supports it
+    "scipy>=1.15,<1.16; python_version < '3.11'",
+
+    # For Python 3.11–3.14: newer series
+    "scipy>=1.16,<1.17; python_version >= '3.11'",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=6.2.2",
-    "pytest-benchmark>=4.0.0",
-    "pytz==2021.1",
-    "tox==3.25",
-    "flake8>=4.0.1",
-    "autoflake>=1.4",
-    "isort>=5.10.1",
-    "ruff>=0.6.9",
-    "pre-commit==3.5.0",
+    "pytest>=9.0.1",
+    "pytest-benchmark>=5.2.3",
+    "pytz==2025.2",
+    "tox==4.32.0",
+    "flake8>=7.3.0",
+    "autoflake>=2.3.1",
+    "isort>=7.0.0",
+    "ruff>=0.14.8",
+    "pre-commit==4.5.0",
 ]
 
 [project.scripts]

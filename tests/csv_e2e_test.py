@@ -121,16 +121,7 @@ def test_analyze_csv():
                 f"Stderr:\n{proc.stderr}\n"
             )
 
-        # Python 3.9 and earlier does not print it for some reason...
-        output_without_log = proc.stdout.replace(
-            "Computing change points for test local.sample...", ""
-        )
-        # Python 3.9 complains about importlib.metadata.packages_distributions...
-        output_without_log = output_without_log.replace(
-            "An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'",
-            "",
-        )
-        assert _remove_trailing_whitespaces(output_without_log) == expected_output.rstrip("\n")
+        assert _remove_trailing_whitespaces(proc.stdout) == expected_output.rstrip("\n")
 
 
 def test_regressions_csv():
@@ -214,16 +205,7 @@ def test_regressions_csv():
                 f"Stderr:\n{proc.stderr}\n"
             )
 
-        # Python 3.9 and earlier does not print it for some reason...
-        output_without_log = proc.stdout.replace(
-            "Computing change points for test local.sample...", ""
-        )
-        # Python 3.9 complains about importlib.metadata.packages_distributions...
-        output_without_log = output_without_log.replace(
-            "An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'",
-            "",
-        )
-        assert _remove_trailing_whitespaces(output_without_log) == expected_output.rstrip("\n")
+        assert _remove_trailing_whitespaces(proc.stdout) == expected_output.rstrip("\n")
 
 
 def _remove_trailing_whitespaces(s: str) -> str:
