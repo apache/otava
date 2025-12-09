@@ -34,9 +34,9 @@ integrated with a pull request.
 
 See the documentation in https://otava.apache.org/docs/overview/.
 
-## Python Versions
+## Supported Python Versions
 
-Apache Otava is tested against Python 3.8, 3.9, and 3.10.
+Apache Otava is tested against Python 3.10, 3.11, 3.12, 3.13, and 3.14.
 
 
 ## License

@@ -37,11 +37,11 @@ COPY . /build
 RUN uv build --wheel
 
 # Runtime stage - install and run the package
-FROM python:3.10-slim-bookworm AS runtime
+FROM python:3.14.1-slim AS runtime
 
 # So that STDOUT/STDERR is printed
 ENV PYTHONUNBUFFERED="1"
-ARG UV_VERSION=0.8.3
+ARG UV_VERSION=0.9.16
 ENV UV_VERSION=${UV_VERSION}
 
 # We create the default user and group to run unprivileged
