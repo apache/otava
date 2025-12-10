@@ -16,15 +16,14 @@
 # under the License.
 
 import os
-import shutil
-import socket
 import subprocess
 import textwrap
-import time
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Callable
 
 import pytest
+from e2e_test_utils import _remove_trailing_whitespaces, container
 
 
 def test_analyze():
@@ -36,7 +35,10 @@ def test_analyze():
     container, and compares stdout to the expected output (seeded data uses
     deterministic 2025 timestamps).
     """
-    with postgres_container() as (postgres_container_id, host_port):
+    username = "exampleuser"
+    password = "examplepassword"
+    db = "benchmark_results"
+    with postgres_container(username, password, db) as (postgres_container_id, host_port):
         # Run the Otava analysis
         proc = subprocess.run(
             ["uv", "run", "otava", "analyze", "aggregate_mem"],
@@ -48,9 +50,9 @@ def test_analyze():
                 OTAVA_CONFIG=Path("examples/postgresql/config/otava.yaml"),
                 POSTGRES_HOSTNAME="localhost",
                 POSTGRES_PORT=host_port,
-                POSTGRES_USERNAME="exampleuser",
-                POSTGRES_PASSWORD="examplepassword",
-                POSTGRES_DATABASE="benchmark_results",
+                POSTGRES_USERNAME=username,
+                POSTGRES_PASSWORD=password,
+                POSTGRES_DATABASE=db,
                 BRANCH="trunk",
             ),
         )
@@ -131,7 +133,11 @@ def test_analyze_and_update_postgres():
     container, and compares stdout to the expected output (seeded data uses
     deterministic 2025 timestamps).
     """
-    with postgres_container() as (postgres_container_id, host_port):
+
+    username = "exampleuser"
+    password = "examplepassword"
+    db = "benchmark_results"
+    with postgres_container(username, password, db) as (postgres_container_id, host_port):
         # Run the Otava analysis
         proc = subprocess.run(
             ["uv", "run", "otava", "analyze", "aggregate_mem", "--update-postgres"],
@@ -143,9 +149,9 @@ def test_analyze_and_update_postgres():
                 OTAVA_CONFIG=Path("examples/postgresql/config/otava.yaml"),
                 POSTGRES_HOSTNAME="localhost",
                 POSTGRES_PORT=host_port,
-                POSTGRES_USERNAME="exampleuser",
-                POSTGRES_PASSWORD="examplepassword",
-                POSTGRES_DATABASE="benchmark_results",
+                POSTGRES_USERNAME=username,
+                POSTGRES_PASSWORD=password,
+                POSTGRES_DATABASE=db,
                 BRANCH="trunk",
             ),
         )
@@ -233,7 +239,10 @@ def test_regressions():
     waits for Postgres to be ready, runs the otava regressions command,
     and compares stdout to the expected output.
     """
-    with postgres_container() as (postgres_container_id, host_port):
+    username = "exampleuser"
+    password = "examplepassword"
+    db = "benchmark_results"
+    with postgres_container(username, password, db) as (postgres_container_id, host_port):
         # Run the Otava regressions command
         proc = subprocess.run(
             ["uv", "run", "otava", "regressions", "aggregate_mem"],
@@ -245,9 +254,9 @@ def test_regressions():
                 OTAVA_CONFIG=Path("examples/postgresql/config/otava.yaml"),
                 POSTGRES_HOSTNAME="localhost",
                 POSTGRES_PORT=host_port,
-                POSTGRES_USERNAME="exampleuser",
-                POSTGRES_PASSWORD="examplepassword",
-                POSTGRES_DATABASE="benchmark_results",
+                POSTGRES_USERNAME=username,
+                POSTGRES_PASSWORD=password,
+                POSTGRES_DATABASE=db,
                 BRANCH="trunk",
             ),
         )
@@ -310,106 +319,48 @@ def test_regressions():
         assert forward_change == backward_change == p_value == ""
 
 
+def _postgres_readiness_check_f(
+    username: str, database: str
+) -> Callable[[str, dict[int, int]], bool]:
+    """Check if PostgreSQL is ready to accept connections."""
+
+    def _inner(
+        container_id: str,
+        port_map: dict[int, int],
+    ) -> bool:
+        cmd = [
+            "docker",
+            "exec",
+            container_id,
+            "pg_isready",
+            "-U",
+            username,
+            "-d",
+            database,
+        ]
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        return proc.returncode == 0
+
+    return _inner
+
+
 @contextmanager
-def postgres_container():
+def postgres_container(username, password, database):
     """
     Context manager for running a PostgreSQL container.
     Yields the container ID and ensures cleanup on exit.
     """
-    if not shutil.which("docker"):
-        pytest.fail("docker is not available on PATH")
-
-    container_id = None
-    try:
-        # Start postgres container
-        cmd = [
-            "docker",
-            "run",
-            "-d",
-            "--env",
-            "POSTGRES_USER=exampleuser",
-            "--env",
-            "POSTGRES_PASSWORD=examplepassword",
-            "--env",
-            "POSTGRES_DB=benchmark_results",
-            "--volume",
-            f"{Path('examples/postgresql/init-db').resolve()}:/docker-entrypoint-initdb.d",
-            "--publish",
-            "5432",
-            "postgres:latest",
-        ]
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        if proc.returncode != 0:
-            pytest.fail(
-                "Docker command returned non-zero exit code.\n\n"
-                f"Command: {cmd!r}\n"
-                f"Exit code: {proc.returncode}\n\n"
-                f"Stdout:\n{proc.stdout}\n\n"
-                f"Stderr:\n{proc.stderr}\n"
-            )
-        container_id = proc.stdout.strip()
-        # Determine the randomly assigned host port for 5432/tcp
-        inspect_cmd = [
-            "docker",
-            "inspect",
-            "-f",
-            '{{ (index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort }}',
-            container_id,
-        ]
-        inspect_proc = subprocess.run(inspect_cmd, capture_output=True, text=True, timeout=60)
-        if inspect_proc.returncode != 0:
-            pytest.fail(
-                "Docker inspect returned non-zero exit code.\n\n"
-                f"Command: {inspect_cmd!r}\n"
-                f"Exit code: {inspect_proc.returncode}\n\n"
-                f"Stdout:\n{inspect_proc.stdout}\n\n"
-                f"Stderr:\n{inspect_proc.stderr}\n"
-            )
-        host_port = inspect_proc.stdout.strip()
-
-        # Wait until Postgres responds
-        deadline = time.time() + 60
-        ready = False
-        while time.time() < deadline:
-            # First ensure the assigned host port accepts TCP connections
-            try:
-                with socket.create_connection(("localhost", int(host_port)), timeout=1):
-                    port_ready = True
-            except OSError:
-                port_ready = False
-                continue
-
-            # Then check pg_isready inside the container
-            cmd = [
-                "docker",
-                "exec",
-                container_id,
-                "pg_isready",
-                "-U",
-                "exampleuser",
-                "-d",
-                "benchmark_results",
-            ]
-            proc = subprocess.run(cmd, capture_output=True, text=True)
-            if port_ready and proc.returncode == 0:
-                ready = True
-                break
-            time.sleep(1)
-
-        if not ready:
-            pytest.fail("Postgres did not become ready within timeout.")
-
-        yield container_id, host_port
-    finally:
-        if container_id:
-            res = subprocess.run(
-                ["docker", "stop", container_id], capture_output=True, text=True, timeout=60
-            )
-            if res.returncode != 0:
-                pytest.fail(
-                    f"Docker command returned non-zero exit code: {res.returncode}\nStdout: {res.stdout}\nStderr: {res.stderr}"
-                )
-
-
-def _remove_trailing_whitespaces(s: str) -> str:
-    return "\n".join(line.rstrip() for line in s.splitlines())
+    with container(
+        "postgres:latest",
+        env={
+            "POSTGRES_USER": username,
+            "POSTGRES_PASSWORD": password,
+            "POSTGRES_DB": database,
+        },
+        ports=[5432],
+        volumes={
+            str(Path("examples/postgresql/init-db").resolve()): "/docker-entrypoint-initdb.d",
+        },
+        readiness_check=_postgres_readiness_check_f(username, database),
+    ) as (container_id, port_map):
+        yield container_id, str(port_map[5432])
