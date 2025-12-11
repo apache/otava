@@ -37,34 +37,39 @@ COPY . /build
 RUN uv build --wheel
 
 # Runtime stage - install and run the package
-FROM python:3.14.1-slim AS runtime
+FROM python:3.14.1-alpine AS runtime
 
 # So that STDOUT/STDERR is printed
 ENV PYTHONUNBUFFERED="1"
-ARG UV_VERSION=0.9.16
-ENV UV_VERSION=${UV_VERSION}
+
 
 # We create the default user and group to run unprivileged
 ENV OTAVA_HOME /srv/otava
 WORKDIR ${OTAVA_HOME}
 
-RUN groupadd --gid 8192 otava && \
-    useradd --uid 8192 --shell /bin/false --create-home --no-log-init --gid otava otava && \
+RUN addgroup -g 8192 otava && \
+    adduser -u 8192 -G otava -s /bin/false -D -H otava && \
     chown otava:otava ${OTAVA_HOME}
 
 
-# Install build dependencies needed for native extensions
-RUN apt-get update --assume-yes && \
-    apt-get install -o 'Dpkg::Options::=--force-confnew' -y --force-yes -q \
-    gcc \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy the wheel from builder stage
+# Copy uv from builder stage and the wheel
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /build/dist/*.whl /tmp/
 
-# Install the wheel using uv
-RUN pip install /tmp/apache_otava-*.whl && rm /tmp/apache_otava-*.whl
+# Install build dependencies, install the wheel, then remove build tools
+RUN apk add --no-cache --virtual .build-deps \
+    gcc \
+    g++ \
+    musl-dev \
+    python3-dev \
+    libffi-dev \
+    openblas-dev \
+    gfortran \
+    && apk add --no-cache libstdc++ openblas \
+    && uv pip install --system --no-cache /tmp/apache_otava-*.whl \
+    && rm /tmp/apache_otava-*.whl \
+    && apk del .build-deps \
+    && rm /usr/local/bin/uv
 
 # Switch to otava user
 USER otava
