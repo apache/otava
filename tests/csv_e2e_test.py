@@ -24,6 +24,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
+from e2e_test_utils import _remove_trailing_whitespaces
 
 
 def test_analyze_csv():
@@ -206,7 +207,3 @@ def test_regressions_csv():
             )
 
         assert _remove_trailing_whitespaces(proc.stdout) == expected_output.rstrip("\n")
-
-
-def _remove_trailing_whitespaces(s: str) -> str:
-    return "\n".join(line.rstrip() for line in s.splitlines()).strip()
