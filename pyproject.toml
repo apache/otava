@@ -84,6 +84,8 @@ Repository = "https://github.com/apache/otava"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# This piece of Python build magic invokes hatch_build.py that
+# generates PyPI project description from README.md and DISCLAIMER
 [tool.hatch.metadata.hooks.custom]
 
 [tool.hatch.build.targets.wheel]
