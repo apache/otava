@@ -191,6 +191,18 @@ class NestedYAMLConfigFileParser(configargparse.ConfigFileParser):
                 # Value must be cast to string here, so arg parser can cast from string to expected type later
                 flattened_dict[new_key] = str(value)
 
+    def get_syntax_description(self):
+        return ""
+
+
+def add_service_option_groups(parser) -> None:
+    """Add Graphite, Grafana, Slack, Postgres, and BigQuery option groups to a parser."""
+    GraphiteConfig.add_parser_args(parser.add_argument_group('Graphite Options', 'Options for Graphite configuration'))
+    GrafanaConfig.add_parser_args(parser.add_argument_group('Grafana Options', 'Options for Grafana configuration'))
+    SlackConfig.add_parser_args(parser.add_argument_group('Slack Options', 'Options for Slack configuration'))
+    PostgresConfig.add_parser_args(parser.add_argument_group('PostgreSQL Options', 'Options for PostgreSQL configuration'))
+    BigQueryConfig.add_parser_args(parser.add_argument_group('BigQuery Options', 'Options for BigQuery configuration'))
+
 
 def create_config_parser() -> configargparse.ArgumentParser:
     parser = configargparse.ArgumentParser(
@@ -203,11 +215,7 @@ def create_config_parser() -> configargparse.ArgumentParser:
         allow_abbrev=False,  # required for correct parsing of nested values from config file
     )
     parser.add_argument('--config-file', is_config_file=True, help='Otava config file path', env_var="OTAVA_CONFIG")
-    GraphiteConfig.add_parser_args(parser.add_argument_group('Graphite Options', 'Options for Graphite configuration'))
-    GrafanaConfig.add_parser_args(parser.add_argument_group('Grafana Options', 'Options for Grafana configuration'))
-    SlackConfig.add_parser_args(parser.add_argument_group('Slack Options', 'Options for Slack configuration'))
-    PostgresConfig.add_parser_args(parser.add_argument_group('Postgres Options', 'Options for Postgres configuration'))
-    BigQueryConfig.add_parser_args(parser.add_argument_group('BigQuery Options', 'Options for BigQuery configuration'))
+    add_service_option_groups(parser)
     return parser
 
 
