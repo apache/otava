@@ -16,8 +16,10 @@
 # under the License.
 
 import numpy as np
+import pytest
 
-from otava.analysis import TTestSignificanceTester
+from otava.analysis import TTestSignificanceTester, TTestStats
+from otava.change_point_divisive.base import ChangePoint
 from otava.change_point_divisive.calculator import PairDistanceCalculator
 from otava.change_point_divisive.detector import ChangePointDetector
 from otava.change_point_divisive.significance_test import PermutationsSignificanceTester
@@ -113,3 +115,31 @@ def test_ttest():
     cpd = ChangePointDetector(significance_tester=st, calculator=PairDistanceCalculator)
     cps = cpd.get_change_points(series=sequence)
     assert [cp.index for cp in cps] == CHANGE_POINTS_INDS
+
+
+def test_get_intervals_requires_sorted_change_points():
+    """Test that get_intervals() raises AssertionError when change points are not sorted by index."""
+    tester = TTestSignificanceTester(max_pvalue=0.01)
+    stats = TTestStats(mean_1=1.0, mean_2=2.0, std_1=0.1, std_2=0.1, pvalue=0.001)
+
+    # Sorted change points should work
+    sorted_cps = [
+        ChangePoint(index=5, qhat=1.0, stats=stats),
+        ChangePoint(index=10, qhat=1.0, stats=stats),
+        ChangePoint(index=15, qhat=1.0, stats=stats),
+    ]
+    intervals = tester.get_intervals(sorted_cps)
+    assert len(intervals) == 4
+    assert intervals[0] == slice(0, 5)
+    assert intervals[1] == slice(5, 10)
+    assert intervals[2] == slice(10, 15)
+    assert intervals[3] == slice(15, None)
+
+    # Unsorted change points should raise AssertionError
+    unsorted_cps = [
+        ChangePoint(index=10, qhat=1.0, stats=stats),
+        ChangePoint(index=5, qhat=1.0, stats=stats),
+        ChangePoint(index=15, qhat=1.0, stats=stats),
+    ]
+    with pytest.raises(AssertionError, match="Change points must be sorted by index"):
+        tester.get_intervals(unsorted_cps)

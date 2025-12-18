@@ -271,6 +271,8 @@ def split(series: Sequence[SupportsFloat], window_len: int = 30, max_pvalue: flo
             if cp not in change_points:
                 change_points += [cp]
 
+    # Sort change points by index; required by get_intervals() and maintained by merge()
+    change_points.sort(key=lambda cp: cp.index)
     intervals = tester.get_intervals(change_points)
     return [tester.change_point(cp.to_candidate(), series, intervals) for cp in change_points]
 
