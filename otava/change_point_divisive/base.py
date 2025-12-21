@@ -68,7 +68,11 @@ class SignificanceTester(Generic[GenericStats]):
         self.max_pvalue = max_pvalue
 
     def get_intervals(self, change_points: List[ChangePoint[GenericStats]]) -> List[slice]:
-        '''Returns list of slices of the series'''
+        '''Returns list of slices of the series. Change points must be sorted by index.'''
+        assert all(
+            change_points[i].index <= change_points[i + 1].index
+            for i in range(len(change_points) - 1)
+        ), "Change points must be sorted by index"
         intervals = [
             slice(
                 0 if i == 0 else change_points[i - 1].index,
