@@ -353,7 +353,7 @@ def create_postgres_test_config(test_name: str, test_info: Dict) -> PostgresTest
         raise TestConfigError(f"Configuration key not found in test {test_name}: {e.args[0]}")
 
 
-def create_bigquery_test_config(test_name: str, test_info: Dict) -> PostgresTestConfig:
+def create_bigquery_test_config(test_name: str, test_info: Dict) -> BigQueryTestConfig:
     try:
         time_column = test_info.get("time_column", "time")
         attributes = test_info.get("attributes", [])
