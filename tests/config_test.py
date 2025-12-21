@@ -28,6 +28,7 @@ from otava.config import (
     load_config_from_file,
     load_config_from_parser_args,
 )
+from otava.main import create_otava_cli_parser
 from otava.test_config import CsvTestConfig, GraphiteTestConfig, HistoStatTestConfig
 
 
@@ -439,3 +440,19 @@ slack:
         for key in env_vars:
             if key in os.environ:
                 del os.environ[key]
+
+
+def test_unknown_argument_raises_error(capsys):
+    """Test that unknown arguments raise an error."""
+    parser = create_otava_cli_parser()
+
+    # Unknown argument should cause SystemExit
+    with pytest.raises(SystemExit) as exc_info:
+        parser.parse_args(["--banana", "list-groups"])
+
+    # argparse exits with code 2 for invalid arguments
+    assert exc_info.value.code == 2
+
+    # Check error message
+    captured = capsys.readouterr()
+    assert "unrecognized arguments: --banana" in captured.err

@@ -515,30 +515,41 @@ def analysis_options_from_args(args: argparse.Namespace) -> AnalysisOptions:
 
 
 def create_otava_cli_parser() -> argparse.ArgumentParser:
+    config_parser = config.create_config_parser()
     parser = argparse.ArgumentParser(
-        description="Hunts performance regressions in Fallout results",
-        parents=[config.create_config_parser()],
+        description="Change Detection for Continuous Performance Engineering",
+        parents=[config_parser],
         config_file_parser_class=config.NestedYAMLConfigFileParser,
         allow_abbrev=False,  # required for correct parsing of nested values from config file
     )
 
     subparsers = parser.add_subparsers(dest="command")
-    list_tests_parser = subparsers.add_parser("list-tests", help="list available tests")
+    list_tests_parser = subparsers.add_parser(
+        "list-tests",
+        help="list available tests",
+    )
+    config.add_service_option_groups(list_tests_parser)
     list_tests_parser.add_argument("group", help="name of the group of the tests", nargs="*")
 
     list_metrics_parser = subparsers.add_parser(
-        "list-metrics", help="list available metrics for a test"
+        "list-metrics",
+        help="list available metrics for a test",
     )
+    config.add_service_option_groups(list_metrics_parser)
     list_metrics_parser.add_argument("test", help="name of the test")
 
-    subparsers.add_parser("list-groups", help="list available groups of tests")
+    list_groups_parser = subparsers.add_parser(
+        "list-groups",
+        help="list available groups of tests",
+    )
+    config.add_service_option_groups(list_groups_parser)
 
     analyze_parser = subparsers.add_parser(
         "analyze",
         help="analyze performance test results",
-        formatter_class=argparse.RawTextHelpFormatter,
     )
     analyze_parser.add_argument("tests", help="name of the test or group of the tests", nargs="+")
+    config.add_service_option_groups(analyze_parser)
     analyze_parser.add_argument(
         "--update-grafana",
         help="Update Grafana dashboards with appropriate annotations of change points",
@@ -576,14 +587,21 @@ def create_otava_cli_parser() -> argparse.ArgumentParser:
     setup_data_selector_parser(analyze_parser)
     setup_analysis_options_parser(analyze_parser)
 
-    regressions_parser = subparsers.add_parser("regressions", help="find performance regressions")
+    regressions_parser = subparsers.add_parser(
+        "regressions",
+        help="find performance regressions",
+    )
     regressions_parser.add_argument(
         "tests", help="name of the test or group of the tests", nargs="+"
     )
+    config.add_service_option_groups(regressions_parser)
     setup_data_selector_parser(regressions_parser)
     setup_analysis_options_parser(regressions_parser)
 
-    remove_annotations_parser = subparsers.add_parser("remove-annotations")
+    remove_annotations_parser = subparsers.add_parser(
+        "remove-annotations",
+    )
+    config.add_service_option_groups(remove_annotations_parser)
     remove_annotations_parser.add_argument(
         "tests", help="name of the test or test group", nargs="*"
     )
@@ -591,9 +609,11 @@ def create_otava_cli_parser() -> argparse.ArgumentParser:
         "--force", help="don't ask questions, just do it", dest="force", action="store_true"
     )
 
-    subparsers.add_parser(
-        "validate", help="validates the tests and metrics defined in the configuration"
+    validate_parser = subparsers.add_parser(
+        "validate",
+        help="validates the tests and metrics defined in the configuration",
     )
+    config.add_service_option_groups(validate_parser)
 
     return parser
 
@@ -603,7 +623,7 @@ def script_main(conf: Config = None, args: List[str] = None):
     parser = create_otava_cli_parser()
 
     try:
-        args, _ = parser.parse_known_args(args=args)
+        args = parser.parse_args(args=args)
         if conf is None:
             conf = config.load_config_from_parser_args(args)
         otava = Otava(conf)
