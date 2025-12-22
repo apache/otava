@@ -27,7 +27,7 @@
 The Otava community treats releases with great importance. They are a public face of the project and most users interact with the project only through the releases. Releases are signed off by the entire Otava community in a public vote.
 Each release is executed by a Release Manager, who is selected/proposed by the Otava PMC members. This document describes the process that the Release Manager follows to perform a release. Any changes to this process should be discussed and adopted on the [dev@otava.apache.org](mailto:dev@otava.apache.org) mailing list.
 
-Please remember that publishing software has legal consequences. This guide complements the foundation-wide [Product Release Policy](https://www.apache.org/dev/release.html) and [Release Distribution Policy](https://www.apache.org/dev/release-distribution).
+Please remember, that the act of publishing software has both legal and policy significance. This guide complements the foundation-wide [Product Release Policy](https://www.apache.org/dev/release.html) and [Release Distribution Policy](https://www.apache.org/dev/release-distribution).
 
 ## Overview
 
@@ -45,7 +45,8 @@ The release process consists of several steps:
 1. Decide to release
 2. Prepare for the release
 3. Build a release candidate
-4. Vote on the release candidate
+4. Vote on the release candidate:
+- While we are in the ASF incubator program, voting has 2 phases: On the Otava project mailing list, then formally on the Incubator project list.
 5. If necessary, fix any issues and go back to step 3.
 6. Finalize the release
 7. Promote the release
