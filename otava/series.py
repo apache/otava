@@ -21,10 +21,7 @@ from datetime import datetime, timezone
 from itertools import groupby
 from typing import Any, Dict, Iterable, List, Optional
 
-import numpy as np
-
 from otava.analysis import (
-    TTestSignificanceTester,
     TTestStats,
     compute_change_points,
     compute_change_points_orig,
@@ -528,41 +525,3 @@ class AnalyzedSeries:
             analyzed_series.change_points_by_time = AnalyzedSeries.__group_change_points_by_time(analyzed_series.__series, analyzed_series.change_points)
 
         return analyzed_series
-
-
-@dataclass
-class SeriesComparison:
-    series_1: AnalyzedSeries
-    series_2: AnalyzedSeries
-    index_1: int
-    index_2: int
-    stats: Dict[str, TTestStats]  # keys: metric name
-
-
-def compare(
-    series_1: AnalyzedSeries,
-    index_1: Optional[int],
-    series_2: AnalyzedSeries,
-    index_2: Optional[int],
-) -> SeriesComparison:
-
-    # if index not specified, we want to take the most recent performance
-    index_1 = index_1 if index_1 is not None else len(series_1.time())
-    index_2 = index_2 if index_2 is not None else len(series_2.time())
-    metrics = filter(lambda m: m in series_2.metric_names(), series_1.metric_names())
-
-    tester = TTestSignificanceTester(series_1.options.max_pvalue)
-    stats = {}
-
-    for metric in metrics:
-        data_1 = series_1.data(metric)
-        (begin_1, end_1) = series_1.get_stable_range(metric, index_1)
-        data_1 = [x for x in data_1[begin_1:end_1] if x is not None]
-
-        data_2 = series_2.data(metric)
-        (begin_2, end_2) = series_2.get_stable_range(metric, index_2)
-        data_2 = [x for x in data_2[begin_2:end_2] if x is not None]
-
-        stats[metric] = tester.compare(np.array(data_1), np.array(data_2))
-
-    return SeriesComparison(series_1, series_2, index_1, index_2, stats)
