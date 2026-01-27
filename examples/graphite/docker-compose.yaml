@@ -54,9 +54,7 @@ services:
       - otava-graphite
 
   otava:
-    build:
-      context: ../..
-      dockerfile: Dockerfile
+    image: apache/otava:latest
     container_name: otava
     depends_on:
       - graphite
