@@ -19,30 +19,18 @@
 
 # Installation
 
-## Install using pipx
+## Install using pip
 
-Otava requires Python 3.8.  If you don't have python 3.8, use pyenv to install it.
+Otava requires Python 3.10 or later.
 
-Use pip to install otava:
-
-```
+```bash
 pip install apache-otava
 ```
 
-## Build Docker container
+## Install using Docker
 
-To build the Docker container, run the following command:
+Pull the official Docker image:
 
 ```bash
-docker build -t otava .
+docker pull apache/otava
 ```
-
-> [!NOTE]
-> The Dockerfile contains a `--mount` option that requires BuildKit [^1].
-> The BuildKit can be installed with the following commands:
->
-> Debian and Ubuntu: `apt install -y docker-buildx`
->
-> Fedora: `dnf install docker-buildx`
->
-> [^1]: https://docs.docker.com/go/buildkit/
