@@ -17,9 +17,7 @@
 
 services:
   otava:
-    build:
-      context: ../..
-      dockerfile: Dockerfile
+    image: apache/otava:latest
     container_name: otava
     environment:
       OTAVA_CONFIG: /config/otava.yaml

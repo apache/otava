@@ -99,13 +99,13 @@ filter data by commit or version using `--since-commit` or `--since-version` sel
 Start docker-compose with Graphite in one tab:
 
 ```bash
-docker-compose -f examples/graphite/docker-compose.yaml up --force-recreate --always-recreate-deps --renew-anon-volumes --build
+docker-compose -f examples/graphite/docker-compose.yaml up --force-recreate --always-recreate-deps --renew-anon-volumes
 ````
 
 Run otava in another tab:
 
 ```bash
-docker-compose -f examples/graphite/docker-compose.yaml run otava analyze my-product.test --since=-10m
+docker-compose -f examples/graphite/docker-compose.yaml run --rm otava analyze my-product.test --since=-10m
 ```
 
 Expected output:
