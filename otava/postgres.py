@@ -77,9 +77,9 @@ class Postgres:
             )
         return self.__conn
 
-    def fetch_data(self, query: str):
+    def fetch_data(self, query: str, params: tuple = None):
         cursor = self.__get_conn().cursor()
-        cursor.execute(query)
+        cursor.execute(query, params)
         columns = [c[0] for c in cursor.description]
         return (columns, cursor.fetchall())
 

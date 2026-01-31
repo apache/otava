@@ -109,8 +109,7 @@ tests:
 
   remote2:
     inherit: [common_metrics, write_metrics]
-    prefix: "performance_regressions.my_product.main.test2"
-    branch_prefix: "performance_regressions.my_product.feature-%{BRANCH}.test2"
+    prefix: "performance_regressions.my_product.%{BRANCH}.test2"
 
 
 

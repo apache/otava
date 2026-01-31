@@ -41,7 +41,7 @@ def test_analyze():
     with postgres_container(username, password, db) as (postgres_container_id, host_port):
         # Run the Otava analysis
         proc = subprocess.run(
-            ["uv", "run", "otava", "analyze", "aggregate_mem"],
+            ["uv", "run", "otava", "analyze", "aggregate_mem", "--branch", "trunk"],
             capture_output=True,
             text=True,
             timeout=600,
@@ -53,7 +53,6 @@ def test_analyze():
                 POSTGRES_USERNAME=username,
                 POSTGRES_PASSWORD=password,
                 POSTGRES_DATABASE=db,
-                BRANCH="trunk",
             ),
         )
 
@@ -140,7 +139,7 @@ def test_analyze_and_update_postgres():
     with postgres_container(username, password, db) as (postgres_container_id, host_port):
         # Run the Otava analysis
         proc = subprocess.run(
-            ["uv", "run", "otava", "analyze", "aggregate_mem", "--update-postgres"],
+            ["uv", "run", "otava", "analyze", "aggregate_mem", "--branch", "trunk", "--update-postgres"],
             capture_output=True,
             text=True,
             timeout=600,
@@ -152,7 +151,6 @@ def test_analyze_and_update_postgres():
                 POSTGRES_USERNAME=username,
                 POSTGRES_PASSWORD=password,
                 POSTGRES_DATABASE=db,
-                BRANCH="trunk",
             ),
         )
 

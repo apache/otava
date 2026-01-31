@@ -185,7 +185,7 @@ options:
                         Slack. Same syntax as --since.
   --output {log,json,regressions_only}
                         Output format for the generated report.
-  --branch [STRING]     name of the branch
+  --branch [STRING]     name of the branch [env var: BRANCH]
   --metrics LIST        a comma-separated list of metrics to analyze
   --attrs LIST          a comma-separated list of attribute names associated with the runs (e.g.
                         commit, branch, version); if not specified, it will be automatically
@@ -243,7 +243,7 @@ options:
                         Slack. Same syntax as --since.
   --output {log,json,regressions_only}
                         Output format for the generated report.
-  --branch [STRING]     name of the branch
+  --branch [STRING]     name of the branch [env var: BRANCH]
   --metrics LIST        a comma-separated list of metrics to analyze
   --attrs LIST          a comma-separated list of attribute names associated with the runs (e.g.
                         commit, branch, version); if not specified, it will be automatically

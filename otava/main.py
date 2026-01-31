@@ -301,7 +301,8 @@ class Otava:
 
 def setup_data_selector_parser(parser: argparse.ArgumentParser):
     parser.add_argument(
-        "--branch", metavar="STRING", dest="branch", help="name of the branch", nargs="?"
+        "--branch", metavar="STRING", dest="branch", help="name of the branch", nargs="?",
+        env_var="BRANCH"
     )
     parser.add_argument(
         "--metrics",

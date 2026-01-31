@@ -22,7 +22,9 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
+
+from google.cloud import bigquery
 
 from otava.bigquery import BigQuery
 from otava.config import Config
@@ -221,13 +223,12 @@ class CsvImporter(Importer):
         else:
             return defined_metrics
 
+    BRANCH_COLUMN = "branch"
+
     def fetch_data(self, test_conf: TestConfig, selector: DataSelector = DataSelector()) -> Series:
 
         if not isinstance(test_conf, CsvTestConfig):
             raise ValueError("Expected CsvTestConfig")
-
-        if selector.branch:
-            raise ValueError("CSV tests don't support branching yet")
 
         since_time = selector.since_time
         until_time = selector.until_time
@@ -250,6 +251,17 @@ class CsvImporter(Importer):
 
                 headers: List[str] = next(reader, None)
                 metrics = self.__selected_metrics(test_conf.metrics, selector.metrics)
+
+                # Check for branch column
+                has_branch_column = self.BRANCH_COLUMN in headers
+                branch_index = headers.index(self.BRANCH_COLUMN) if has_branch_column else None
+
+                if selector.branch and not has_branch_column:
+                    # --branch specified but no branch column
+                    raise DataImportError(
+                        f"Test {test_conf.name}: --branch was specified but CSV file does not have "
+                        f"a '{self.BRANCH_COLUMN}' column. Add a branch column to the CSV file."
+                    )
 
                 # Decide which columns to fetch into which components of the result:
                 try:
@@ -275,9 +287,19 @@ class CsvImporter(Importer):
                 for i in attr_indexes:
                     attributes[headers[i]] = []
 
+                branches: Set[str] = set()
+
                 # Append the lists with data from each row:
                 for row in reader:
                     self.check_row_len(headers, row)
+
+                    # Track branch values if branch column exists
+                    if has_branch_column:
+                        row_branch = row[branch_index]
+                        branches.add(row_branch)
+                        # Filter by branch if --branch is specified
+                        if selector.branch and row_branch != selector.branch:
+                            continue
 
                     # Filter by time:
                     ts: datetime = self.__convert_time(row[time_index])
@@ -305,6 +327,15 @@ class CsvImporter(Importer):
                     for i in attr_indexes:
                         attributes[headers[i]].append(row[i])
 
+                # Branch column exists but --branch not specified and multiple branches found
+                if has_branch_column and not selector.branch and len(branches) > 1:
+                    raise DataImportError(
+                        f"Test {test_conf.name}: CSV file contains data from multiple branches. "
+                        f"Analyzing results across different branches will produce confusing results. "
+                        f"Use --branch to select a specific branch.\n"
+                        f"Branches found:\n" + "\n".join(sorted(branches))
+                    )
+
                 # Convert metrics to series.Metrics
                 metrics = {m.name: Metric(m.direction, m.scale) for m in metrics.values()}
 
@@ -321,7 +352,7 @@ class CsvImporter(Importer):
 
                 return Series(
                     test_conf.name,
-                    branch=None,
+                    branch=selector.branch,
                     time=time,
                     metrics=metrics,
                     data=data,
@@ -476,9 +507,6 @@ class PostgresImporter(Importer):
         if not isinstance(test_conf, PostgresTestConfig):
             raise ValueError("Expected PostgresTestConfig")
 
-        if selector.branch:
-            raise ValueError("Postgres tests don't support branching yet")
-
         since_time = selector.since_time
         until_time = selector.until_time
         if since_time.timestamp() > until_time.timestamp():
@@ -489,7 +517,21 @@ class PostgresImporter(Importer):
             )
         metrics = self.__selected_metrics(test_conf.metrics, selector.metrics)
 
-        columns, rows = self.__postgres.fetch_data(test_conf.query)
+        # Handle %{BRANCH} placeholder using parameterized query to prevent SQL injection
+        query = test_conf.query
+        params = None
+        if "%{BRANCH}" in query:
+            if not selector.branch:
+                raise DataImportError(
+                    f"Test {test_conf.name} uses %{{BRANCH}} in query but --branch was not specified"
+                )
+            # Count occurrences and create matching number of parameters
+            placeholder_count = query.count("%{BRANCH}")
+            # Replace placeholder with %s for pg8000 parameterized query
+            query = query.replace("%{BRANCH}", "%s")
+            params = tuple(selector.branch for _ in range(placeholder_count))
+
+        columns, rows = self.__postgres.fetch_data(query, params)
 
         # Decide which columns to fetch into which components of the result:
         try:
@@ -548,7 +590,7 @@ class PostgresImporter(Importer):
 
         return Series(
             test_conf.name,
-            branch=None,
+            branch=selector.branch,
             time=time,
             metrics=metrics,
             data=data,
@@ -693,9 +735,6 @@ class BigQueryImporter(Importer):
         if not isinstance(test_conf, BigQueryTestConfig):
             raise ValueError("Expected BigQueryTestConfig")
 
-        if selector.branch:
-            raise ValueError("BigQuery tests don't support branching yet")
-
         since_time = selector.since_time
         until_time = selector.until_time
         if since_time.timestamp() > until_time.timestamp():
@@ -706,7 +745,19 @@ class BigQueryImporter(Importer):
             )
         metrics = self.__selected_metrics(test_conf.metrics, selector.metrics)
 
-        columns, rows = self.__bigquery.fetch_data(test_conf.query)
+        # Handle %{BRANCH} placeholder using parameterized query to prevent SQL injection
+        query = test_conf.query
+        params = None
+        if "%{BRANCH}" in query:
+            if not selector.branch:
+                raise DataImportError(
+                    f"Test {test_conf.name} uses %{{BRANCH}} in query but --branch was not specified"
+                )
+            # Replace placeholder with @branch for BigQuery parameterized query
+            query = query.replace("%{BRANCH}", "@branch")
+            params = [bigquery.ScalarQueryParameter("branch", "STRING", selector.branch)]
+
+        columns, rows = self.__bigquery.fetch_data(query, params)
 
         # Decide which columns to fetch into which components of the result:
         try:
@@ -765,7 +816,7 @@ class BigQueryImporter(Importer):
 
         return Series(
             test_conf.name,
-            branch=None,
+            branch=selector.branch,
             time=time,
             metrics=metrics,
             data=data,

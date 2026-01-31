@@ -22,7 +22,7 @@ from otava.analysis import compute_change_points
 def _get_series():
     """
     This is the Tigerbeetle dataset used for demo purposes at Nyrkiö.
-    It has a couple distinctive ups and down, ananomalous drop, then an upward slope and the rest is just normal variance.
+    It has a couple distinctive ups and down, anomalous drop, then an upward slope and the rest is just normal variance.
 
     ^                                                                             .'
     |            ...       ,..''.'...,......''','....'''''.......'...'.....,,,..''
