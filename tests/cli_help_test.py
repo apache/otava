@@ -46,32 +46,17 @@ def test_otava_help_output():
         f"Expected exit code 0, got {result.returncode}. stderr:\n{result.stderr}"
     )
 
-    # Python 3.13+ formats the usage line differently (keeps subcommands on one line)
-    if IS_PYTHON_313_PLUS:
-        usage_line = """\
-usage: otava [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
-             [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
-             [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
-             [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
-             [--postgres-username POSTGRES_USERNAME] [--postgres-password POSTGRES_PASSWORD]
-             [--postgres-database POSTGRES_DATABASE] [--bigquery-project-id BIGQUERY_PROJECT_ID]
-             [--bigquery-dataset BIGQUERY_DATASET] [--bigquery-credentials BIGQUERY_CREDENTIALS]
-             {list-tests,list-metrics,list-groups,analyze,remove-annotations,validate} ..."""
-    else:
-        usage_line = """\
-usage: otava [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
-             [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
-             [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
-             [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
-             [--postgres-username POSTGRES_USERNAME] [--postgres-password POSTGRES_PASSWORD]
-             [--postgres-database POSTGRES_DATABASE] [--bigquery-project-id BIGQUERY_PROJECT_ID]
-             [--bigquery-dataset BIGQUERY_DATASET] [--bigquery-credentials BIGQUERY_CREDENTIALS]
-             {list-tests,list-metrics,list-groups,analyze,remove-annotations,validate}
-             ..."""
-
     assert (
         result.stdout
-        == usage_line + """
+        == """\
+usage: otava [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+             [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
+             [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
+             [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
+             [--postgres-username POSTGRES_USERNAME] [--postgres-password POSTGRES_PASSWORD]
+             [--postgres-database POSTGRES_DATABASE] [--bigquery-project-id BIGQUERY_PROJECT_ID]
+             [--bigquery-dataset BIGQUERY_DATASET] [--bigquery-credentials BIGQUERY_CREDENTIALS]
+             {list-tests,list-metrics,list-groups,analyze,remove-annotations,validate} ...
 
 Change Detection for Continuous Performance Engineering
 
