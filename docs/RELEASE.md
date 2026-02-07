@@ -391,6 +391,10 @@ git push origin $RELEASE_VERSION-incubating
 
 Go to Github releases page and create a new release for the tag `$RELEASE_VERSION-incubating`.
 
+### Update the website download page
+
+Update the list of releases on the website at https://otava.apache.org/docs/download to include the new release.
+
 ### Publish PyPI artifacts
 
 In svn release directory:
@@ -434,7 +438,6 @@ In `otava-dist-release-repo`:
 svn rm $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE
 svn ci -m "[otava] Remove $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE"
 ```
-
 
 ## Promote the release
 
