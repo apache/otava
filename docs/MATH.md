@@ -13,7 +13,10 @@ The current implementation prioritizes:
 - Practical runtime for production workloads
 
 A representative example of algorithm application:
+
 ![Example](./imgs/example.png "Example")
+
+Here the algorithm detected 4 change points with statistical test showing that behavior of the time series changes at them. In other words, data have different distribution to the left and to the right of each change point.
 
 ## Technical Details
 ### Main Idea
