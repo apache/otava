@@ -17,7 +17,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List, Optional
 
 from google.cloud import bigquery
 from google.oauth2 import service_account
@@ -71,8 +71,13 @@ class BigQuery:
             self.__client = bigquery.Client(credentials=credentials, project=credentials.project_id)
         return self.__client
 
-    def fetch_data(self, query: str):
-        query_job = self.client.query(query)  # API request
+    def fetch_data(
+        self, query: str, params: Optional[List[bigquery.ScalarQueryParameter]] = None
+    ):
+        job_config = None
+        if params:
+            job_config = bigquery.QueryJobConfig(query_parameters=params)
+        query_job = self.client.query(query, job_config=job_config)  # API request
         results = query_job.result()
         columns = [field.name for field in results.schema]
         return (columns, results)

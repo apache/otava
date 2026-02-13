@@ -15,7 +15,6 @@ source = { editable = "." }
 dependencies = [
     { name = "configargparse" },
     { name = "dateparser" },
-    { name = "expandvars" },
     { name = "google-cloud-bigquery" },
     { name = "numpy" },
     { name = "pg8000" },
@@ -48,7 +47,6 @@ requires-dist = [
     { name = "autoflake", marker = "extra == 'dev'", specifier = ">=2.3.1" },
     { name = "configargparse", specifier = ">=1.7.1" },
     { name = "dateparser", specifier = ">=1.0.0" },
-    { name = "expandvars", specifier = ">=0.12.0" },
     { name = "flake8", marker = "extra == 'dev'", specifier = ">=7.3.0" },
     { name = "google-cloud-bigquery", specifier = ">=3.38.0" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=7.0.0" },
@@ -271,15 +269,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0b/9f/a65090624ecf468cdca03533906e7c69ed7588582240cfe7cc9e770b50eb/exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88", size = 29749, upload-time = "2025-05-10T17:42:51.123Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/36/f4/c6e662dade71f56cd2f3735141b265c3c79293c109549c1e6933b0651ffc/exceptiongroup-1.3.0-py3-none-any.whl", hash = "sha256:4d111e6e0c13d0644cad6ddaa7ed0261a0b36971f6d23e7ec9b4b9097da78a10", size = 16674, upload-time = "2025-05-10T17:42:49.33Z" },
-]
-
-[[package]]
-name = "expandvars"
-version = "1.1.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/9c/64/a9d8ea289d663a44b346203a24bf798507463db1e76679eaa72ee6de1c7a/expandvars-1.1.2.tar.gz", hash = "sha256:6c5822b7b756a99a356b915dd1267f52ab8a4efaa135963bd7f4bd5d368f71d7", size = 70842, upload-time = "2025-09-12T10:55:20.929Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/e6/79c43f7a55264e479a9fbf21ddba6a73530b3ea8439a8bb7fa5a281721af/expandvars-1.1.2-py3-none-any.whl", hash = "sha256:d1652fe4e61914f5b88ada93aaedb396446f55ae4621de45c8cb9f66e5712526", size = 7526, upload-time = "2025-09-12T10:55:18.779Z" },
 ]
 
 [[package]]

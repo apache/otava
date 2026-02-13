@@ -15,14 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# External systems connectors configuration:
-postgres:
-  hostname: ${POSTGRES_HOSTNAME}
-  port: ${POSTGRES_PORT}
-  username: ${POSTGRES_USERNAME}
-  password: ${POSTGRES_PASSWORD}
-  database: ${POSTGRES_DATABASE}
-
 # Templates define common bits shared between test definitions:
 templates:
   common:
@@ -63,7 +55,7 @@ tests:
       INNER JOIN configs c ON r.config_id = c.id
       INNER JOIN experiments e ON r.experiment_id = e.id
       WHERE e.exclude_from_analysis = false AND
-            e.branch = '${BRANCH}' AND
+            e.branch = %{BRANCH} AND
             e.username = 'ci' AND
             c.store = 'MEM' AND
             c.cache = true AND
@@ -85,7 +77,7 @@ tests:
       INNER JOIN configs c ON r.config_id = c.id
       INNER JOIN experiments e ON r.experiment_id = e.id
       WHERE e.exclude_from_analysis = false AND
-            e.branch = '${BRANCH}' AND
+            e.branch = %{BRANCH} AND
             e.username = 'ci' AND
             c.store = 'TIME_ROCKS' AND
             c.cache = true AND

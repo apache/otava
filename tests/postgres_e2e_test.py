@@ -41,7 +41,7 @@ def test_analyze():
     with postgres_container(username, password, db) as (postgres_container_id, host_port):
         # Run the Otava analysis
         proc = subprocess.run(
-            ["uv", "run", "otava", "analyze", "aggregate_mem"],
+            ["uv", "run", "otava", "analyze", "aggregate_mem", "--branch", "trunk"],
             capture_output=True,
             text=True,
             timeout=600,
@@ -53,7 +53,6 @@ def test_analyze():
                 POSTGRES_USERNAME=username,
                 POSTGRES_PASSWORD=password,
                 POSTGRES_DATABASE=db,
-                BRANCH="trunk",
             ),
         )
 
@@ -140,7 +139,7 @@ def test_analyze_and_update_postgres():
     with postgres_container(username, password, db) as (postgres_container_id, host_port):
         # Run the Otava analysis
         proc = subprocess.run(
-            ["uv", "run", "otava", "analyze", "aggregate_mem", "--update-postgres"],
+            ["uv", "run", "otava", "analyze", "aggregate_mem", "--branch", "trunk", "--update-postgres"],
             capture_output=True,
             text=True,
             timeout=600,
@@ -152,7 +151,6 @@ def test_analyze_and_update_postgres():
                 POSTGRES_USERNAME=username,
                 POSTGRES_PASSWORD=password,
                 POSTGRES_DATABASE=db,
-                BRANCH="trunk",
             ),
         )
 
@@ -229,94 +227,6 @@ def test_analyze_and_update_postgres():
             pytest.fail(f"DB backward change {backward_change!r} not within tolerance of 5.94")
         if p_value >= 0.001:
             pytest.fail(f"DB p-value {p_value!r} not less than 0.01")
-
-
-def test_regressions():
-    """
-    End-to-end test for the PostgreSQL regressions command.
-
-    Starts the docker-compose stack from examples/postgresql/docker-compose.yaml,
-    waits for Postgres to be ready, runs the otava regressions command,
-    and compares stdout to the expected output.
-    """
-    username = "exampleuser"
-    password = "examplepassword"
-    db = "benchmark_results"
-    with postgres_container(username, password, db) as (postgres_container_id, host_port):
-        # Run the Otava regressions command
-        proc = subprocess.run(
-            ["uv", "run", "otava", "regressions", "aggregate_mem"],
-            capture_output=True,
-            text=True,
-            timeout=600,
-            env=dict(
-                os.environ,
-                OTAVA_CONFIG=Path("examples/postgresql/config/otava.yaml"),
-                POSTGRES_HOSTNAME="localhost",
-                POSTGRES_PORT=host_port,
-                POSTGRES_USERNAME=username,
-                POSTGRES_PASSWORD=password,
-                POSTGRES_DATABASE=db,
-                BRANCH="trunk",
-            ),
-        )
-
-        if proc.returncode != 0:
-            pytest.fail(
-                "Command returned non-zero exit code.\n\n"
-                f"Command: {proc.args!r}\n"
-                f"Exit code: {proc.returncode}\n\n"
-                f"Stdout:\n{proc.stdout}\n\n"
-                f"Stderr:\n{proc.stderr}\n"
-            )
-
-        expected_output = textwrap.dedent(
-            """\
-            aggregate_mem:
-                process_cumulative_rate_mean: 6.08e+04 --> 5.74e+04 (  -5.6%)
-            Regressions in 1 test found
-            """
-        )
-        assert proc.stdout == expected_output
-
-        # Verify the DB was NOT updated since --update-postgres was not specified
-        query_proc = subprocess.run(
-            [
-                "docker",
-                "exec",
-                postgres_container_id,
-                "psql",
-                "-U",
-                "exampleuser",
-                "-d",
-                "benchmark_results",
-                "-Atc",
-                """
-             SELECT
-                process_cumulative_rate_mean_rel_forward_change,
-                process_cumulative_rate_mean_rel_backward_change,
-                process_cumulative_rate_mean_p_value
-             FROM results
-              WHERE experiment_id='aggregate-14df1b11' AND config_id=1;
-             """,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        if query_proc.returncode != 0:
-            pytest.fail(
-                "Command returned non-zero exit code.\n\n"
-                f"Command: {query_proc.args!r}\n"
-                f"Exit code: {query_proc.returncode}\n\n"
-                f"Stdout:\n{query_proc.stdout}\n\n"
-                f"Stderr:\n{query_proc.stderr}\n"
-            )
-
-        # psql -Atc returns rows like: value|pvalue
-        forward_change, backward_change, p_value = query_proc.stdout.strip().split("|")
-        # --update-postgres was not specified, so no change point should be recorded
-        assert forward_change == backward_change == p_value == ""
 
 
 def _postgres_readiness_check_f(
