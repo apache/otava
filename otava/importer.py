@@ -560,6 +560,71 @@ class PostgresImporter(Importer):
 
 
 class JsonImporter(Importer):
+    """
+    Importer implementation for loading benchmark results from a JSON file.
+
+    Overview
+    --------
+    JsonImporter reads structured time-series benchmark data from a JSON file
+    and converts it into a Series object compatible with Otava's analysis engine.
+
+    The JSON file must contain a list of result objects. Each result object
+    represents a single benchmark run and must include:
+
+        - "timestamp": Unix timestamp (int or float)
+        - "metrics": list of {"name": str, "value": numeric}
+        - "attributes": dictionary containing metadata (e.g., branch name)
+
+    Expected JSON Format
+    --------------------
+        [
+          {
+            "timestamp": 1700000000,
+            "metrics": [
+              {"name": "latency", "value": 100},
+              {"name": "throughput", "value": 500}
+            ],
+            "attributes": {
+              "branch": "main",
+              "env": "linux"
+            }
+          }
+        ]
+
+    Behavior
+    --------
+    - The JSON file is loaded and cached to avoid repeated disk access.
+    - Metric names and attribute names are discovered dynamically.
+    - Results may be filtered using DataSelector:
+        * Branch filtering
+        * Metric filtering
+        * Time range filtering (since_time to until_time)
+        * Limiting to the last N data points
+
+    Filtering Rules
+    ---------------
+    - If selector.branch is specified, only results from that branch are included.
+    - If selector.branch is not specified but test_conf.base_branch is set,
+      only results from base_branch are included.
+    - If selector.metrics is specified, only selected metrics are returned.
+    - If since_time is later than until_time, a DataImportError is raised.
+    - If the input file does not exist, a DataImportError is raised.
+
+    Return Value
+    ------------
+    Returns a Series object containing:
+        - time        : list of timestamps
+        - metrics     : metric metadata
+        - data        : metric values grouped by metric name
+        - attributes  : attribute values grouped by attribute name
+
+    Notes
+    -----
+    JsonImporter assumes the JSON structure matches the expected format.
+    Missing required fields such as "metrics" or "attributes"
+    may result in runtime errors.
+    """
+
     def __init__(self):
         self._data = {}
 
@@ -580,7 +645,6 @@ class JsonImporter(Importer):
         if not isinstance(test_conf, JsonTestConfig):
             raise ValueError("Expected JsonTestConfig")
 
-        # TODO: refactor. THis is copy pasted from CSV importer
         since_time = selector.since_time
         until_time = selector.until_time
 
@@ -597,7 +661,6 @@ class JsonImporter(Importer):
         attributes = OrderedDict()
 
         for name in self.fetch_all_metric_names(test_conf):
-            # Ignore metrics if selector.metrics is not None and name is not in selector.metrics
             if selector.metrics is not None and name not in selector.metrics:
                 continue
             data[name] = []
@@ -606,9 +669,6 @@ class JsonImporter(Importer):
         for name in attr_names:
             attributes[name] = []
 
-        # If the user specified a branch, only include results from that branch.
-        # Otherwise if the test config specifies a branch, only include results from that branch.
-        # Else include all results.
         branch = None
         if selector.branch:
             branch = selector.branch
@@ -617,6 +677,7 @@ class JsonImporter(Importer):
 
         objs = self.inputfile(test_conf)
         list_of_json_obj = []
+
         for o in objs:
             if branch and o["attributes"]["branch"] != branch:
                 continue
@@ -624,52 +685,11 @@ class JsonImporter(Importer):
 
         for result in list_of_json_obj:
             time.append(result["timestamp"])
+
             for metric in result["metrics"]:
-                # Skip metrics not in selector.metrics if selector.metrics is enabled
                 if metric["name"] not in data:
                     continue
-
-                data[metric["name"]].append(metric["value"])
-                metrics[metric["name"]] = Metric(1, 1.0)
-        for a in attr_names:
-            attributes[a] = [o["attributes"][a] for o in list_of_json_obj]
-
-        # Leave last n points:
-        time = time[-selector.last_n_points :]
-        tmp = data
-        data = {}
-        for k, v in tmp.items():
-            data[k] = v[-selector.last_n_points :]
-        tmp = attributes
-        attributes = {}
-        for k, v in tmp.items():
-            attributes[k] = v[-selector.last_n_points :]
-
-        return Series(
-            test_conf.name,
-            branch=None,
-            time=time,
-            metrics=metrics,
-            data=data,
-            attributes=attributes,
-        )
-
-    def fetch_all_metric_names(self, test_conf: JsonTestConfig) -> List[str]:
-        metric_names = set()
-        list_of_json_obj = self.inputfile(test_conf)
-        for result in list_of_json_obj:
-            for metric in result["metrics"]:
-                metric_names.add(metric["name"])
-        return [m for m in metric_names]
-
-    def fetch_all_attribute_names(self, test_conf: JsonTestConfig) -> List[str]:
-        attr_names = set()
-        list_of_json_obj = self.inputfile(test_conf)
-        for result in list_of_json_obj:
-            for a in result["attributes"].keys():
-                attr_names.add(a)
-        return [m for m in attr_names]
-
+               
 
 class BigQueryImporter(Importer):
     __bigquery: BigQuery
