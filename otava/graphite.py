@@ -57,7 +57,6 @@ class TimeSeries:
 
 
 def decode_graphite_datapoints(series: Dict[str, List[List[float]]]) -> List[DataPoint]:
-
     points = series["datapoints"]
     return [DataPoint(int(p[1]), p[0]) for p in points if p[0] is not None]
 
@@ -80,49 +79,45 @@ class GraphiteError(IOError):
 
 @dataclass
 class GraphiteEvent:
-    test_owner: str
-    test_name: str
-    run_id: str
-    status: str
-    start_time: datetime
-    pub_time: datetime
-    end_time: datetime
+    test_owner: Optional[str]
+    test_name: Optional[str]
+    run_id: Optional[str]
+    status: Optional[str]
+    start_time: Optional[datetime]
+    pub_time: Optional[datetime]
+    end_time: Optional[datetime]
     version: Optional[str]
     branch: Optional[str]
     commit: Optional[str]
 
-    def __init__(
+
+def __init__(
         self,
         pub_time: int,
-        test_owner: str,
-        test_name: str,
-        run_id: str,
-        status: str,
-        start_time: int,
-        end_time: int,
-        version: Optional[str],
-        branch: Optional[str],
-        commit: Optional[str],
-    ):
-        self.test_owner = test_owner
-        self.test_name = test_name
-        self.run_id = run_id
-        self.status = status
-        self.start_time = parse_datetime(str(start_time))
-        self.pub_time = parse_datetime(str(pub_time))
-        self.end_time = parse_datetime(str(end_time))
-        if len(version) == 0 or version == "null":
-            self.version = None
-        else:
-            self.version = version
-        if len(branch) == 0 or branch == "null":
-            self.branch = None
-        else:
-            self.branch = branch
-        if len(commit) == 0 or commit == "null":
-            self.commit = None
-        else:
-            self.commit = commit
+        test_owner: Optional[str] = None,
+        test_name: Optional[str] = None,
+        run_id: Optional[str] = None,
+        status: Optional[str] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        version: Optional[str] = None,
+        branch: Optional[str] = None,
+        commit: Optional[str] = None,
+):
+    self.test_owner = test_owner or "unknown"
+    self.test_name = test_name or "unknown"
+    self.run_id = run_id or "unknown"
+    self.status = status or "unknown"
+
+    # Parse timestamps, fallback to pub_time if missing
+    self.start_time = parse_datetime(str(start_time)) if start_time else parse_datetime(str(pub_time))
+    self.pub_time = parse_datetime(str(pub_time))
+    self.end_time = parse_datetime(str(end_time)) if end_time else parse_datetime(str(pub_time))
+
+    # Normalize optional strings
+    self.version = None if not version or version == "null" else version
+    self.branch = None if not branch or branch == "null" else branch
+    self.commit = None if not commit or commit == "null" else commit
 
 
 def compress_target_paths(paths: List[str]) -> List[str]:
@@ -160,10 +155,10 @@ class Graphite:
         self.__url_limit = 4094
 
     def fetch_events(
-        self,
-        tags: Iterable[str],
-        from_time: Optional[datetime] = None,
-        until_time: Optional[datetime] = None,
+            self,
+            tags: Iterable[str],
+            from_time: Optional[datetime] = None,
+            until_time: Optional[datetime] = None,
     ) -> List[GraphiteEvent]:
         """
         Returns 'Performance Test' events that match all of
@@ -199,7 +194,7 @@ class Graphite:
             raise GraphiteError(f"Failed to fetch Graphite events: {str(e)}")
 
     def fetch_events_with_matching_time_option(
-        self, tags: Iterable[str], commit: Optional[str], version: Optional[str]
+            self, tags: Iterable[str], commit: Optional[str], version: Optional[str]
     ) -> List[GraphiteEvent]:
         events = []
         if commit is not None:
