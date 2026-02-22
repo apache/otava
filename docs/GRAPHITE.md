@@ -73,10 +73,6 @@ tests:
 ```
 
 ### Tags
-
-> [!WARNING]
-> Tags do not work as expected in the current version. See https://github.com/apache/otava/issues/24 for more details
-
 The optional `tags` property contains the tags that are used to query for Graphite events that store
 additional test run metadata such as run identifier, commit, branch and product version information.
 
@@ -93,6 +89,21 @@ $ curl -X POST "http://graphite_address/events/" \
 
 Posting those events is not mandatory, but when they are available, Otava is able to
 filter data by commit or version using `--since-commit` or `--since-version` selectors.
+
+#### Supported Metadata Schema
+The following keys are supported within the `data` dictionary:
+
+| Field | Description | Default Value |
+| :--- | :--- | :--- |
+| **`test_owner`** | The user or team responsible for the run. | `"null"` |
+| **`test_name`** | The name of the test suite executed. | `"null"` |
+| **`run_id`** | Unique identifier for the specific run. | `"null"` |
+| **`status`** | The outcome (e.g., `success`, `failure`). | `"null"` |
+| **`version`** | The product version being tested. | `"null"` |
+| **`branch`** | The VCS branch name. | `"null"` |
+| **`commit`** | The specific commit hash. | `"null"` |
+| **`start_time`** | Timestamp of test start. | `when` (from Graphite) |
+| **`end_time`** | Timestamp of test end. | `when` (from Graphite) |
 
 ## Example
 
@@ -111,15 +122,15 @@ docker-compose -f examples/graphite/docker-compose.yaml run --rm otava analyze m
 Expected output:
 
 ```bash
-time                       run    branch    version    commit      throughput    response_time    cpu_usage
--------------------------  -----  --------  ---------  --------  ------------  ---------------  -----------
-2024-12-14 22:45:10 +0000                                               61160               87          0.2
-2024-12-14 22:46:10 +0000                                               60160               85          0.3
-2024-12-14 22:47:10 +0000                                               60960               89          0.1
-                                                                 ············                   ···········
-                                                                        -5.6%                       +300.0%
-                                                                 ············                   ···········
-2024-12-14 22:48:10 +0000                                               57123               88          0.8
-2024-12-14 22:49:10 +0000                                               57980               87          0.9
-2024-12-14 22:50:10 +0000                                               56950               85          0.7
+time                       run    branch       version    commit      throughput    response_time    cpu_usage
+-------------------------  -----  -----------  ---------  --------  ------------  ---------------  -----------
+2026-02-22 18:51:10 +0000  null   new-feature  0.0.1      p7q8r9           61160               87          0.2
+2026-02-22 18:52:10 +0000  null   new-feature  0.0.1      m4n5o6           60160               85          0.3
+2026-02-22 18:53:10 +0000  null   new-feature  0.0.1      j1k2l3           60960               89          0.1
+                                                                    ············                   ···········  
+                                                                           -5.6%                       +300.0%  
+                                                                    ············                   ···········  
+2026-02-22 18:54:10 +0000  null   new-feature  0.0.1      g7h8i9           57123               88          0.8
+2026-02-22 18:55:10 +0000  null   new-feature  0.0.1      d4e5f6           57980               87          0.9
+2026-02-22 18:56:10 +0000  null   new-feature  0.0.1      a1b2c3           56950               85          0.7
 ```
