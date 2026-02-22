@@ -79,45 +79,28 @@ class GraphiteError(IOError):
 
 @dataclass
 class GraphiteEvent:
-    test_owner: Optional[str]
-    test_name: Optional[str]
-    run_id: Optional[str]
-    status: Optional[str]
-    start_time: Optional[datetime]
-    pub_time: Optional[datetime]
-    end_time: Optional[datetime]
-    version: Optional[str]
-    branch: Optional[str]
-    commit: Optional[str]
+    test_owner: Optional[str] = "null"
+    test_name: Optional[str] = "null"
+    run_id: Optional[str] = "null"
+    status: Optional[str] = "null"
+    start_time: Optional[datetime] = None
+    pub_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    version: Optional[str] = "null"
+    branch: Optional[str] = "null"
+    commit: Optional[str] = "null"
 
 
-def __init__(
-        self,
-        pub_time: int,
-        test_owner: Optional[str] = None,
-        test_name: Optional[str] = None,
-        run_id: Optional[str] = None,
-        status: Optional[str] = None,
-        start_time: Optional[int] = None,
-        end_time: Optional[int] = None,
-        version: Optional[str] = None,
-        branch: Optional[str] = None,
-        commit: Optional[str] = None,
-):
-    self.test_owner = test_owner or "unknown"
-    self.test_name = test_name or "unknown"
-    self.run_id = run_id or "unknown"
-    self.status = status or "unknown"
+    def __post_init__(self):
+        # Ensure pub_time is always a datetime
+        if self.pub_time is None:
+            self.pub_time = datetime.now()
+        else:
+            self.pub_time = parse_datetime(str(self.pub_time))
 
-    # Parse timestamps, fallback to pub_time if missing
-    self.start_time = parse_datetime(str(start_time)) if start_time else parse_datetime(str(pub_time))
-    self.pub_time = parse_datetime(str(pub_time))
-    self.end_time = parse_datetime(str(end_time)) if end_time else parse_datetime(str(pub_time))
-
-    # Normalize optional strings
-    self.version = None if not version or version == "null" else version
-    self.branch = None if not branch or branch == "null" else branch
-    self.commit = None if not commit or commit == "null" else commit
+        # Now safely parse start_time and end_time
+        self.start_time = parse_datetime(str(self.start_time)) if self.start_time else self.pub_time
+        self.end_time = parse_datetime(str(self.end_time)) if self.end_time else self.pub_time
 
 
 def compress_target_paths(paths: List[str]) -> List[str]:
@@ -185,7 +168,7 @@ class Graphite:
             data_str = urllib.request.urlopen(url).read()
             data_as_json = json.loads(data_str)
             return [
-                GraphiteEvent(event.get("when"), **ast.literal_eval(event.get("data")))
+                GraphiteEvent(pub_time=event.get("when"), **ast.literal_eval(event.get("data")))
                 for event in data_as_json
                 if event.get("what") == "Performance Test"
             ]

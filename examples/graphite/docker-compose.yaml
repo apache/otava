@@ -69,7 +69,6 @@ services:
       - otava-graphite
     volumes:
       - ./config:/config
-      - ./src:/srv/otava/src:cached       # mount your local source code
 networks:
   otava-graphite:
     driver: bridge
