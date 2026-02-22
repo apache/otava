@@ -46,6 +46,7 @@ services:
       - otava-postgres
     volumes:
       - ./config:/config
+    command: [ "analyze", "local.sample" ]
 
 networks:
   otava-postgres:
