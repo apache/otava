@@ -142,56 +142,85 @@ You can inherit more than one template.
 
 ## Validating Performance of a Feature Branch
 
-The `otava regressions` command can work with feature branches.
+When developing a feature, you may want to analyze performance test results from a specific branch
+to detect any regressions introduced by your changes. The `--branch` option allows you to run
+change-point analysis on branch-specific data.
 
-First you need to tell Otava how to fetch the data of the tests run against a feature branch.
-The `prefix` property of the graphite test definition accepts `%{BRANCH}` variable,
-which is substituted at the data import time by the branch name passed to `--branch`
-command argument. Alternatively, if the prefix for the main branch of your product is different
-from the prefix used for feature branches, you can define an additional `branch_prefix` property.
+### Configuration
+
+To support branch-based analysis, use the `%{BRANCH}` placeholder in your test configuration.
+This placeholder will be replaced with the branch name specified via `--branch`:
 
 ```yaml
-my-product.test-1:
-  type: graphite
-  tags: [perf-test, daily, my-product, test-1]
-  prefix: performance-tests.daily.%{BRANCH}.my-product.test-1
-  inherit: common-metrics
-
-my-product.test-2:
-  type: graphite
-  tags: [perf-test, daily, my-product, test-2]
-  prefix: performance-tests.daily.master.my-product.test-2
-  branch_prefix: performance-tests.feature.%{BRANCH}.my-product.test-2
-  inherit: common-metrics
+tests:
+  my-product.test:
+    type: graphite
+    prefix: performance-tests.%{BRANCH}.my-product
+    tags: [perf-test, my-product]
+    metrics:
+      throughput:
+        suffix: client.throughput
+        direction: 1
+      response_time:
+        suffix: client.p50
+        direction: -1
 ```
 
-Now you can verify if correct data are imported by running
-`otava analyze <test> --branch <branch>`.
+For PostgreSQL or BigQuery tests, use `%{BRANCH}` in your SQL query:
 
-The `--branch` argument also works with `otava regressions`. In this case a comparison will be made
-between the tail of the specified branch and the tail of the main branch (or a point of the
-main branch specified by one of the `--since` selectors).
-
-```
-$ otava regressions <test or group> --branch <branch>
-$ otava regressions <test or group> --branch <branch> --since <date>
-$ otava regressions <test or group> --branch <branch> --since-version <version>
-$ otava regressions <test or group> --branch <branch> --since-commit <commit>
-```
-
-When comparing two branches, you generally want to compare the tails of both test histories, and
-specifically a stable sequence from the end that doesn't contain any changes in itself.
-To ignore the older test results, and compare
-only the last few points on the branch with the tail of the main branch,
-use the `--last <n>` selector. E.g. to check regressions on the last run of the tests
-on the feature branch:
-
-```
-$ otava regressions <test or group> --branch <branch> --last 1
+```yaml
+tests:
+  my-product.db-test:
+    type: postgres
+    time_column: commit_ts
+    attributes: [experiment_id, commit]
+    query: |
+      SELECT commit, commit_ts, throughput, response_time
+      FROM results
+      WHERE branch = %{BRANCH}
+      ORDER BY commit_ts ASC
+    metrics:
+      throughput:
+        direction: 1
+      response_time:
+        direction: -1
 ```
 
-Please beware that performance validation based on a single data point is quite weak
-and Otava might miss a regression if the point is not too much different from
-the baseline. However, accuracy improves as more data points accumulate, and it is
-a normal way of using Otava to just merge a feature and then revert if it is
-flagged later.
+For CSV data sources, the branching is done by looking at the `branch` column in the CSV file and filtering rows based on the specified branch value.
+
+### Usage
+
+Run the analysis with the `--branch` option:
+
+```
+otava analyze my-product.test --branch feature-xyz
+```
+
+This will:
+1. Fetch data from the branch-specific location.
+2. Run change-point detection on the branch's performance data
+
+### Example
+
+```
+$ otava analyze my-product.test --branch feature-new-cache --since=-30d
+INFO: Computing change points for test my-product.test...
+my-product.test:
+time                         throughput    response_time
+-------------------------  ------------  ---------------
+2024-01-15 10:00:00 +0000        125000            45.2
+2024-01-16 10:00:00 +0000        124500            44.8
+2024-01-17 10:00:00 +0000        126200            45.1
+                               ········
+                                 +15.2%
+                               ········
+2024-01-18 10:00:00 +0000        145000            38.5
+2024-01-19 10:00:00 +0000        144200            39.1
+2024-01-20 10:00:00 +0000        146100            38.2
+```
+
+The `--branch` option can also be set via the `BRANCH` environment variable:
+
+```
+BRANCH=feature-xyz otava analyze my-product.test
+```

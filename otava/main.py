@@ -15,11 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import copy
 import logging
-import sys
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, List, Optional
 
 import configargparse as argparse
@@ -36,7 +34,7 @@ from otava.graphite import GraphiteError
 from otava.importer import DataImportError, Importers
 from otava.postgres import Postgres, PostgresError
 from otava.report import Report, ReportType
-from otava.series import AnalysisOptions, AnalyzedSeries, compare
+from otava.series import AnalysisOptions, AnalyzedSeries
 from otava.slack import NotificationError, SlackNotifier
 from otava.test_config import (
     BigQueryTestConfig,
@@ -256,71 +254,6 @@ class Otava:
                 attributes = series.attributes_at(cp.index)
                 bigquery.insert_change_point(test, metric_name, attributes, cp)
 
-    def regressions(
-        self, test: TestConfig, selector: DataSelector, options: AnalysisOptions
-    ) -> bool:
-        importer = self.__importers.get(test)
-
-        # Even if user is interested only in performance difference since some point X,
-        # we really need to fetch some earlier points than X.
-        # Otherwise, if performance went down very early after X, e.g. at X + 1, we'd have
-        # insufficient number of data points to compute the baseline performance.
-        # Instead of using `since-` selector, we're fetching everything from the
-        # beginning and then we find the baseline performance around the time pointed by
-        # the original selector.
-        since_version = selector.since_version
-        since_commit = selector.since_commit
-        since_time = selector.since_time
-        baseline_selector = copy.deepcopy(selector)
-        baseline_selector.last_n_points = sys.maxsize
-        baseline_selector.branch = None
-        baseline_selector.since_version = None
-        baseline_selector.since_commit = None
-        baseline_selector.since_time = since_time - timedelta(days=30)
-        baseline_series = importer.fetch_data(test, baseline_selector)
-
-        if since_version:
-            baseline_index = baseline_series.find_by_attribute("version", since_version)
-            if not baseline_index:
-                raise OtavaError(f"No runs of test {test.name} with version {since_version}")
-            baseline_index = max(baseline_index)
-        elif since_commit:
-            baseline_index = baseline_series.find_by_attribute("commit", since_commit)
-            if not baseline_index:
-                raise OtavaError(f"No runs of test {test.name} with commit {since_commit}")
-            baseline_index = max(baseline_index)
-        else:
-            baseline_index = baseline_series.find_first_not_earlier_than(since_time)
-
-        baseline_series = baseline_series.analyze(options=options)
-
-        if selector.branch:
-            target_series = importer.fetch_data(test, selector).analyze(options=options)
-        else:
-            target_series = baseline_series
-
-        cmp = compare(baseline_series, baseline_index, target_series, target_series.len())
-        regressions = []
-        for metric_name, stats in cmp.stats.items():
-            direction = baseline_series.metric(metric_name).direction
-            m1 = stats.mean_1
-            m2 = stats.mean_2
-            change_percent = stats.forward_rel_change() * 100.0
-            if m2 * direction < m1 * direction and stats.pvalue < options.max_pvalue:
-                regressions.append(
-                    "    {:16}: {:#8.3g} --> {:#8.3g} ({:+6.1f}%)".format(
-                        metric_name, m1, m2, change_percent
-                    )
-                )
-
-        if regressions:
-            print(f"{test.name}:")
-            for r in regressions:
-                print(r)
-        else:
-            print(f"{test.name}: OK")
-        return len(regressions) > 0
-
     def __maybe_create_slack_notifier(self):
         if not self.__conf.slack:
             return None
@@ -368,7 +301,8 @@ class Otava:
 
 def setup_data_selector_parser(parser: argparse.ArgumentParser):
     parser.add_argument(
-        "--branch", metavar="STRING", dest="branch", help="name of the branch", nargs="?"
+        "--branch", metavar="STRING", dest="branch", help="name of the branch", nargs="?",
+        env_var="BRANCH"
     )
     parser.add_argument(
         "--metrics",
@@ -587,17 +521,6 @@ def create_otava_cli_parser() -> argparse.ArgumentParser:
     setup_data_selector_parser(analyze_parser)
     setup_analysis_options_parser(analyze_parser)
 
-    regressions_parser = subparsers.add_parser(
-        "regressions",
-        help="find performance regressions",
-    )
-    regressions_parser.add_argument(
-        "tests", help="name of the test or group of the tests", nargs="+"
-    )
-    config.add_service_option_groups(regressions_parser)
-    setup_data_selector_parser(regressions_parser)
-    setup_analysis_options_parser(regressions_parser)
-
     remove_annotations_parser = subparsers.add_parser(
         "remove-annotations",
     )
@@ -686,32 +609,6 @@ def script_main(conf: Config = None, args: List[str] = None):
                     channels=slack_notification_channels,
                     since=slack_cph_since,
                 )
-
-        if args.command == "regressions":
-            data_selector = data_selector_from_args(args)
-            options = analysis_options_from_args(args)
-            tests = otava.get_tests(*args.tests)
-            regressing_test_count = 0
-            errors = 0
-            for test in tests:
-                try:
-                    regressions = otava.regressions(test, selector=data_selector, options=options)
-                    if regressions:
-                        regressing_test_count += 1
-                except OtavaError as err:
-                    logging.error(err.message)
-                    errors += 1
-                except DataImportError as err:
-                    logging.error(err.message)
-                    errors += 1
-            if regressing_test_count == 0:
-                print("No regressions found!")
-            elif regressing_test_count == 1:
-                print("Regressions in 1 test found")
-            else:
-                print(f"Regressions in {regressing_test_count} tests found")
-            if errors > 0:
-                print("Some tests were skipped due to import / analyze errors. Consult error log.")
 
         if args.command == "remove-annotations":
             if args.tests:

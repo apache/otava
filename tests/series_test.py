@@ -20,7 +20,7 @@ from random import random
 
 import pytest
 
-from otava.series import AnalysisOptions, Metric, Series, compare
+from otava.series import AnalysisOptions, Metric, Series
 
 
 def test_change_point_detection():
@@ -135,63 +135,6 @@ def test_get_stable_range():
     assert test.get_stable_range("series2", 0) == (0, 4)
     assert test.get_stable_range("series2", 1) == (0, 4)
     assert test.get_stable_range("series2", 3) == (0, 4)
-
-
-def test_compare():
-    series_1 = [1.02, 0.95, 0.99, 1.00, 1.04, 1.02, 0.50, 0.51, 0.48, 0.48, 0.53]
-    series_2 = [2.02, 2.03, 2.01, 2.04, 0.51, 0.49, 0.51, 0.49, 0.48, 0.52, 0.50]
-    time = list(range(len(series_1)))
-    test_1 = Series("test_1", None, time, {"data": Metric()}, {"data": series_1}, {}).analyze()
-    test_2 = Series("test_2", None, time, {"data": Metric()}, {"data": series_2}, {}).analyze()
-
-    stats = compare(test_1, None, test_2, None).stats["data"]
-    assert stats.pvalue > 0.5  # tails are almost the same
-    assert 0.48 < stats.mean_1 < 0.52
-    assert 0.48 < stats.mean_2 < 0.52
-
-    stats = compare(test_1, 0, test_2, 0).stats["data"]
-    assert stats.pvalue < 0.01  # beginnings are different
-    assert 0.98 < stats.mean_1 < 1.02
-    assert 2.00 < stats.mean_2 < 2.03
-
-    stats = compare(test_1, 5, test_2, 10).stats["data"]
-    assert stats.pvalue < 0.01
-    assert 0.98 < stats.mean_1 < 1.02
-    assert 0.49 < stats.mean_2 < 0.51
-
-
-def test_compare_single_point():
-    series_1 = [1.02, 0.95, 0.99, 1.00, 1.04, 1.02, 0.50, 0.51, 0.48, 0.48, 0.53]
-    series_2 = [0.51]
-    series_3 = [0.99]
-
-    test_1 = Series(
-        "test_1", None, list(range(len(series_1))), {"data": Metric()}, {"data": series_1}, {}
-    ).analyze()
-    test_2 = Series("test_2", None, [1], {"data": Metric()}, {"data": series_2}, {}).analyze()
-    test_3 = Series("test_3", None, [1], {"data": Metric()}, {"data": series_3}, {}).analyze()
-
-    stats = compare(test_1, None, test_2, None).stats["data"]
-    assert stats.pvalue > 0.5
-
-    stats = compare(test_1, 5, test_3, None).stats["data"]
-    assert stats.pvalue > 0.5
-
-    stats = compare(test_1, None, test_3, None).stats["data"]
-    assert stats.pvalue < 0.01
-
-
-def test_compare_metrics_order():
-    test = Series(
-        "test",
-        branch=None,
-        time=list(range(3)),
-        metrics={"m1": Metric(), "m2": Metric(), "m3": Metric(), "m4": Metric(), "m5": Metric()},
-        data={"m1": [0, 0, 0], "m2": [0, 0, 0], "m3": [0, 0, 0], "m4": [0, 0, 0], "m5": [0, 0, 0]},
-        attributes={},
-    ).analyze()
-    cmp = compare(test, None, test, None)
-    assert list(cmp.stats.keys()) == ["m1", "m2", "m3", "m4", "m5"]
 
 
 def test_incremental_otava():

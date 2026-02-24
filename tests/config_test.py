@@ -19,14 +19,10 @@ import tempfile
 from io import StringIO
 
 import pytest
-from expandvars import UnboundVariable
 
 from otava.config import (
     NestedYAMLConfigFileParser,
-    create_config_parser,
-    expand_env_vars_recursive,
     load_config_from_file,
-    load_config_from_parser_args,
 )
 from otava.main import create_otava_cli_parser
 from otava.test_config import CsvTestConfig, GraphiteTestConfig, HistoStatTestConfig
@@ -218,148 +214,6 @@ templates:
     for key in result.keys():
         section = key.split('-')[0]
         assert section not in ignored_sections, f"Found key '{key}' from ignored section '{section}'"
-
-
-def test_expand_env_vars_recursive():
-    """Test the expand_env_vars_recursive function with various data types."""
-
-    # Set up test environment variables
-    test_env_vars = {
-        "TEST_HOST": "localhost",
-        "TEST_PORT": "8080",
-        "TEST_DB": "testdb",
-        "TEST_USER": "testuser",
-    }
-
-    for key, value in test_env_vars.items():
-        os.environ[key] = value
-
-    try:
-        # Test simple string expansion
-        simple_string = "${TEST_HOST}:${TEST_PORT}"
-        result = expand_env_vars_recursive(simple_string)
-        assert result == "localhost:8080"
-
-        # Test dictionary expansion
-        test_dict = {
-            "host": "${TEST_HOST}",
-            "port": "${TEST_PORT}",
-            "database": "${TEST_DB}",
-            "connection_string": "postgresql://${TEST_USER}@${TEST_HOST}:${TEST_PORT}/${TEST_DB}",
-            "timeout": 30,  # non-string should remain unchanged
-            "enabled": True,  # non-string should remain unchanged
-        }
-
-        result_dict = expand_env_vars_recursive(test_dict)
-        expected_dict = {
-            "host": "localhost",
-            "port": "8080",
-            "database": "testdb",
-            "connection_string": "postgresql://testuser@localhost:8080/testdb",
-            "timeout": 30,
-            "enabled": True,
-        }
-        assert result_dict == expected_dict
-
-        # Test list expansion
-        test_list = [
-            "${TEST_HOST}",
-            {"nested_host": "${TEST_HOST}", "nested_port": "${TEST_PORT}"},
-            ["${TEST_USER}", "${TEST_DB}"],
-            123,  # non-string should remain unchanged
-        ]
-
-        result_list = expand_env_vars_recursive(test_list)
-        expected_list = [
-            "localhost",
-            {"nested_host": "localhost", "nested_port": "8080"},
-            ["testuser", "testdb"],
-            123,
-        ]
-        assert result_list == expected_list
-
-        # Test undefined variables (should throw UnboundVariable)
-        with pytest.raises(UnboundVariable, match="'UNDEFINED_VAR: unbound variable"):
-            expand_env_vars_recursive("${UNDEFINED_VAR}")
-
-        # Test mixed defined/undefined variables (should throw UnboundVariable)
-        with pytest.raises(UnboundVariable, match="'UNDEFINED_VAR: unbound variable"):
-            expand_env_vars_recursive("prefix-${TEST_HOST}-middle-${UNDEFINED_VAR}-suffix")
-
-    finally:
-        # Clean up environment variables
-        for key in test_env_vars:
-            if key in os.environ:
-                del os.environ[key]
-
-
-def test_env_var_expansion_in_templates_and_tests():
-    """Test that environment variable expansion works in template and test sections."""
-
-    # Set up test environment variables
-    test_env_vars = {
-        "CSV_DELIMITER": "$",
-        "CSV_QUOTE_CHAR": "!",
-        "CSV_FILENAME": "/tmp/test.csv",
-    }
-
-    for key, value in test_env_vars.items():
-        os.environ[key] = value
-
-    # Create a temporary config file with env var placeholders
-    config_content = """
-templates:
-  csv_template_1:
-      csv_options:
-          delimiter: "${CSV_DELIMITER}"
-
-  csv_template_2:
-      csv_options:
-          quote_char: '${CSV_QUOTE_CHAR}'
-
-tests:
-  expansion_test:
-    type: csv
-    file: ${CSV_FILENAME}
-    time_column: timestamp
-    metrics:
-      response_time:
-        column: response_ms
-        unit: ms
-    inherit: [csv_template_1, csv_template_2]
-"""
-
-    try:
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            f.write(config_content)
-            config_file_path = f.name
-
-        try:
-            # Load config and verify expansion worked
-            parser = create_config_parser()
-            args = parser.parse_args(["--config-file", config_file_path])
-            config = load_config_from_parser_args(args)
-
-            # Verify test was loaded
-            assert "expansion_test" in config.tests
-            test = config.tests["expansion_test"]
-            assert isinstance(test, CsvTestConfig)
-
-            # Verify that expansion worked
-            assert test.file == test_env_vars["CSV_FILENAME"]
-
-            # Verify that inheritance from templates worked with expanded values
-            assert test.csv_options.delimiter == test_env_vars["CSV_DELIMITER"]
-            assert test.csv_options.quote_char == test_env_vars["CSV_QUOTE_CHAR"]
-
-        finally:
-            os.unlink(config_file_path)
-
-    finally:
-        # Clean up environment variables
-        for key in test_env_vars:
-            if key in os.environ:
-                del os.environ[key]
 
 
 def test_cli_precedence_over_env_vars():

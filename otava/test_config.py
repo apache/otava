@@ -20,7 +20,6 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from otava.csv_options import CsvOptions
-from otava.util import interpolate
 
 
 @dataclass
@@ -83,8 +82,7 @@ class GraphiteMetric:
 
 @dataclass
 class GraphiteTestConfig(TestConfig):
-    prefix: str  # location of the performance data for the main branch
-    branch_prefix: Optional[str]  # location of the performance data for the feature branch
+    prefix: str  # location of the performance data (use %{BRANCH} for branch substitution)
     metrics: Dict[str, GraphiteMetric]  # collection of metrics to fetch
     tags: List[str]  # tags to query graphite events for this test
     annotate: List[str]  # annotation tags
@@ -93,35 +91,26 @@ class GraphiteTestConfig(TestConfig):
         self,
         name: str,
         prefix: str,
-        branch_prefix: Optional[str],
         metrics: List[GraphiteMetric],
         tags: List[str],
         annotate: List[str],
     ):
         self.name = name
         self.prefix = prefix
-        self.branch_prefix = branch_prefix
         self.metrics = {m.name: m for m in metrics}
         self.tags = tags
         self.annotate = annotate
 
-    def get_path(self, branch_name: Optional[str], metric_name: str) -> str:
+    def get_path(self, branch: Optional[str], metric_name: str) -> str:
         metric = self.metrics.get(metric_name)
-        substitutions = {"BRANCH": [branch_name if branch_name else "main"]}
-        if branch_name and self.branch_prefix:
-            return interpolate(self.branch_prefix, substitutions)[0] + "." + metric.suffix
-        elif branch_name:
-            branch_var_name = "%{BRANCH}"
-            if branch_var_name not in self.prefix:
+        prefix = self.prefix
+        if "%{BRANCH}" in prefix:
+            if not branch:
                 raise TestConfigError(
-                    f"Test {self.name} does not support branching. "
-                    f"Please set the `branch_prefix` property or use {branch_var_name} "
-                    f"in the `prefix`."
+                    f"Test {self.name} uses %{{BRANCH}} in prefix but --branch was not specified"
                 )
-            interpolated = interpolate(self.prefix, substitutions)
-            return interpolated[0] + "." + metric.suffix
-        else:
-            return self.prefix + "." + metric.suffix
+            prefix = prefix.replace("%{BRANCH}", branch)
+        return prefix + "." + metric.suffix
 
     def fully_qualified_metric_names(self):
         return [f"{self.prefix}.{m.suffix}" for _, m in self.metrics.items()]
@@ -304,7 +293,6 @@ def create_graphite_test_config(name: str, test_info: Dict) -> GraphiteTestConfi
     return GraphiteTestConfig(
         name,
         prefix=test_info["prefix"],
-        branch_prefix=test_info.get("branch_prefix"),
         tags=test_info.get("tags", []),
         annotate=test_info.get("annotate", []),
         metrics=metrics,

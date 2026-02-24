@@ -46,42 +46,26 @@ def test_otava_help_output():
         f"Expected exit code 0, got {result.returncode}. stderr:\n{result.stderr}"
     )
 
-    # Python 3.13+ formats the usage line differently (keeps subcommands on one line)
-    if IS_PYTHON_313_PLUS:
-        usage_line = """\
-usage: otava [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
-             [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
-             [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
-             [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
-             [--postgres-username POSTGRES_USERNAME] [--postgres-password POSTGRES_PASSWORD]
-             [--postgres-database POSTGRES_DATABASE] [--bigquery-project-id BIGQUERY_PROJECT_ID]
-             [--bigquery-dataset BIGQUERY_DATASET] [--bigquery-credentials BIGQUERY_CREDENTIALS]
-             {list-tests,list-metrics,list-groups,analyze,regressions,remove-annotations,validate} ..."""
-    else:
-        usage_line = """\
-usage: otava [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
-             [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
-             [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
-             [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
-             [--postgres-username POSTGRES_USERNAME] [--postgres-password POSTGRES_PASSWORD]
-             [--postgres-database POSTGRES_DATABASE] [--bigquery-project-id BIGQUERY_PROJECT_ID]
-             [--bigquery-dataset BIGQUERY_DATASET] [--bigquery-credentials BIGQUERY_CREDENTIALS]
-             {list-tests,list-metrics,list-groups,analyze,regressions,remove-annotations,validate}
-             ..."""
-
     assert (
         result.stdout
-        == usage_line + """
+        == """\
+usage: otava [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+             [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
+             [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
+             [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
+             [--postgres-username POSTGRES_USERNAME] [--postgres-password POSTGRES_PASSWORD]
+             [--postgres-database POSTGRES_DATABASE] [--bigquery-project-id BIGQUERY_PROJECT_ID]
+             [--bigquery-dataset BIGQUERY_DATASET] [--bigquery-credentials BIGQUERY_CREDENTIALS]
+             {list-tests,list-metrics,list-groups,analyze,remove-annotations,validate} ...
 
 Change Detection for Continuous Performance Engineering
 
 positional arguments:
-  {list-tests,list-metrics,list-groups,analyze,regressions,remove-annotations,validate}
+  {list-tests,list-metrics,list-groups,analyze,remove-annotations,validate}
     list-tests          list available tests
     list-metrics        list available metrics for a test
     list-groups         list available groups of tests
     analyze             analyze performance test results
-    regressions         find performance regressions
     validate            validates the tests and metrics defined in the configuration
 
 options:
@@ -186,7 +170,7 @@ options:
                         Slack. Same syntax as --since.
   --output {log,json,regressions_only}
                         Output format for the generated report.
-  --branch [STRING]     name of the branch
+  --branch [STRING]     name of the branch [env var: BRANCH]
   --metrics LIST        a comma-separated list of metrics to analyze
   --attrs LIST          a comma-separated list of attribute names associated with the runs (e.g.
                         commit, branch, version); if not specified, it will be automatically
@@ -244,169 +228,7 @@ options:
                         Slack. Same syntax as --since.
   --output {log,json,regressions_only}
                         Output format for the generated report.
-  --branch [STRING]     name of the branch
-  --metrics LIST        a comma-separated list of metrics to analyze
-  --attrs LIST          a comma-separated list of attribute names associated with the runs (e.g.
-                        commit, branch, version); if not specified, it will be automatically
-                        filled based on available information
-  --since-commit STRING
-                        the commit at the start of the time span to analyze
-  --since-version STRING
-                        the version at the start of the time span to analyze
-  --since DATE          the start of the time span to analyze; accepts ISO, and human-readable
-                        dates like '10 weeks ago'
-  --until-commit STRING
-                        the commit at the end of the time span to analyze
-  --until-version STRING
-                        the version at the end of the time span to analyze
-  --until DATE          the end of the time span to analyze; same syntax as --since
-  --last COUNT          the number of data points to take from the end of the series
-  -P, --p-value PVALUE  maximum accepted P-value of a change-point; P denotes the probability that
-                        the change-point has been found by a random coincidence, rather than a
-                        real difference between the data distributions
-  -M MAGNITUDE, --magnitude MAGNITUDE"""
-
-    assert (
-        result.stdout
-        == usage_and_options + """
-                        minimum accepted magnitude of a change-point computed as abs(new_mean /
-                        old_mean - 1.0); use it to filter out stupidly small changes like < 0.01
-  --window WINDOW       the number of data points analyzed at once; the window size affects the
-                        discriminative power of the change point detection algorithm; large
-                        windows are less susceptible to noise; however, a very large window may
-                        cause dismissing short regressions as noise so it is best to keep it short
-                        enough to include not more than a few change points (optimally at most 1)
-  --orig-edivisive ORIG_EDIVISIVE
-                        use the original edivisive algorithm with no windowing and weak change
-                        points analysis improvements
-
-Graphite Options:
-  Options for Graphite configuration
-
-  --graphite-url GRAPHITE_URL
-                        Graphite server URL [env var: GRAPHITE_ADDRESS]
-
-Grafana Options:
-  Options for Grafana configuration
-
-  --grafana-url GRAFANA_URL
-                        Grafana server URL [env var: GRAFANA_ADDRESS]
-  --grafana-user GRAFANA_USER
-                        Grafana server user [env var: GRAFANA_USER]
-  --grafana-password GRAFANA_PASSWORD
-                        Grafana server password [env var: GRAFANA_PASSWORD]
-
-Slack Options:
-  Options for Slack configuration
-
-  --slack-token SLACK_TOKEN
-                        Slack bot token to use for sending notifications [env var:
-                        SLACK_BOT_TOKEN]
-
-PostgreSQL Options:
-  Options for PostgreSQL configuration
-
-  --postgres-hostname POSTGRES_HOSTNAME
-                        PostgreSQL server hostname [env var: POSTGRES_HOSTNAME]
-  --postgres-port POSTGRES_PORT
-                        PostgreSQL server port [env var: POSTGRES_PORT]
-  --postgres-username POSTGRES_USERNAME
-                        PostgreSQL username [env var: POSTGRES_USERNAME]
-  --postgres-password POSTGRES_PASSWORD
-                        PostgreSQL password [env var: POSTGRES_PASSWORD]
-  --postgres-database POSTGRES_DATABASE
-                        PostgreSQL database name [env var: POSTGRES_DATABASE]
-
-BigQuery Options:
-  Options for BigQuery configuration
-
-  --bigquery-project-id BIGQUERY_PROJECT_ID
-                        BigQuery project ID [env var: BIGQUERY_PROJECT_ID]
-  --bigquery-dataset BIGQUERY_DATASET
-                        BigQuery dataset [env var: BIGQUERY_DATASET]
-  --bigquery-credentials BIGQUERY_CREDENTIALS
-                        BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
-
- In general, command-line values override environment variables which override defaults.
-"""
-    )
-
-
-def test_otava_regressions_help_output():
-    result = run_help_command("regressions")
-    assert result.returncode == 0, (
-        f"Expected exit code 0, got {result.returncode}. stderr:\n{result.stderr}"
-    )
-
-    # Python 3.13+ formats usage lines and option aliases differently
-    if IS_PYTHON_313_PLUS:
-        usage_and_options = """\
-usage: otava regressions [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_URL]
-                         [--grafana-user GRAFANA_USER] [--grafana-password GRAFANA_PASSWORD]
-                         [--slack-token SLACK_TOKEN] [--postgres-hostname POSTGRES_HOSTNAME]
-                         [--postgres-port POSTGRES_PORT] [--postgres-username POSTGRES_USERNAME]
-                         [--postgres-password POSTGRES_PASSWORD]
-                         [--postgres-database POSTGRES_DATABASE]
-                         [--bigquery-project-id BIGQUERY_PROJECT_ID]
-                         [--bigquery-dataset BIGQUERY_DATASET]
-                         [--bigquery-credentials BIGQUERY_CREDENTIALS] [--branch [STRING]]
-                         [--metrics LIST] [--attrs LIST] [--since-commit STRING |
-                         --since-version STRING | --since DATE] [--until-commit STRING |
-                         --until-version STRING | --until DATE] [--last COUNT]
-                         [-P, --p-value PVALUE] [-M MAGNITUDE] [--window WINDOW]
-                         [--orig-edivisive ORIG_EDIVISIVE]
-                         tests [tests ...]
-
-positional arguments:
-  tests                 name of the test or group of the tests
-
-options:
-  -h, --help            show this help message and exit
-  --branch [STRING]     name of the branch
-  --metrics LIST        a comma-separated list of metrics to analyze
-  --attrs LIST          a comma-separated list of attribute names associated with the runs (e.g.
-                        commit, branch, version); if not specified, it will be automatically
-                        filled based on available information
-  --since-commit STRING
-                        the commit at the start of the time span to analyze
-  --since-version STRING
-                        the version at the start of the time span to analyze
-  --since DATE          the start of the time span to analyze; accepts ISO, and human-readable
-                        dates like '10 weeks ago'
-  --until-commit STRING
-                        the commit at the end of the time span to analyze
-  --until-version STRING
-                        the version at the end of the time span to analyze
-  --until DATE          the end of the time span to analyze; same syntax as --since
-  --last COUNT          the number of data points to take from the end of the series
-  -P, --p-value PVALUE  maximum accepted P-value of a change-point; P denotes the probability that
-                        the change-point has been found by a random coincidence, rather than a
-                        real difference between the data distributions
-  -M, --magnitude MAGNITUDE"""
-    else:
-        usage_and_options = """\
-usage: otava regressions [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_URL]
-                         [--grafana-user GRAFANA_USER] [--grafana-password GRAFANA_PASSWORD]
-                         [--slack-token SLACK_TOKEN] [--postgres-hostname POSTGRES_HOSTNAME]
-                         [--postgres-port POSTGRES_PORT] [--postgres-username POSTGRES_USERNAME]
-                         [--postgres-password POSTGRES_PASSWORD]
-                         [--postgres-database POSTGRES_DATABASE]
-                         [--bigquery-project-id BIGQUERY_PROJECT_ID]
-                         [--bigquery-dataset BIGQUERY_DATASET]
-                         [--bigquery-credentials BIGQUERY_CREDENTIALS] [--branch [STRING]]
-                         [--metrics LIST] [--attrs LIST]
-                         [--since-commit STRING | --since-version STRING | --since DATE]
-                         [--until-commit STRING | --until-version STRING | --until DATE]
-                         [--last COUNT] [-P, --p-value PVALUE] [-M MAGNITUDE] [--window WINDOW]
-                         [--orig-edivisive ORIG_EDIVISIVE]
-                         tests [tests ...]
-
-positional arguments:
-  tests                 name of the test or group of the tests
-
-options:
-  -h, --help            show this help message and exit
-  --branch [STRING]     name of the branch
+  --branch [STRING]     name of the branch [env var: BRANCH]
   --metrics LIST        a comma-separated list of metrics to analyze
   --attrs LIST          a comma-separated list of attribute names associated with the runs (e.g.
                         commit, branch, version); if not specified, it will be automatically
