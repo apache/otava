@@ -24,7 +24,7 @@ from logging import info
 from typing import Dict, Iterable, List, Optional
 
 from otava.data_selector import DataSelector
-from otava.util import parse_datetime
+from otava.util import clean_str, parse_datetime
 
 
 @dataclass
@@ -80,27 +80,33 @@ class GraphiteError(IOError):
 @dataclass
 class GraphiteEvent:
     pub_time: datetime
-    test_owner: Optional[str] = "null"
-    test_name: Optional[str] = "null"
-    run_id: Optional[str] = "null"
-    status: Optional[str] = "null"
+    test_owner: Optional[str] = None
+    test_name: Optional[str] = None
+    run_id: Optional[str] = None
+    status: Optional[str] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
-    version: Optional[str] = "null"
-    branch: Optional[str] = "null"
-    commit: Optional[str] = "null"
+    version: Optional[str] = None
+    branch: Optional[str] = None
+    commit: Optional[str] = None
 
 
     def __post_init__(self):
         if self.pub_time is None:
             raise ValueError("pub_time is required and cannot be None")
         # Ensure pub_time is always a datetime
+        self.pub_time = parse_datetime(str(self.pub_time))
 
-        # Only parse if it isn't already a datetime object
-        if isinstance(self.pub_time, str):
-            self.pub_time = parse_datetime(self.pub_time)
-        elif isinstance(self.pub_time, (int, float)):
-            self.pub_time = datetime.fromtimestamp(self.pub_time)
+
+        self.version = clean_str(self.version)
+        self.branch = clean_str(self.branch)
+        self.commit = clean_str(self.commit)
+        self.test_owner = clean_str(self.test_owner)
+        self.test_name = clean_str(self.test_name)
+        self.run_id = clean_str(self.run_id)
+        self.status = clean_str(self.status)
+
+
 
 
 def compress_target_paths(paths: List[str]) -> List[str]:
@@ -138,10 +144,10 @@ class Graphite:
         self.__url_limit = 4094
 
     def fetch_events(
-            self,
-            tags: Iterable[str],
-            from_time: Optional[datetime] = None,
-            until_time: Optional[datetime] = None,
+        self,
+        tags: Iterable[str],
+        from_time: Optional[datetime] = None,
+        until_time: Optional[datetime] = None,
     ) -> List[GraphiteEvent]:
         """
         Returns 'Performance Test' events that match all of
@@ -177,7 +183,7 @@ class Graphite:
             raise GraphiteError(f"Failed to fetch Graphite events: {str(e)}")
 
     def fetch_events_with_matching_time_option(
-            self, tags: Iterable[str], commit: Optional[str], version: Optional[str]
+        self, tags: Iterable[str], commit: Optional[str], version: Optional[str]
     ) -> List[GraphiteEvent]:
         events = []
         if commit is not None:

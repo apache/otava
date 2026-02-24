@@ -91,19 +91,19 @@ Posting those events is not mandatory, but when they are available, Otava is abl
 filter data by commit or version using `--since-commit` or `--since-version` selectors.
 
 #### Supported Metadata Schema
-The following keys are supported within the `data` dictionary:
+The following tags are supported:
 
-| Field | Description | Default Value |
-| :--- | :--- | :--- |
-| **`test_owner`** | The user or team responsible for the run. | `"null"` |
-| **`test_name`** | The name of the test suite executed. | `"null"` |
-| **`run_id`** | Unique identifier for the specific run. | `"null"` |
-| **`status`** | The outcome (e.g., `success`, `failure`). | `"null"` |
-| **`version`** | The product version being tested. | `"null"` |
-| **`branch`** | The VCS branch name. | `"null"` |
-| **`commit`** | The specific commit hash. | `"null"` |
-| **`start_time`** | Timestamp of test start. | `when` (from Graphite) |
-| **`end_time`** | Timestamp of test end. | `when` (from Graphite) |
+| Field | Description | Default Value          |
+| :--- | :--- |:-----------------------|
+| **`test_owner`** | The user or team responsible for the run. | `None`               |
+| **`test_name`** | The name of the test suite executed. | `None`               |
+| **`run_id`** | Unique identifier for the specific run. | `None`               |
+| **`status`** | The outcome (e.g., `success`, `failure`). | `None`               |
+| **`version`** | The product version being tested. | `None`               |
+| **`branch`** | The VCS branch name. | `None`               |
+| **`commit`** | The specific commit hash. | `None`               |
+| **`start_time`** | Timestamp of test start. | `None` |
+| **`end_time`** | Timestamp of test end. | `None` |
 
 ## Example
 
@@ -124,13 +124,13 @@ Expected output:
 ```bash
 time                       run    branch       version    commit      throughput    response_time    cpu_usage
 -------------------------  -----  -----------  ---------  --------  ------------  ---------------  -----------
-2026-02-22 18:51:10 +0000  null   new-feature  0.0.1      p7q8r9           61160               87          0.2
-2026-02-22 18:52:10 +0000  null   new-feature  0.0.1      m4n5o6           60160               85          0.3
-2026-02-22 18:53:10 +0000  null   new-feature  0.0.1      j1k2l3           60960               89          0.1
+2026-04-18 15:42:50 +0000         new-feature  0.0.1      p7q8r9           61160               87          0.2
+2026-04-18 15:43:50 +0000         new-feature  0.0.1      m4n5o6           60160               85          0.3
+2026-04-18 15:44:50 +0000         new-feature  0.0.1      j1k2l3           60960               89          0.1
                                                                     ············                   ···········  
                                                                            -5.6%                       +300.0%  
                                                                     ············                   ···········  
-2026-02-22 18:54:10 +0000  null   new-feature  0.0.1      g7h8i9           57123               88          0.8
-2026-02-22 18:55:10 +0000  null   new-feature  0.0.1      d4e5f6           57980               87          0.9
-2026-02-22 18:56:10 +0000  null   new-feature  0.0.1      a1b2c3           56950               85          0.7
+2026-04-18 15:45:50 +0000         new-feature  0.0.1      g7h8i9           57123               88          0.8
+2026-04-18 15:46:50 +0000         new-feature  0.0.1      d4e5f6           57980               87          0.9
+2026-04-18 15:47:50 +0000         new-feature  0.0.1      a1b2c3           56950               85          0.7
 ```
