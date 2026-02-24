@@ -80,15 +80,15 @@ class GraphiteError(IOError):
 @dataclass
 class GraphiteEvent:
     pub_time: datetime
-    test_owner: Optional[str] = "null"
-    test_name: Optional[str] = "null"
-    run_id: Optional[str] = "null"
-    status: Optional[str] = "null"
+    test_owner: Optional[str] = None
+    test_name: Optional[str] = None
+    run_id: Optional[str] = None
+    status: Optional[str] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
-    version: Optional[str] = "null"
-    branch: Optional[str] = "null"
-    commit: Optional[str] = "null"
+    version: Optional[str] = None
+    branch: Optional[str] = None
+    commit: Optional[str] = None
 
 
     def __post_init__(self):

@@ -93,17 +93,17 @@ filter data by commit or version using `--since-commit` or `--since-version` sel
 #### Supported Metadata Schema
 The following keys are supported within the `data` dictionary:
 
-| Field | Description | Default Value |
-| :--- | :--- | :--- |
-| **`test_owner`** | The user or team responsible for the run. | `"null"` |
-| **`test_name`** | The name of the test suite executed. | `"null"` |
-| **`run_id`** | Unique identifier for the specific run. | `"null"` |
-| **`status`** | The outcome (e.g., `success`, `failure`). | `"null"` |
-| **`version`** | The product version being tested. | `"null"` |
-| **`branch`** | The VCS branch name. | `"null"` |
-| **`commit`** | The specific commit hash. | `"null"` |
-| **`start_time`** | Timestamp of test start. | `when` (from Graphite) |
-| **`end_time`** | Timestamp of test end. | `when` (from Graphite) |
+| Field | Description | Default Value          |
+| :--- | :--- |:-----------------------|
+| **`test_owner`** | The user or team responsible for the run. | `None`               |
+| **`test_name`** | The name of the test suite executed. | `None`               |
+| **`run_id`** | Unique identifier for the specific run. | `None`               |
+| **`status`** | The outcome (e.g., `success`, `failure`). | `None`               |
+| **`version`** | The product version being tested. | `None`               |
+| **`branch`** | The VCS branch name. | `None`               |
+| **`commit`** | The specific commit hash. | `None`               |
+| **`start_time`** | Timestamp of test start. | `None` |
+| **`end_time`** | Timestamp of test end. | `None` |
 
 ## Example
 
