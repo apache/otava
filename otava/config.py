@@ -182,6 +182,14 @@ def add_service_option_groups(parser) -> None:
     BigQueryConfig.add_parser_args(parser.add_argument_group('BigQuery Options', 'Options for BigQuery configuration'))
 
 
+def create_subparser_parent() -> configargparse.ArgumentParser:
+    """Create a parent parser for subparsers that accepts --config-file and service options."""
+    parent = configargparse.ArgumentParser(add_help=False)
+    parent.add_argument('--config-file', help='Otava config file path', env_var="OTAVA_CONFIG")
+    add_service_option_groups(parent)
+    return parent
+
+
 def create_config_parser() -> configargparse.ArgumentParser:
     parser = configargparse.ArgumentParser(
         add_help=False,
