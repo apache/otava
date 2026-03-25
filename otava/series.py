@@ -22,6 +22,7 @@ from itertools import groupby
 from typing import Any, Dict, Iterable, List, Optional
 
 from otava.analysis import (
+    TTestSignificanceTester,
     TTestStats,
     compute_change_points,
     compute_change_points_orig,
@@ -248,7 +249,16 @@ class AnalyzedSeries:
                     values,
                     max_pvalue=options.max_pvalue,
                 )
-                result[metric] = change_points
+                tester = TTestSignificanceTester(options.max_pvalue)
+                intervals = tester.get_intervals(change_points)
+                for c in change_points:
+                    cp_ttest = tester.change_point(c.to_candidate(), values, intervals)
+                    result[metric].append(
+                        ChangePoint(
+                            index=cp_ttest.index, qhat=cp_ttest.qhat,
+                            time=series.time[cp_ttest.index], metric=metric, stats=cp_ttest.stats
+                        )
+                    )
             else:
                 change_points, weak_cps = compute_change_points(
                     values,

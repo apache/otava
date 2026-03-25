@@ -427,7 +427,7 @@ def setup_analysis_options_parser(parser: argparse.ArgumentParser):
     )
     parser.add_argument(
         "--orig-edivisive",
-        type=bool,
+        action="store_true",
         default=False,
         dest="orig_edivisive",
         help="use the original edivisive algorithm with no windowing "
