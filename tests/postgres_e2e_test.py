@@ -41,7 +41,7 @@ def test_analyze():
     with postgres_container(username, password, db) as (postgres_container_id, host_port):
         # Run the Otava analysis
         proc = subprocess.run(
-            ["uv", "run", "otava", "analyze", "aggregate_mem", "--branch", "trunk"],
+            ["uv", "run", "otava", "analyze", "aggregate_mem", "--branch", "trunk", "--since", "2025-01-01"],
             capture_output=True,
             text=True,
             timeout=600,
@@ -139,7 +139,7 @@ def test_analyze_and_update_postgres():
     with postgres_container(username, password, db) as (postgres_container_id, host_port):
         # Run the Otava analysis
         proc = subprocess.run(
-            ["uv", "run", "otava", "analyze", "aggregate_mem", "--branch", "trunk", "--update-postgres"],
+            ["uv", "run", "otava", "analyze", "aggregate_mem", "--branch", "trunk", "--update-postgres", "--since", "2025-01-01"],
             capture_output=True,
             text=True,
             timeout=600,
