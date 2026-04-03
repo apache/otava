@@ -23,7 +23,7 @@
 
 ## Overview
 
-`JsonImporter` reads benchmark results from a local JSON file and feeds them into Otava for change-point analysis. It is the simplest data source to set up — no external database or service is required.
+`JsonImporter` reads benchmark results from a local JSON file and feeds them into Otava for change-point analysis. It is a simple data source to set up — no external database or service is required.
 
 The importer caches parsed file content in memory, so a file is only read once per session even if multiple tests reference the same path.
 
@@ -94,14 +94,14 @@ Add a test with `type: json` to your `otava.yaml`:
 tests:
   my_benchmark:
     type: json
-    file: path/to/results.json
+    file: otava/examples/json/data/sample.json
     base_branch: main
 ```
 
 | Field | Required | Description |
 |---|---|---|
 | `type` | yes | Must be `json` |
-| `file` | yes | file: Path to the JSON file |
+| `file` | yes |  Path to the JSON file |
 | `base_branch` | no | If set, only runs from this branch are analyzed by default |
 
 ---
@@ -131,4 +131,6 @@ tests:
 ## Example Usage
 
 Run analysis on a test backed by a JSON file:
-otava analyze my_benchmark
+```bash
+otava analyze my_benchmark --config otava/examples/json/config/otava.yaml
+```
