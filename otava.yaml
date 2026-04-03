@@ -1,0 +1,5 @@
+tests:
+  my_benchmark:
+    type: json
+    file: test_data/sample.json
+    base_branch: main
