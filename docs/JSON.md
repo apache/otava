@@ -67,24 +67,25 @@ The input file must be a JSON array. Each element represents a single benchmark 
 
 - **Type:** integer (Unix epoch seconds)
 - **Required:** yes
-- Identifies when the benchmark run occurred. Used for time-range filtering via `DataSelector`.
+- Identifies when the commit was merged into the tracked branch. This timestamp should remain constant for the same commit, even if benchmarks are rerun multiple times.
 
 ### `metrics`
 
 - **Type:** array of objects
 - **Required:** yes
 - Each object must have:
-  - `name` (string) — unique identifier for the metric within this run
+  - `name` (string) — unique identifier for the metric within this result
   - `value` (number) — the measured value
-- Metric names are collected dynamically across all entries in the file. Names must be consistent across runs for change-point analysis to be meaningful.
+- Metric names must be consistent across results for change-point analysis to be meaningful.
+
+> Note: A `unit` field (e.g., "ms") is not currently supported by JsonImporter.
 
 ### `attributes`
 
 - **Type:** object (string → string)
-- **Required:** yes if `branch` filtering is used
+- **Required:** no
 - Arbitrary key-value pairs describing the run context (e.g. branch, commit, version).
-- The `branch` key is treated specially: if a branch is specified via `DataSelector` or `base_branch` in the config, only runs where `attributes["branch"]` matches that value are included.
-
+- The `branch` key is required only when using branch-based filtering.
 ---
 
 ## Configuration Example
@@ -106,18 +107,6 @@ tests:
 
 ---
 
-## Behavior
-
-- **File loading:** The file is read in full when first accessed. Parsed content is cached in memory for the lifetime of the session — repeated calls with the same file path do not re-read from disk.
-- **Metric discovery:** All metric names are collected by scanning every entry in the file. The resulting set is unordered.
-- **Attribute discovery:** Attribute keys are collected the same way — by scanning all entries.
-- **Branch filtering:** If `selector.branch` is set, only runs where `attributes["branch"]` equals that value are included. If not set but `base_branch` is configured, that value is used instead. If neither is set, all runs are included.
-- **Metric filtering:** If `selector.metrics` is set, only metrics whose names appear in that list are included. Others are silently skipped.
-- **Time filtering:** Entries outside `selector.since_time` / `selector.until_time` are excluded. An invalid range (since > until) raises an error.
-- **Truncation:** After filtering, only the last `selector.last_n_points` entries are kept for time, data, and attributes.
-
----
-
 ## Limitations
 
 - The entire file is read into memory at once. Very large files may cause high memory usage.
@@ -130,7 +119,7 @@ tests:
 
 ## Example Usage
 
-Run analysis on a test backed by a JSON file:
+Analyze test results stored in JSON format:
 ```bash
 otava analyze my_benchmark --config otava/examples/json/config/otava.yaml
 ```

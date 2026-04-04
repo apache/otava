@@ -7,5 +7,14 @@
     "attributes": {
       "branch": "main"
     }
+  },
+  {
+    "timestamp": 1712016000,
+    "metrics": [
+      { "name": "throughput", "value": 120 }
+    ],
+    "attributes": {
+      "branch": "main"
+    }
   }
 ]

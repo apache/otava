@@ -18,5 +18,5 @@
 tests:
   my_benchmark:
     type: json
-    file: test_data/sample.json
+    file: otava/examples/json/data/sample.json
     base_branch: main
