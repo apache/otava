@@ -165,8 +165,15 @@ def parse_datetime(date: Optional[Union[str, int, float, datetime]]) -> Optional
 def clean_str(value: Optional[str]) -> Optional[str]:
     if value is None:
         return None
+
+    if not isinstance(value, str):
+        return value  # or raise TypeError if you want strictness
+
+    value = value.strip()
+
     if value == "" or value.lower() == "null":
         return None
+
     return value
 
 
