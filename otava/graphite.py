@@ -107,8 +107,6 @@ class GraphiteEvent:
         self.status = clean_str(self.status)
 
 
-
-
 def compress_target_paths(paths: List[str]) -> List[str]:
     """Uses the alternative syntax to reduce the total length of the query"""
     result = []
