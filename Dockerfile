@@ -37,7 +37,10 @@ COPY . /build
 RUN uv build --wheel
 
 # Runtime stage - install and run the package
-FROM python:3.14.1-alpine AS runtime
+# Use a glibc-based image so NumPy/SciPy can be installed from prebuilt
+# wheels on both amd64 and arm64. Alpine/musl often falls back to source
+# builds, which is memory-intensive under buildx/QEMU.
+FROM python:3.14.1-slim AS runtime
 
 # So that STDOUT/STDERR is printed
 ENV PYTHONUNBUFFERED="1"
@@ -47,8 +50,8 @@ ENV PYTHONUNBUFFERED="1"
 ENV OTAVA_HOME /srv/otava
 WORKDIR ${OTAVA_HOME}
 
-RUN addgroup -g 8192 otava && \
-    adduser -u 8192 -G otava -s /bin/false -D -H otava && \
+RUN groupadd --gid 8192 otava && \
+    useradd --uid 8192 --gid otava --shell /usr/sbin/nologin --no-create-home otava && \
     chown otava:otava ${OTAVA_HOME}
 
 
@@ -56,19 +59,11 @@ RUN addgroup -g 8192 otava && \
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /build/dist/*.whl /tmp/
 
-# Install build dependencies, install the wheel, then remove build tools
-RUN apk add --no-cache --virtual .build-deps \
-    gcc \
-    g++ \
-    musl-dev \
-    python3-dev \
-    libffi-dev \
-    openblas-dev \
-    gfortran \
-    && apk add --no-cache libstdc++ openblas \
-    && uv pip install --system --no-cache /tmp/apache_otava-*.whl \
+# Install the wheel and remove temporary artifacts.
+# With the slim runtime image this should resolve binary dependencies from
+# prebuilt wheels instead of compiling NumPy/SciPy from source.
+RUN uv pip install --system --no-cache /tmp/apache_otava-*.whl \
     && rm /tmp/apache_otava-*.whl \
-    && apk del .build-deps \
     && rm /usr/local/bin/uv
 
 # Switch to otava user
