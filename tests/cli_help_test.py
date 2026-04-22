@@ -136,15 +136,16 @@ def test_otava_analyze_help_output():
     # Python 3.13+ formats mutually exclusive group usage and option aliases differently
     if IS_PYTHON_313_PLUS:
         usage_filter_lines = """\
-                     [--attrs LIST] [--since-commit STRING | --since-version STRING |
-                     --since DATE] [--until-commit STRING | --until-version STRING | --until DATE]"""
-        magnitude_option = "  -M, --magnitude MAGNITUDE"
+                     [--attrs LIST]
+                     [--since-commit STRING | --since-version STRING | --since DATE]
+                     [--until-commit STRING | --until-version STRING | --until DATE]"""
     else:
         usage_filter_lines = """\
                      [--attrs LIST]
                      [--since-commit STRING | --since-version STRING | --since DATE]
                      [--until-commit STRING | --until-version STRING | --until DATE]"""
-        magnitude_option = "  -M MAGNITUDE, --magnitude MAGNITUDE"
+
+    magnitude_option = "  -M MAGNITUDE, --magnitude MAGNITUDE"
 
     usage_and_options = f"""\
 usage: otava analyze [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
@@ -162,7 +163,7 @@ usage: otava analyze [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_U
                      [--output {{log,json,regressions_only}}] [--branch [STRING]] [--metrics LIST]
 {usage_filter_lines}
                      [--last COUNT] [-P, --p-value PVALUE] [-M MAGNITUDE] [--window WINDOW]
-                     [--orig-edivisive ORIG_EDIVISIVE]
+                     [--orig-edivisive ORIG_EDIVISIVE] [--min-segment-len MIN_SEGMENT_LEN]
                      tests [tests ...]
 
 positional arguments:
@@ -218,6 +219,9 @@ options:
   --orig-edivisive ORIG_EDIVISIVE
                         use the original edivisive algorithm with no windowing and weak change
                         points analysis improvements
+  --min-segment-len MIN_SEGMENT_LEN
+                        minimum accepted segment length between change points; segments with
+                        length >= this value are kept, shorter regimes are removed
 
 Graphite Options:
   Options for Graphite configuration

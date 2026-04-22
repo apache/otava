@@ -188,6 +188,88 @@ def fill_missing(data: Sequence[SupportsFloat]):
         prev = data[i]
 
 
+def collapse_short_segments(
+    change_points: TtestCPList,
+    series: Sequence[SupportsFloat],
+    max_pvalue: float,
+    min_magnitude: float,
+    min_segment_len: int,
+) -> TtestCPList:
+    """
+    Normalizes weak change points by removing or collapsing too-short regimes.
+
+    This is an explicit denoising pass that runs before the regular otava merge.
+    If the weak change points induce a regime shorter than ``min_segment_len`` we
+    treat that regime as unstable noise rather than a real stationary segment.
+
+    For an edge segment we simply remove the adjacent change point. For a short
+    middle segment ``A | B | C`` we remove both boundaries around ``B`` and, if
+    the two stable neighbors ``A`` and ``C`` still differ significantly, replace
+    them with a single synthetic change point at the start of ``C``.
+
+    Note that the replacement change point is intentionally a denoised summary:
+    its statistics describe the stable neighbors ``A`` vs ``C``, not the literal
+    contiguous split in the raw series at that index. This keeps one-point spikes
+    from polluting the reported magnitude and p-value while still surfacing the
+    stable post-spike change.
+    """
+    if min_segment_len <= 1:
+        return change_points
+
+    tester = TTestSignificanceTester(max_pvalue)
+
+    def interval_len(interval: slice) -> int:
+        start = 0 if interval.start is None else interval.start
+        stop = len(series) if interval.stop is None else interval.stop
+        return stop - start
+
+    while change_points:
+        intervals = tester.get_intervals(change_points)
+        for interval_index, interval in enumerate(intervals):
+            if interval_len(interval) >= min_segment_len:
+                continue
+
+            if interval_index == 0:
+                # A short leading segment has only one adjacent boundary, so the
+                # most conservative option is to drop that candidate entirely.
+                del change_points[0]
+            elif interval_index == len(intervals) - 1:
+                # Same for a short trailing segment.
+                del change_points[-1]
+            else:
+                left_interval = intervals[interval_index - 1]
+                right_interval = intervals[interval_index + 1]
+                right_change_point = change_points[interval_index]
+                # The short middle regime is treated as transient noise. Compare
+                # the stable neighbors directly and, if they still differ enough,
+                # emit a single replacement change point at the start of the
+                # right-hand stable regime.
+                replacement_stats = tester.compare(
+                    series[left_interval],
+                    series[right_interval],
+                )
+
+                # Remove both boundaries that created the short middle regime.
+                del change_points[interval_index - 1 : interval_index + 1]
+
+                replacement_cp = ChangePoint(
+                    index=right_change_point.index,
+                    qhat=right_change_point.qhat,
+                    stats=replacement_stats,
+                )
+                if (
+                    tester.is_significant(replacement_cp)
+                    and replacement_cp.stats.change_magnitude() > min_magnitude
+                ):
+                    change_points.insert(interval_index - 1, replacement_cp)
+
+            break
+        else:
+            return change_points
+
+    return change_points
+
+
 def merge(
     change_points: TtestCPList, series: Sequence[SupportsFloat], max_pvalue: float, min_magnitude: float
 ) -> TtestCPList:
@@ -201,7 +283,6 @@ def merge(
     """
     tester = TTestSignificanceTester(max_pvalue)
     while change_points:
-
         # Select the change point with weakest unacceptable P-value
         # If all points have acceptable P-values, select the change-point with
         # the least relative change:
@@ -292,8 +373,13 @@ def compute_change_points_orig(series: Sequence[SupportsFloat], max_pvalue: floa
 
 
 def compute_change_points(
-    series: Sequence[SupportsFloat], window_len: int = 50, max_pvalue: float = 0.001, min_magnitude: float = 0.0,
-    new_data: Optional[int] = None, old_weak_cp: Optional[GenCPList] = None
+    series: Sequence[SupportsFloat],
+    window_len: int = 50,
+    max_pvalue: float = 0.001,
+    min_magnitude: float = 0.0,
+    min_segment_len: int = 1,
+    new_data: Optional[int] = None,
+    old_weak_cp: Optional[GenCPList] = None,
 ) -> Tuple[GenCPList, Optional[GenCPList]]:
     """
     Change Point detection algorithm described in "Hunter: Using Change Point Detection to Hunt for Performance
@@ -320,7 +406,25 @@ def compute_change_points(
         2. Merge step:
             - Filters out weak change points recursively going bottom-up, keeping only high-quality change points, i.e., the
               ones that meet either a p-value threshold criteria or relative magnitude change criteria.
+
+    When ``min_segment_len > 1`` there is an additional normalization step between
+    split and merge which collapses weak change points that form regimes shorter
+    than the requested minimum length.
     """
     first_pass_pvalue = max_pvalue * 10 if max_pvalue < 0.05 else (max_pvalue * 2 if max_pvalue < 0.5 else max_pvalue)
     weak_change_points = split(series, window_len, first_pass_pvalue, new_points=new_data, old_cp=old_weak_cp)
-    return merge(weak_change_points, series, max_pvalue, min_magnitude), weak_change_points
+    return (
+        merge(
+            collapse_short_segments(
+                weak_change_points,
+                series,
+                max_pvalue,
+                min_magnitude,
+                min_segment_len,
+            ),
+            series,
+            max_pvalue,
+            min_magnitude,
+        ),
+        weak_change_points,
+    )
