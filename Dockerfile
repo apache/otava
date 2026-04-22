@@ -56,19 +56,11 @@ RUN addgroup -g 8192 otava && \
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /build/dist/*.whl /tmp/
 
-# Install build dependencies, install the wheel, then remove build tools
-RUN apk add --no-cache --virtual .build-deps \
-    gcc \
-    g++ \
-    musl-dev \
-    python3-dev \
-    libffi-dev \
-    openblas-dev \
-    gfortran \
-    && apk add --no-cache libstdc++ openblas \
-    && uv pip install --system --no-cache /tmp/apache_otava-*.whl \
+# Install the wheel and remove temporary artifacts.
+# With the slim runtime image this should resolve binary dependencies from
+# prebuilt wheels instead of compiling NumPy/SciPy from source.
+RUN uv pip install --system --no-cache /tmp/apache_otava-*.whl \
     && rm /tmp/apache_otava-*.whl \
-    && apk del .build-deps \
     && rm /usr/local/bin/uv
 
 # Switch to otava user
