@@ -37,10 +37,7 @@ COPY . /build
 RUN uv build --wheel
 
 # Runtime stage - install and run the package
-# Use a glibc-based image so NumPy/SciPy can be installed from prebuilt
-# wheels on both amd64 and arm64. Alpine/musl often falls back to source
-# builds, which is memory-intensive under buildx/QEMU.
-FROM python:3.14.1-slim AS runtime
+FROM python:3.14.1-alpine AS runtime
 
 # So that STDOUT/STDERR is printed
 ENV PYTHONUNBUFFERED="1"
@@ -50,8 +47,8 @@ ENV PYTHONUNBUFFERED="1"
 ENV OTAVA_HOME /srv/otava
 WORKDIR ${OTAVA_HOME}
 
-RUN groupadd --gid 8192 otava && \
-    useradd --uid 8192 --gid otava --shell /usr/sbin/nologin --no-create-home otava && \
+RUN addgroup -g 8192 otava && \
+    adduser -u 8192 -G otava -s /bin/false -D -H otava && \
     chown otava:otava ${OTAVA_HOME}
 
 
