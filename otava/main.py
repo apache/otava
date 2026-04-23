@@ -433,6 +433,15 @@ def setup_analysis_options_parser(parser: argparse.ArgumentParser):
         help="use the original edivisive algorithm with no windowing "
         "and weak change points analysis improvements",
     )
+    parser.add_argument(
+        "--min-segment-len",
+        default=1,
+        type=int,
+        dest="min_segment_len",
+        help="minimum accepted segment length between change points; "
+        "segments with length >= this value are kept, shorter regimes are "
+        "removed",
+    )
 
 
 def analysis_options_from_args(args: argparse.Namespace) -> AnalysisOptions:
@@ -443,6 +452,8 @@ def analysis_options_from_args(args: argparse.Namespace) -> AnalysisOptions:
         conf.min_magnitude = args.magnitude
     if args.window is not None:
         conf.window_len = args.window
+    if args.min_segment_len is not None:
+        conf.min_segment_len = args.min_segment_len
     if args.orig_edivisive is not None:
         conf.orig_edivisive = args.orig_edivisive
     return conf

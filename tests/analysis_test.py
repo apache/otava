@@ -108,3 +108,101 @@ def test_significance_tester():
     cp = tester.change_point(candidate, series, intervals=[slice(None, None)])
     assert tester.is_significant(cp)
     assert 0.00 < cp.stats.pvalue < 0.001
+
+
+def test_single_point_spike_is_removed_by_min_segment_len():
+    series = [100, 100, 100, 100, 300, 100, 100, 100, 100]
+
+    cps, _ = compute_change_points(
+        series,
+        window_len=5,
+        max_pvalue=0.001,
+        min_magnitude=0.01,
+        min_segment_len=3,
+    )
+
+    assert [cp.index for cp in cps] == []
+
+
+def test_clean_step_is_preserved_by_min_segment_len():
+    series = [100, 100, 100, 100, 110, 110, 110, 110, 110]
+
+    cps, _ = compute_change_points(
+        series,
+        window_len=5,
+        max_pvalue=0.001,
+        min_magnitude=0.01,
+        min_segment_len=3,
+    )
+
+    assert [cp.index for cp in cps] == [4]
+
+
+def test_spike_then_shift_collapses_to_real_change_point():
+    series = [100, 100, 100, 100, 300, 110, 110, 110, 110]
+
+    cps, _ = compute_change_points(
+        series,
+        window_len=5,
+        max_pvalue=0.001,
+        min_magnitude=0.01,
+        min_segment_len=3,
+    )
+
+    assert [cp.index for cp in cps] == [5]
+
+
+def test_later_step_after_short_regime_is_ignored_when_segment_too_short():
+    series = [100, 100, 100, 100, 300, 100, 100, 110, 110]
+
+    cps, _ = compute_change_points(
+        series,
+        window_len=5,
+        max_pvalue=0.001,
+        min_magnitude=0.01,
+        min_segment_len=3,
+    )
+
+    assert [cp.index for cp in cps] == []
+
+
+def test_short_regime_is_ignored_when_shorter_than_min_segment_len():
+    series = [100, 100, 100, 100, 300, 300, 100, 100, 100]
+
+    cps, _ = compute_change_points(
+        series,
+        window_len=5,
+        max_pvalue=0.001,
+        min_magnitude=0.01,
+        min_segment_len=3,
+    )
+
+    assert [cp.index for cp in cps] == []
+
+
+def test_multiple_sustained_steps_are_preserved_by_min_segment_len():
+    series = [100, 100, 100, 100, 130, 130, 130, 130, 150, 150, 150, 150]
+
+    cps, _ = compute_change_points(
+        series,
+        window_len=5,
+        max_pvalue=0.001,
+        min_magnitude=0.01,
+        min_segment_len=3,
+    )
+
+    assert [cp.index for cp in cps] == [4, 8]
+
+
+def test_two_point_middle_regime_is_suppressed_by_min_segment_len():
+    series = [100, 100, 100, 100, 130, 130, 150, 150, 150, 150]
+
+    cps, _ = compute_change_points(
+        series,
+        window_len=5,
+        max_pvalue=0.001,
+        min_magnitude=0.01,
+        min_segment_len=3,
+    )
+
+    assert [cp.index for cp in cps] == [6]
