@@ -31,3 +31,5 @@ dist/
 venv/
 .tox/
 .docker/
+docs_sphinx/venv/
+docs_sphinx/build/
