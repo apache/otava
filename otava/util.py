@@ -20,10 +20,10 @@ import re
 import sys
 from collections import OrderedDict, deque
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import reduce
 from itertools import islice
-from typing import Dict, List, Optional, Set, TypeVar
+from typing import Dict, List, Optional, Set, TypeVar, Union
 
 import dateparser
 from pytz import UTC
@@ -134,18 +134,47 @@ class DateFormatError(ValueError):
     message: str
 
 
-def parse_datetime(date: Optional[str]) -> Optional[datetime]:
+def parse_datetime(date: Optional[Union[str, int, float, datetime]]) -> Optional[datetime]:
     """
-    Converts a human-readable string into a datetime object.
-    Accepts many formats and many languages, see dateparser package.
-    Raises DataFormatError if the input string format hasn't been recognized.
+    Normalize various datetime inputs into a timezone-aware datetime.
+
+    Supports:
+    - datetime (returned as-is)
+    - int/float (treated as Unix timestamp)
+    - str (parsed via dateparser)
+    - None (returns None)
     """
     if date is None:
         return None
-    parsed: datetime = dateparser.parse(date, settings={"RETURN_AS_TIMEZONE_AWARE": True})
-    if parsed is None:
-        raise DateFormatError(f"Invalid datetime value: {date}")
-    return parsed
+
+    if isinstance(date, datetime):
+        return date
+
+    if isinstance(date, (int, float)):
+        return datetime.fromtimestamp(date, tz=timezone.utc)
+
+    if isinstance(date, str):
+        parsed = dateparser.parse(date, settings={"RETURN_AS_TIMEZONE_AWARE": True})
+        if parsed is None:
+            raise DateFormatError(f"Invalid datetime value: {date}")
+        return parsed
+
+    raise TypeError(f"Unsupported type for datetime parsing: {type(date)}")
+
+
+def clean_str(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+
+    if not isinstance(value, str):
+        return value  # or raise TypeError if you want strictness
+
+    value = value.strip()
+
+    if value == "" or value.lower() == "null":
+        return None
+
+    return value
 
 
 def sliding_window(iterable, size):
