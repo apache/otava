@@ -39,7 +39,7 @@ GenericStats = TypeVar("GenericStats", bound=BaseStats)
 
 
 @dataclass
-class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
+class ChangePointOtava(CandidateChangePoint, Generic[GenericStats]):
     '''Change point class, defined by index and signigicance test statistic.'''
     stats: GenericStats
 
@@ -48,7 +48,7 @@ class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
         return isinstance(other, self.__class__) and self.index == other.index
 
     @classmethod
-    def from_candidate(cls, candidate: CandidateChangePoint, stats: GenericStats) -> 'ChangePoint[GenericStats]':
+    def from_candidate(cls, candidate: CandidateChangePoint, stats: GenericStats) -> 'ChangePointOtava[GenericStats]':
         return cls(
             index=candidate.index,
             qhat=candidate.qhat,
@@ -67,7 +67,7 @@ class SignificanceTester(Generic[GenericStats]):
     def __init__(self, max_pvalue: float):
         self.max_pvalue = max_pvalue
 
-    def get_intervals(self, change_points: List[ChangePoint[GenericStats]]) -> List[slice]:
+    def get_intervals(self, change_points: List[ChangePointOtava[GenericStats]]) -> List[slice]:
         '''Returns list of slices of the series. Change points must be sorted by index.'''
         assert all(
             change_points[i].index <= change_points[i + 1].index
@@ -82,12 +82,12 @@ class SignificanceTester(Generic[GenericStats]):
         ]
         return [interval for interval in intervals if interval.start != interval.stop]
 
-    def is_significant(self, point: ChangePoint[GenericStats]) -> bool:
-        '''Compares ChangePoint to level of significance max_pvalue'''
+    def is_significant(self, point: ChangePointOtava[GenericStats]) -> bool:
+        '''Compares ChangePointOtava to level of significance max_pvalue'''
         return point.stats.pvalue <= self.max_pvalue
 
-    def change_point(self, candidate: CandidateChangePoint, series: NDArray, intervals: List[slice]) -> ChangePoint[GenericStats]:
-        '''Computes stats for a change point candidate and wraps it into ChangePoint class'''
+    def change_point(self, candidate: CandidateChangePoint, series: NDArray, intervals: List[slice]) -> ChangePointOtava[GenericStats]:
+        '''Computes stats for a change point candidate and wraps it into ChangePointOtava class'''
         ...
 
 

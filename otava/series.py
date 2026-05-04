@@ -27,7 +27,7 @@ from otava.analysis import (
     compute_change_points_orig,
     fill_missing,
 )
-from otava.change_point_divisive.base import ChangePoint as _ChangePoint
+from otava.change_point_divisive.base import ChangePointOtava
 
 
 @dataclass
@@ -72,7 +72,7 @@ class Metric:
 
 
 @dataclass
-class ChangePoint(_ChangePoint[TTestStats]):
+class ChangePointHunter(ChangePointOtava[TTestStats]):
     """A change-point for a single metric"""
     metric: str
     time: int
@@ -140,7 +140,7 @@ class ChangePointGroup:
     prev_time: int
     attributes: Dict[str, str]
     prev_attributes: Dict[str, str]
-    changes: List[ChangePoint]
+    changes: List[ChangePointHunter]
 
     def to_json(self, rounded=False):
         return {
@@ -215,11 +215,11 @@ class AnalyzedSeries:
 
     __series: Series
     options: AnalysisOptions
-    change_points: Dict[str, List[ChangePoint]]
+    change_points: Dict[str, List[ChangePointHunter]]
     change_points_by_time: List[ChangePointGroup]
     change_points_timestamp: Any
 
-    def __init__(self, series: Series, options: AnalysisOptions, change_points: Dict[str, ChangePoint] = None):
+    def __init__(self, series: Series, options: AnalysisOptions, change_points: Dict[str, ChangePointHunter] = None):
         self.__series = series
         self.options = options
         self.change_points_timestamp = datetime.now(tz=timezone.utc)
@@ -235,7 +235,7 @@ class AnalyzedSeries:
     @staticmethod
     def __compute_change_points(
         series: Series, options: AnalysisOptions
-    ) -> Dict[str, List[ChangePoint]]:
+    ) -> Dict[str, List[ChangePointHunter]]:
         result = {}
         weak_change_points = {}
         for metric in series.data.keys():
@@ -258,13 +258,13 @@ class AnalyzedSeries:
                 )
                 for c in weak_cps:
                     weak_change_points[metric].append(
-                        ChangePoint(
+                        ChangePointHunter(
                             index=c.index, qhat=0.0, time=series.time[c.index], metric=metric, stats=c.stats
                         )
                     )
                 for c in change_points:
                     result[metric].append(
-                        ChangePoint(
+                        ChangePointHunter(
                             index=c.index, qhat=0.0, time=series.time[c.index], metric=metric, stats=c.stats
                         )
                     )
@@ -274,9 +274,9 @@ class AnalyzedSeries:
 
     @staticmethod
     def __group_change_points_by_time(
-        series: Series, change_points: Dict[str, List[ChangePoint]]
+        series: Series, change_points: Dict[str, List[ChangePointHunter]]
     ) -> List[ChangePointGroup]:
-        changes: List[ChangePoint] = []
+        changes: List[ChangePointHunter] = []
         for metric in change_points.keys():
             changes += change_points[metric]
 
@@ -381,14 +381,14 @@ class AnalyzedSeries:
             result[metric] = []
             for c in change_points:
                 result[metric].append(
-                    ChangePoint(
+                    ChangePointHunter(
                         index=c.index, qhat=0.0, time=self.__series.time[c.index], metric=metric, stats=c.stats
                     )
                 )
             weak_change_points[metric] = []
             for c in weak_cps:
                 weak_change_points[metric].append(
-                    ChangePoint(
+                    ChangePointHunter(
                         index=c.index, qhat=0.0, time=self.__series.time[c.index], metric=metric, stats=c.stats
                     )
                 )
@@ -493,7 +493,7 @@ class AnalyzedSeries:
                     pvalue=cp["pvalue"],
                 )
                 new_list.append(
-                    ChangePoint(
+                    ChangePointHunter(
                         index=cp["index"], time=cp["time"], metric=cp["metric"], stats=stat
                     )
                 )
@@ -511,7 +511,7 @@ class AnalyzedSeries:
                     pvalue=cp["pvalue"],
                 )
                 new_list.append(
-                    ChangePoint(
+                    ChangePointHunter(
                         index=cp["index"], time=cp["time"], metric=cp["metric"], stats=stat
                     )
                 )

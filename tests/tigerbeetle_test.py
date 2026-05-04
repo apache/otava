@@ -19,6 +19,10 @@
 from otava.analysis import compute_change_points
 
 
+def tigerbeetle_demo_data():
+    return _get_series()
+
+
 def _get_series():
     """
     This is the Tigerbeetle dataset used for demo purposes at Nyrkiö.
