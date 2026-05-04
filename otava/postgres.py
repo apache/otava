@@ -21,7 +21,7 @@ from typing import Dict
 
 import pg8000
 
-from otava.analysis import ChangePoint
+from otava.analysis import ChangePointOtava
 from otava.test_config import PostgresTestConfig
 
 
@@ -88,7 +88,7 @@ class Postgres:
         test: PostgresTestConfig,
         metric_name: str,
         attributes: Dict,
-        change_point: ChangePoint,
+        change_point: ChangePointOtava,
     ):
         cursor = self.__get_conn().cursor()
         kwargs = {**attributes, **{test.time_column: datetime.utcfromtimestamp(change_point.time)}}

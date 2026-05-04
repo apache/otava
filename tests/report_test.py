@@ -40,6 +40,13 @@ def series():
 
 @pytest.fixture(scope="module")
 def change_points(series):
+    # o = AnalysisOptions()
+    # print("default AnalysisOptions are...")
+    # print(o)
+    # o.max_pvalue = 0.001
+    # print("setting them to")
+    # print(o)
+    # return series.analyze(options=o).change_points_by_time
     return series.analyze().change_points_by_time
 
 
@@ -51,6 +58,7 @@ def report(series, change_points):
 def test_report(series, change_points):
     report = Report(series, change_points)
     output = report.produce_report("test", ReportType.LOG)
+
     assert "series1" in output
     assert "series2" in output
     assert "1.02" in output

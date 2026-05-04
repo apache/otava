@@ -99,6 +99,7 @@ def test_blocks_dispatch():
         since=since_time,
     )
     dispatches = mock_client.dispatches
+
     assert list(dispatches.keys()) == NOTIFICATION_CHANNELS, "Wrong channels were notified"
     for channel in NOTIFICATION_CHANNELS:
         assert len(dispatches[channel]) == 1, "Unexpected number of Slack messages created"

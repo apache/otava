@@ -80,7 +80,9 @@ time                       experiment_id       commit      config_id    process_
 2025-04-27 10:03:02 +0000  aggregate-0af4ccbc  0af4ccbc            1                           56950                              2052                           13532
         """
         )
-        assert _remove_trailing_whitespaces(proc.stdout) == expected_output.rstrip("\n")
+        out = _remove_trailing_whitespaces(proc.stdout)
+        print(out)
+        assert out == expected_output.rstrip("\n")
 
         # Verify the DB was updated with the detected change.
         # Query the updated change metric at the detected change point.

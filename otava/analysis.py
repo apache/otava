@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import copy
 from dataclasses import dataclass
 from typing import List, Optional, Sequence, SupportsFloat, Tuple
 
@@ -24,7 +25,7 @@ from scipy.stats import ttest_ind_from_stats
 from otava.change_point_divisive.base import (
     BaseStats,
     CandidateChangePoint,
-    ChangePoint,
+    ChangePointOtava,
     GenericStats,
     SignificanceTester,
 )
@@ -97,11 +98,11 @@ class TTestStats(BaseStats):
 
 
 # Generic Change Point List
-GenCPList = List[ChangePoint[GenericStats]]
+GenCPList = List[ChangePointOtava[GenericStats]]
 # Permutation Change Point List
-PermCPList = List[ChangePoint[PermutationStats]]
+PermCPList = List[ChangePointOtava[PermutationStats]]
 # T-test Change Point List
-TtestCPList = List[ChangePoint[TTestStats]]
+TtestCPList = List[ChangePointOtava[TTestStats]]
 
 
 class TTestSignificanceTester(SignificanceTester):
@@ -130,7 +131,7 @@ class TTestSignificanceTester(SignificanceTester):
 
     def change_point(
         self, candidate: CandidateChangePoint, series: Sequence[SupportsFloat], intervals: List[slice]
-    ) -> ChangePoint[TTestStats]:
+    ) -> ChangePointOtava[TTestStats]:
         """
         Computes properties of the change point if the Candidate Change Point based on the provided intervals.
 
@@ -167,7 +168,7 @@ class TTestSignificanceTester(SignificanceTester):
         left = series[left_interval]
         right = series[right_interval]
         stats = self.compare(left, right)
-        return ChangePoint.from_candidate(candidate, stats)
+        return ChangePointOtava.from_candidate(candidate, stats)
 
 
 def fill_missing(data: Sequence[SupportsFloat]):
@@ -323,4 +324,4 @@ def compute_change_points(
     """
     first_pass_pvalue = max_pvalue * 10 if max_pvalue < 0.05 else (max_pvalue * 2 if max_pvalue < 0.5 else max_pvalue)
     weak_change_points = split(series, window_len, first_pass_pvalue, new_points=new_data, old_cp=old_weak_cp)
-    return merge(weak_change_points, series, max_pvalue, min_magnitude), weak_change_points
+    return merge(copy.copy(weak_change_points), series, max_pvalue, min_magnitude), weak_change_points
