@@ -30,6 +30,8 @@ class AnalysisOptionsModel(BaseModel):
     max_pvalue: float = 0.001
     min_magnitude: float = 0.0
     orig_edivisive: bool = False
+    deterministic_edivisive: bool = False
+    split_edivisive: bool = True
 
 
 class MetricModel(BaseModel):
