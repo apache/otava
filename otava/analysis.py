@@ -213,6 +213,44 @@ def compute_change_points_orig(series: Sequence[SupportsFloat], max_pvalue: floa
     return change_points, None
 
 
+def compute_change_points_deterministic(series: Sequence[SupportsFloat], max_pvalue: float = 0.001, min_magnitude: float = 0.0) -> Tuple[PermCPList, Optional[PermCPList]]:
+    """
+    Same as the original algorithm but with deterministic Student T significance test at the end.
+
+    The motivation for this variation follows from fixing the bug explained at the top of https://github.com/apache/otava/pull/96
+    The intuition is that the split-merge approach introduced by Datastax is addressing the same problem that the _kappa_ variable
+    does in the original paper. Now that we compute correctly over all values of kappa, the split-merge part should be unnecessary,
+    as the original algorithm with kappa bug fixed, will find the same change points, and more. Therefore the conclusion is we want
+    to go back as much as possible to the original and real algorithm from the Matteson & James paper. But even then, we find that
+    Student T as significance test is both much faster but also qualitatively produces better results for the use case we're in at least,
+    that we want to continue using T test and not random permutations for the significance test.
+
+    TBD: Whether weak change points are still helpful or not. By reading the problem they fix appears unrelated from the split-merge vs **kappa** symptoms.
+
+    TODO: Support incremental e-divisive. This was easy to implement on top of the split-merge variation. Not clear what is the correct way here.
+    An easy solution is to rerun from the last change-point, but the problem is the last change point could itself be influenced by the new data
+    appended.
+    """
+    tester = TTestSignificanceTester(max_pvalue=max_pvalue)
+    detector = ChangePointDetector(significance_tester=tester, calculator=PairDistanceCalculator)
+    all_change_points = detector.get_change_points(series=series)
+    if min_magnitude > 0.0:
+        above_threshold_change_points = [cp for cp in all_change_points if cp.stats.change_magnitude() >= min_magnitude]
+    else:
+        above_threshold_change_points = all_change_points
+    return above_threshold_change_points, all_change_points
+
+
+def compute_change_points_split(
+    series: Sequence[SupportsFloat], window_len: int = 50, max_pvalue: float = 0.001, min_magnitude: float = 0.0,
+    new_data: Optional[int] = None, old_weak_cp: Optional[GenCPList] = None
+) -> Tuple[GenCPList, Optional[GenCPList]]:
+    """
+    This function added mainly for symmetry and anticipating a future where this is no longer the default
+    """
+    return compute_change_points(series, window_len, max_pvalue, min_magnitude, new_data, old_weak_cp)
+
+
 def compute_change_points(
     series: Sequence[SupportsFloat], window_len: int = 50, max_pvalue: float = 0.001, min_magnitude: float = 0.0,
     new_data: Optional[int] = None, old_weak_cp: Optional[GenCPList] = None

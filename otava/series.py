@@ -25,6 +25,7 @@ from pydantic import TypeAdapter
 from otava.analysis import (
     TTestStats,
     compute_change_points,
+    compute_change_points_deterministic,
     compute_change_points_orig,
 )
 from otava.change_point_divisive.base import (
@@ -185,6 +186,20 @@ class AnalyzedSeries:
                 change_points, _ = compute_change_points_orig(
                     values,
                     max_pvalue=options.max_pvalue,
+                )
+                for c in change_points:
+                    c.metric = metric
+                    cpg = ChangePointGroup(
+                        time=series.time[c.index],
+                        attributes=series.attributes_at(c.index),
+                        changes={metric: c},
+                    )
+                    result.append(cpg)
+            elif options.deterministic_edivisive:
+                change_points, _ = compute_change_points_deterministic(
+                    values,
+                    max_pvalue=options.max_pvalue,
+                    min_magnitude=options.min_magnitude,
                 )
                 for c in change_points:
                     c.metric = metric

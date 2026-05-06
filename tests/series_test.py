@@ -63,6 +63,8 @@ def test_analysis_options_is_pydantic_model():
         "max_pvalue": 0.05,
         "min_magnitude": 1.0,
         "orig_edivisive": True,
+        "deterministic_edivisive": False,
+        "split_edivisive": True,
     }
 
 
@@ -530,6 +532,7 @@ def test_orig_edivisive():
 
     options = AnalysisOptions()
     options.orig_edivisive = True
+    options.split_edivisive = False
     options.max_pvalue = 0.01
 
     change_points = test.analyze(options=options).change_points_by_time
