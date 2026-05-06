@@ -35,12 +35,14 @@ class AnalysisOptions:
     window_len: int
     max_pvalue: float
     min_magnitude: float
+    min_segment_len: int
     orig_edivisive: bool
 
     def __init__(self):
         self.window_len = 50
         self.max_pvalue = 0.001
         self.min_magnitude = 0.0
+        self.min_segment_len = 1
         self.orig_edivisive = False
 
     def to_json(self):
@@ -48,6 +50,7 @@ class AnalysisOptions:
             "window_len": self.window_len,
             "max_pvalue": self.max_pvalue,
             "min_magnitude": self.min_magnitude,
+            "min_segment_len": self.min_segment_len,
             "orig_edivisive": self.orig_edivisive
         }
 
@@ -255,6 +258,7 @@ class AnalyzedSeries:
                     window_len=options.window_len,
                     max_pvalue=options.max_pvalue,
                     min_magnitude=options.min_magnitude,
+                    min_segment_len=options.min_segment_len,
                 )
                 for c in weak_cps:
                     weak_change_points[metric].append(
@@ -375,6 +379,7 @@ class AnalyzedSeries:
                 window_len=self.options.window_len,
                 max_pvalue=self.options.max_pvalue,
                 min_magnitude=self.options.min_magnitude,
+                min_segment_len=self.options.min_segment_len,
                 new_data=len(new_data[metric]),
                 old_weak_cp=self.weak_change_points.get(metric, [])
             )
@@ -479,6 +484,7 @@ class AnalyzedSeries:
         new_options.window_len = analyzed_json["options"]["window_len"]
         new_options.max_pvalue = analyzed_json["options"]["max_pvalue"]
         new_options.min_magnitude = analyzed_json["options"]["min_magnitude"]
+        new_options.min_segment_len = analyzed_json["options"].get("min_segment_len", 1)
         new_options.orig_edivisive = analyzed_json["options"]["orig_edivisive"]
 
         new_change_points = {}
