@@ -162,7 +162,7 @@ usage: otava analyze [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_U
                      [--output {{log,json,regressions_only}}] [--branch [STRING]] [--metrics LIST]
 {usage_filter_lines}
                      [--last COUNT] [-P, --p-value PVALUE] [-M MAGNITUDE] [--window WINDOW]
-                     [--orig-edivisive ORIG_EDIVISIVE]
+                     [--orig-edivisive]
                      tests [tests ...]
 
 positional arguments:
@@ -215,8 +215,7 @@ options:
                         windows are less susceptible to noise; however, a very large window may
                         cause dismissing short regressions as noise so it is best to keep it short
                         enough to include not more than a few change points (optimally at most 1)
-  --orig-edivisive ORIG_EDIVISIVE
-                        use the original edivisive algorithm with no windowing and weak change
+  --orig-edivisive      use the original edivisive algorithm with no windowing and weak change
                         points analysis improvements
 
 Graphite Options:
