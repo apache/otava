@@ -20,12 +20,19 @@ import time
 from datetime import datetime
 from random import random
 
+import numpy as np
 import pytest
 from pydantic import ValidationError
 
 from otava.change_point_divisive.base import ChangePointSerializer
 from otava.serialization import AnalysisOptionsModel, AnalyzedSeriesModel
-from otava.series import AnalysisOptions, AnalyzedSeries, Metric, Series
+from otava.series import (
+    AnalysisOptions,
+    AnalyzedSeries,
+    Metric,
+    Series,
+    compute_change_points_deterministic,
+)
 
 
 def test_change_point_detection():
@@ -772,3 +779,28 @@ def test_from_json_does_not_recompute(monkeypatch):
     assert restored.change_points_timestamp == analyzed.change_points_timestamp
     assert [c.index for c in restored.change_points.get_change_points_for_metric("m1")] == [10]
     assert len(restored.change_points_by_time) == len(analyzed.change_points_by_time)
+
+
+# Edivisive is more sensitive close to the ends of a series
+def test_tail_spike_change_point():
+    series = np.random.default_rng(2).normal(loc=100.0, scale=5.0, size=303)
+    series[-4] = 150.0
+
+    cps, _ = compute_change_points_deterministic(
+        series,
+        max_pvalue=0.001,
+    )
+
+    assert len(series) - 4 in [cp.index for cp in cps]
+
+
+def test_middle_spike_change_point():
+    series = np.random.default_rng(2).normal(loc=100.0, scale=5.0, size=303)
+    series[150] = 150.0
+
+    cps, _ = compute_change_points_deterministic(
+        series,
+        max_pvalue=0.001,
+    )
+
+    assert len(cps) == 0
