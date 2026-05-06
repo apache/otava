@@ -38,7 +38,12 @@ classifiers = [
 ]
 dependencies = [
     "dateparser>=1.0.0",
-    "numpy==2.2.0.*",
+
+    # NumPy 2.2.x supports Python 3.10–3.13, while Python 3.14 requires a
+    # newer NumPy release to get prebuilt wheels on all supported platforms.
+    "numpy==2.2.0.*; python_version < '3.14'",
+    "numpy>=2.3.2,<2.4; python_version >= '3.14'",
+
     "python-dateutil>=2.9.0",
     "ruamel.yaml==0.18.16",
     "requests>=2.32.5",

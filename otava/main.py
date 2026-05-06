@@ -457,33 +457,35 @@ def create_otava_cli_parser() -> argparse.ArgumentParser:
         allow_abbrev=False,  # required for correct parsing of nested values from config file
     )
 
+    subparser_parent = config.create_subparser_parent()
+
     subparsers = parser.add_subparsers(dest="command")
     list_tests_parser = subparsers.add_parser(
         "list-tests",
         help="list available tests",
+        parents=[subparser_parent],
     )
-    config.add_service_option_groups(list_tests_parser)
     list_tests_parser.add_argument("group", help="name of the group of the tests", nargs="*")
 
     list_metrics_parser = subparsers.add_parser(
         "list-metrics",
         help="list available metrics for a test",
+        parents=[subparser_parent],
     )
-    config.add_service_option_groups(list_metrics_parser)
     list_metrics_parser.add_argument("test", help="name of the test")
 
-    list_groups_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "list-groups",
         help="list available groups of tests",
+        parents=[subparser_parent],
     )
-    config.add_service_option_groups(list_groups_parser)
 
     analyze_parser = subparsers.add_parser(
         "analyze",
         help="analyze performance test results",
+        parents=[subparser_parent],
     )
     analyze_parser.add_argument("tests", help="name of the test or group of the tests", nargs="+")
-    config.add_service_option_groups(analyze_parser)
     analyze_parser.add_argument(
         "--update-grafana",
         help="Update Grafana dashboards with appropriate annotations of change points",
@@ -523,8 +525,8 @@ def create_otava_cli_parser() -> argparse.ArgumentParser:
 
     remove_annotations_parser = subparsers.add_parser(
         "remove-annotations",
+        parents=[subparser_parent],
     )
-    config.add_service_option_groups(remove_annotations_parser)
     remove_annotations_parser.add_argument(
         "tests", help="name of the test or test group", nargs="*"
     )
@@ -532,11 +534,11 @@ def create_otava_cli_parser() -> argparse.ArgumentParser:
         "--force", help="don't ask questions, just do it", dest="force", action="store_true"
     )
 
-    validate_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "validate",
         help="validates the tests and metrics defined in the configuration",
+        parents=[subparser_parent],
     )
-    config.add_service_option_groups(validate_parser)
 
     return parser
 

@@ -411,23 +411,17 @@ twine upload --verbose  apache_otava-$RELEASE_VERSION-py3-none-any.whl apache_ot
 
 ### Publish Docker Image
 
-Build the image:
+Ensure you have a multi-platform builder set up:
 
 ```bash
-uv run tox -e docker-build
+docker buildx create --name multiplatform --use || docker buildx use multiplatform
 ```
 
-Tag the image:
+Log in to Dockerhub and build and push the multi-platform image:
 
 ```bash
-docker tag apache/otava:latest apache/otava:$RELEASE_VERSION-incubating
-```
-
-Push the image to Dockerhub:
-
-```bash
-docker push apache/otava:$RELEASE_VERSION-incubating
-docker push apache/otava:latest
+docker login
+RELEASE_VERSION=$RELEASE_VERSION-incubating uv run tox -e docker-push
 ```
 
 ### Remove old release candidates from dist.apache.org

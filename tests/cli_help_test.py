@@ -133,81 +133,34 @@ def test_otava_analyze_help_output():
         f"Expected exit code 0, got {result.returncode}. stderr:\n{result.stderr}"
     )
 
-    # Python 3.13+ formats usage lines and option aliases differently
+    # Python 3.13+ formats mutually exclusive group usage and option aliases differently
     if IS_PYTHON_313_PLUS:
-        usage_and_options = """\
-usage: otava analyze [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_URL]
-                     [--grafana-user GRAFANA_USER] [--grafana-password GRAFANA_PASSWORD]
-                     [--slack-token SLACK_TOKEN] [--postgres-hostname POSTGRES_HOSTNAME]
-                     [--postgres-port POSTGRES_PORT] [--postgres-username POSTGRES_USERNAME]
-                     [--postgres-password POSTGRES_PASSWORD]
-                     [--postgres-database POSTGRES_DATABASE]
-                     [--bigquery-project-id BIGQUERY_PROJECT_ID]
-                     [--bigquery-dataset BIGQUERY_DATASET]
-                     [--bigquery-credentials BIGQUERY_CREDENTIALS] [--update-grafana]
-                     [--update-postgres] [--update-bigquery]
-                     [--notify-slack NOTIFY_SLACK [NOTIFY_SLACK ...]] [--cph-report-since DATE]
-                     [--output {log,json,regressions_only}] [--branch [STRING]] [--metrics LIST]
+        usage_filter_lines = """\
                      [--attrs LIST] [--since-commit STRING | --since-version STRING |
-                     --since DATE] [--until-commit STRING | --until-version STRING | --until DATE]
-                     [--last COUNT] [-P, --p-value PVALUE] [-M MAGNITUDE] [--window WINDOW]
-                     [--orig-edivisive ORIG_EDIVISIVE]
-                     tests [tests ...]
-
-positional arguments:
-  tests                 name of the test or group of the tests
-
-options:
-  -h, --help            show this help message and exit
-  --update-grafana      Update Grafana dashboards with appropriate annotations of change points
-  --update-postgres     Update PostgreSQL database results with change points
-  --update-bigquery     Update BigQuery database results with change points
-  --notify-slack NOTIFY_SLACK [NOTIFY_SLACK ...]
-                        Send notification containing a summary of change points to given Slack
-                        channels
-  --cph-report-since DATE
-                        Sets a limit on the date range of the Change Point History reported to
-                        Slack. Same syntax as --since.
-  --output {log,json,regressions_only}
-                        Output format for the generated report.
-  --branch [STRING]     name of the branch [env var: BRANCH]
-  --metrics LIST        a comma-separated list of metrics to analyze
-  --attrs LIST          a comma-separated list of attribute names associated with the runs (e.g.
-                        commit, branch, version); if not specified, it will be automatically
-                        filled based on available information
-  --since-commit STRING
-                        the commit at the start of the time span to analyze
-  --since-version STRING
-                        the version at the start of the time span to analyze
-  --since DATE          the start of the time span to analyze; accepts ISO, and human-readable
-                        dates like '10 weeks ago'
-  --until-commit STRING
-                        the commit at the end of the time span to analyze
-  --until-version STRING
-                        the version at the end of the time span to analyze
-  --until DATE          the end of the time span to analyze; same syntax as --since
-  --last COUNT          the number of data points to take from the end of the series
-  -P, --p-value PVALUE  maximum accepted P-value of a change-point; P denotes the probability that
-                        the change-point has been found by a random coincidence, rather than a
-                        real difference between the data distributions
-  -M, --magnitude MAGNITUDE"""
+                     --since DATE] [--until-commit STRING | --until-version STRING | --until DATE]"""
+        magnitude_option = "  -M, --magnitude MAGNITUDE"
     else:
-        usage_and_options = """\
-usage: otava analyze [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_URL]
-                     [--grafana-user GRAFANA_USER] [--grafana-password GRAFANA_PASSWORD]
-                     [--slack-token SLACK_TOKEN] [--postgres-hostname POSTGRES_HOSTNAME]
-                     [--postgres-port POSTGRES_PORT] [--postgres-username POSTGRES_USERNAME]
-                     [--postgres-password POSTGRES_PASSWORD]
-                     [--postgres-database POSTGRES_DATABASE]
-                     [--bigquery-project-id BIGQUERY_PROJECT_ID]
-                     [--bigquery-dataset BIGQUERY_DATASET]
-                     [--bigquery-credentials BIGQUERY_CREDENTIALS] [--update-grafana]
-                     [--update-postgres] [--update-bigquery]
-                     [--notify-slack NOTIFY_SLACK [NOTIFY_SLACK ...]] [--cph-report-since DATE]
-                     [--output {log,json,regressions_only}] [--branch [STRING]] [--metrics LIST]
+        usage_filter_lines = """\
                      [--attrs LIST]
                      [--since-commit STRING | --since-version STRING | --since DATE]
-                     [--until-commit STRING | --until-version STRING | --until DATE]
+                     [--until-commit STRING | --until-version STRING | --until DATE]"""
+        magnitude_option = "  -M MAGNITUDE, --magnitude MAGNITUDE"
+
+    usage_and_options = f"""\
+usage: otava analyze [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+                     [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
+                     [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
+                     [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
+                     [--postgres-username POSTGRES_USERNAME]
+                     [--postgres-password POSTGRES_PASSWORD]
+                     [--postgres-database POSTGRES_DATABASE]
+                     [--bigquery-project-id BIGQUERY_PROJECT_ID]
+                     [--bigquery-dataset BIGQUERY_DATASET]
+                     [--bigquery-credentials BIGQUERY_CREDENTIALS] [--update-grafana]
+                     [--update-postgres] [--update-bigquery]
+                     [--notify-slack NOTIFY_SLACK [NOTIFY_SLACK ...]] [--cph-report-since DATE]
+                     [--output {{log,json,regressions_only}}] [--branch [STRING]] [--metrics LIST]
+{usage_filter_lines}
                      [--last COUNT] [-P, --p-value PVALUE] [-M MAGNITUDE] [--window WINDOW]
                      [--orig-edivisive ORIG_EDIVISIVE]
                      tests [tests ...]
@@ -217,6 +170,8 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
+  --config-file CONFIG_FILE
+                        Otava config file path [env var: OTAVA_CONFIG]
   --update-grafana      Update Grafana dashboards with appropriate annotations of change points
   --update-postgres     Update PostgreSQL database results with change points
   --update-bigquery     Update BigQuery database results with change points
@@ -226,7 +181,7 @@ options:
   --cph-report-since DATE
                         Sets a limit on the date range of the Change Point History reported to
                         Slack. Same syntax as --since.
-  --output {log,json,regressions_only}
+  --output {{log,json,regressions_only}}
                         Output format for the generated report.
   --branch [STRING]     name of the branch [env var: BRANCH]
   --metrics LIST        a comma-separated list of metrics to analyze
@@ -248,7 +203,7 @@ options:
   -P, --p-value PVALUE  maximum accepted P-value of a change-point; P denotes the probability that
                         the change-point has been found by a random coincidence, rather than a
                         real difference between the data distributions
-  -M MAGNITUDE, --magnitude MAGNITUDE"""
+{magnitude_option}"""
 
     assert (
         result.stdout
@@ -324,10 +279,11 @@ def test_otava_list_tests_help_output():
     assert (
         result.stdout
         == """\
-usage: otava list-tests [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_URL]
-                        [--grafana-user GRAFANA_USER] [--grafana-password GRAFANA_PASSWORD]
-                        [--slack-token SLACK_TOKEN] [--postgres-hostname POSTGRES_HOSTNAME]
-                        [--postgres-port POSTGRES_PORT] [--postgres-username POSTGRES_USERNAME]
+usage: otava list-tests [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+                        [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
+                        [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
+                        [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
+                        [--postgres-username POSTGRES_USERNAME]
                         [--postgres-password POSTGRES_PASSWORD]
                         [--postgres-database POSTGRES_DATABASE]
                         [--bigquery-project-id BIGQUERY_PROJECT_ID]
@@ -340,6 +296,8 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
+  --config-file CONFIG_FILE
+                        Otava config file path [env var: OTAVA_CONFIG]
 
 Graphite Options:
   Options for Graphite configuration
@@ -401,10 +359,11 @@ def test_otava_list_metrics_help_output():
     assert (
         result.stdout
         == """\
-usage: otava list-metrics [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_URL]
-                          [--grafana-user GRAFANA_USER] [--grafana-password GRAFANA_PASSWORD]
-                          [--slack-token SLACK_TOKEN] [--postgres-hostname POSTGRES_HOSTNAME]
-                          [--postgres-port POSTGRES_PORT] [--postgres-username POSTGRES_USERNAME]
+usage: otava list-metrics [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+                          [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
+                          [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
+                          [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
+                          [--postgres-username POSTGRES_USERNAME]
                           [--postgres-password POSTGRES_PASSWORD]
                           [--postgres-database POSTGRES_DATABASE]
                           [--bigquery-project-id BIGQUERY_PROJECT_ID]
@@ -417,6 +376,8 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
+  --config-file CONFIG_FILE
+                        Otava config file path [env var: OTAVA_CONFIG]
 
 Graphite Options:
   Options for Graphite configuration
@@ -479,10 +440,11 @@ def test_otava_list_groups_help_output():
     assert (
         result.stdout
         == """\
-usage: otava list-groups [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_URL]
-                         [--grafana-user GRAFANA_USER] [--grafana-password GRAFANA_PASSWORD]
-                         [--slack-token SLACK_TOKEN] [--postgres-hostname POSTGRES_HOSTNAME]
-                         [--postgres-port POSTGRES_PORT] [--postgres-username POSTGRES_USERNAME]
+usage: otava list-groups [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+                         [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
+                         [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
+                         [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
+                         [--postgres-username POSTGRES_USERNAME]
                          [--postgres-password POSTGRES_PASSWORD]
                          [--postgres-database POSTGRES_DATABASE]
                          [--bigquery-project-id BIGQUERY_PROJECT_ID]
@@ -491,6 +453,8 @@ usage: otava list-groups [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFA
 
 options:
   -h, --help            show this help message and exit
+  --config-file CONFIG_FILE
+                        Otava config file path [env var: OTAVA_CONFIG]
 
 Graphite Options:
   Options for Graphite configuration
@@ -552,8 +516,8 @@ def test_otava_remove_annotations_help_output():
     assert (
         result.stdout
         == """\
-usage: otava remove-annotations [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_URL]
-                                [--grafana-user GRAFANA_USER]
+usage: otava remove-annotations [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+                                [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
                                 [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
                                 [--postgres-hostname POSTGRES_HOSTNAME]
                                 [--postgres-port POSTGRES_PORT]
@@ -570,6 +534,8 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
+  --config-file CONFIG_FILE
+                        Otava config file path [env var: OTAVA_CONFIG]
   --force               don't ask questions, just do it
 
 Graphite Options:
@@ -632,10 +598,11 @@ def test_otava_validate_help_output():
     assert (
         result.stdout
         == """\
-usage: otava validate [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_URL]
-                      [--grafana-user GRAFANA_USER] [--grafana-password GRAFANA_PASSWORD]
-                      [--slack-token SLACK_TOKEN] [--postgres-hostname POSTGRES_HOSTNAME]
-                      [--postgres-port POSTGRES_PORT] [--postgres-username POSTGRES_USERNAME]
+usage: otava validate [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+                      [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
+                      [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
+                      [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
+                      [--postgres-username POSTGRES_USERNAME]
                       [--postgres-password POSTGRES_PASSWORD]
                       [--postgres-database POSTGRES_DATABASE]
                       [--bigquery-project-id BIGQUERY_PROJECT_ID]
@@ -644,6 +611,8 @@ usage: otava validate [-h] [--graphite-url GRAPHITE_URL] [--grafana-url GRAFANA_
 
 options:
   -h, --help            show this help message and exit
+  --config-file CONFIG_FILE
+                        Otava config file path [env var: OTAVA_CONFIG]
 
 Graphite Options:
   Options for Graphite configuration

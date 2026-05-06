@@ -24,6 +24,7 @@ from typing import Any, Dict, Iterable, List, Optional
 from otava.analysis import (
     TTestSignificanceTester,
     TTestStats,
+    TTestSignificanceTester,
     compute_change_points,
     compute_change_points_orig,
     fill_missing,
