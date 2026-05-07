@@ -68,6 +68,13 @@ def test_tb_old_defaults_p2():
     assert indexes == [10, 11, 15, 71]
 
 
+def test_tb_small_threshold_p1():
+    series = _get_series()
+    cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.1, min_magnitude=0.01)
+    indexes = [c.index for c in cps]
+    assert indexes == [10, 11, 15, 28, 29, 35, 37, 48, 49, 61, 71, 95, 117, 131, 142, 148, 165, 169, 192, 206, 212, 260, 265, 268, 278, 282, 363]
+
+
 def test_tb_magnitude0_p2():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.2, min_magnitude=0.0)

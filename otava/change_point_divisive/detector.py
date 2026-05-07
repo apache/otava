@@ -28,9 +28,12 @@ from otava.change_point_divisive.base import (
 
 
 class ChangePointDetector:
-    def __init__(self, significance_tester: SignificanceTester, calculator: Type[Calculator]):
+    def __init__(self, significance_tester: SignificanceTester, calculator: Type[Calculator], stop_at: int = 0):
         self.tester = significance_tester
         self.calculator = calculator
+        # If positive, we won't stop at the first candidate that fails the significance test, but we will skip the failing ones
+        # This is similar to weak change points
+        self.stop_at = stop_at
 
     def get_change_points(self, series: Sequence[SupportsFloat], start: Optional[int] = None, end: Optional[int] = None) -> List[ChangePoint[GenericStats]]:
         '''Finds change points in `series[start : end]`.'''
@@ -41,10 +44,11 @@ class ChangePointDetector:
 
         calc = self.calculator(series)
         change_points = []
+        skipped = []
 
         while True:
             intervals = self.tester.get_intervals(change_points)
-            candidate = calc.get_next_candidate(intervals)
+            candidate = calc.get_next_candidate(intervals, skipped)
             if candidate is None:
                 break
             change_point = self.tester.change_point(candidate, series, intervals)
@@ -53,6 +57,8 @@ class ChangePointDetector:
                 change_points.append(change_point)
                 # Could sort by either start or end for non-intersecting intervals
                 change_points.sort(key=lambda point: point.index)
+            elif len(skipped) < self.stop_at:
+                skipped.append(candidate)
             else:
                 break
 
