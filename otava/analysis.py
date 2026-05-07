@@ -16,9 +16,9 @@
 # under the License.
 
 import copy
+import math
 from dataclasses import dataclass, replace
 from typing import List, Optional, Sequence, SupportsFloat, Tuple
-import math
 
 from scipy.stats import ttest_ind_from_stats
 
