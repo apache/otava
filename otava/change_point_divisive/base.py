@@ -836,18 +836,13 @@ class Calculator:
     def __init__(self, series: NDArray):
         self.series = series
 
-    def get_next_candidate(
-        self,
-        intervals: List[slice],
-        skipped_candidates: Optional[List[CandidateChangePoint]] = [],
-    ) -> Optional[CandidateChangePoint]:
+    def get_next_candidate(self, intervals: List[slice]) -> Optional[CandidateChangePoint]:
         """Returns list of existing change points to find next best change point candidate."""
         candidates = [
             self.get_candidate_change_point(interval=interval)
             for interval in intervals
             if len(self.series[interval]) > 1
         ]
-        candidates = [c for c in candidates if c not in skipped_candidates]
         if not candidates:
             return
         candidate = max(candidates, key=lambda point: point.qhat)

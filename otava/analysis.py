@@ -18,7 +18,6 @@
 import copy
 from dataclasses import dataclass, replace
 from typing import List, Optional, Sequence, SupportsFloat, Tuple
-import math
 
 from scipy.stats import ttest_ind_from_stats
 
@@ -233,7 +232,7 @@ def compute_change_points_deterministic(series: Sequence[SupportsFloat], max_pva
     appended.
     """
     tester = TTestSignificanceTester(max_pvalue=max_pvalue)
-    detector = ChangePointDetector(significance_tester=tester, calculator=PairDistanceCalculator, stop_at=math.inf)
+    detector = ChangePointDetector(significance_tester=tester, calculator=PairDistanceCalculator)
     all_change_points = detector.get_change_points(series=series)
     if min_magnitude > 0.0:
         above_threshold_change_points = [cp for cp in all_change_points if cp.stats.change_magnitude() >= min_magnitude]
