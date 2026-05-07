@@ -62,4 +62,3 @@ tests:
         column: metric2
         direction: -1
     attributes: [ commit ]
-
