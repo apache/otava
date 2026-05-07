@@ -20,8 +20,6 @@ from otava.analysis import compute_change_points_deterministic
 from tests.tigerbeetle_test import tigerbeetle_demo_data as _get_series
 
 
-
-
 def test_tb_old_defaults():
     series = _get_series()
     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.01, min_magnitude=0.05)
