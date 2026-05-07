@@ -20,34 +20,6 @@ from otava.analysis import compute_change_points_deterministic
 from tests.tigerbeetle_test import tigerbeetle_demo_data as _get_series
 
 
-
-
-# def test_tb_old_defaults():
-#     series = _get_series()
-#     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.01)
-#     indexes = [c.index for c in cps]
-#     assert indexes == [15, 71]
-#
-#
-# def test_tb_old_defaults_p05():
-#     series = _get_series()
-#     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.05)
-#     indexes = [c.index for c in cps]
-#     assert indexes == [15, 71]
-#
-#
-# def test_tb_old_defaults_p1():
-#     series = _get_series()
-#     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.1)
-#     indexes = [c.index for c in cps]
-#     assert indexes == [10, 11, 15, 71, 363]
-#
-#
-# def test_tb_old_defaults_p2():
-#     series = _get_series()
-#     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.2)
-#     indexes = [c.index for c in cps]
-#     assert indexes == [10, 11, 15, 71]
 def test_tb_magnitude0_p2():
     series = _get_series()
     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.2)
