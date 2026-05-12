@@ -50,7 +50,7 @@ Figure 2. On the **left subfigure**, there is a time-series $Z=\\{ Z_0, \cdots Z
 There are a couple of additional nuances and notes that we want to mention:
 - According to the provided definition, the change point is the first point of the *second* subsequence, and, because both subsequences must be non-empty, the change point cannot be the first point of the whole sequence $Z$, i.e., point $Z_0$.
   - There exists an alternative way of defining the change point (as the last point of the first subsequence - in that case, the last point $Z_{T-1}$ cannot be the change point). And, in fact, some of the papers cited here are using that other definition. However, Apache Otava uses the term "change point" as defined above, i.e., the change point is the first commit at which metrics change.
-- In the example in Figure 2 we effectivelly used distance between means as a distance between the distributions. It's an oversimplification for illustrative purposes, and in reality we actually use a divergence measure between multivariate distributions. See **[Original Work](#original-work)** section for more details.
+- In the example in Figure 2 we effectively used distance between means as a distance between the distributions. It's an oversimplification for illustrative purposes, and in reality we actually use a divergence measure between multivariate distributions. See **[Original Work](#original-work)** section for more details.
 - In the example in Figure 2, we compared only two pairs of the values $(\hat{\tau}_1, \hat{\kappa}_1)$, namely $(6, 12)$ and $(6, 22)$. The algorithm actually checks for all valid values before choosing the best one. See Figure 3.
 ![Figure 3. Tau-Kappa](./imgs/tau_kappa.png "Tau Kappa")
 
