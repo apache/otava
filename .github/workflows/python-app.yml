@@ -26,6 +26,9 @@ on:
   pull_request:
     branches: [master, "0.7", "0.7.x"]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
