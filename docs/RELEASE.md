@@ -85,7 +85,7 @@ export OTAVA_GIT_REPO=$HOME/git/apache/otava
 # https://dist.apache.org/repos/dist/dev/incubator/otava/
 export OTAVA_SVN_DEV=$HOME/svn/apache/otava-dist-dev-repo
 
-# This is an ASF subversion repository where you publish the tar files, images, etc. after the vor
+# This is an ASF subversion repository where you publish the tar files, images, etc. after the vote
 # https://dist.apache.org/repos/dist/release/incubator/otava/
 export OTAVA_SVN_REL=$HOME/svn/apache/otava-dist-release-repo
 ```
