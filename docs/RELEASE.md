@@ -31,7 +31,7 @@ Each release is executed by a Release Manager, who is selected/proposed by the O
 Please remember, that the act of publishing software has both legal and policy significance. This guide complements the foundation-wide
 
 * [Product Release Policy](https://www.apache.org/dev/release.html),
-* [Release Distribution Policy](https://www.apache.org/dev/release-distribution),and
+* [Release Distribution Policy](https://infra.apache.org/release-distribution.html),and
 * [Release Download Pages for Projects](https://infra.apache.org/release-download-pages.html)
 
 ## Overview
@@ -133,6 +133,8 @@ cd $OTAVA_SVN_REL
 svn ci -m "[otava] Add <YOUR_NAME>'s public key"
 ```
 
+*NOTE: Never remove keys from the above file, if they have been used to sign a release. This is true even for expired keys.*
+
 Configure git to use this key when signing code by giving it your key ID, as follows:
 
 ```bash
@@ -222,7 +224,7 @@ Check /pyproject.toml, it should have a line:
 version = $RELEASE_VERSION
 ```
 
-IMPORTANT: Note that above the pyproject verion and the release-notes file are already set to $RELEASE_VERSION-incubating, but below tag and commit message will be $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE. If there are several release candidates, you should edit/add to the same release-notes file as above. (This is git, after all...) The commit message on the other hand should use @RELEASE_VERSION-incubating-$RELEASE_CANDIDATE and if there are more than one candidate and vote, then the following commit and tag increase by 1.
+IMPORTANT: Note that above the pyproject version and the release-notes file are already set to $RELEASE_VERSION-incubating, but below tag and commit message will be $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE. If there are several release candidates, you should edit/add to the same release-notes file as above. (This is git, after all...) The commit message on the other hand should use @RELEASE_VERSION-incubating-$RELEASE_CANDIDATE and if there are more than one candidate and vote, then the following commit and tag increase by 1.
 
 ```bash
 git tag -a $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE -m "$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE"
