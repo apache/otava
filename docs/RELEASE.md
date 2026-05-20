@@ -463,15 +463,8 @@ Once the release candidate has been reviewed and approved by the project and Inc
 
 ### Publish Source Release
 
-In `otava-dist-release-repo`:
-
 ```bash
-cp -r $OTAVA_SVN_DEV/$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE $OTAVA_SVN_REL/$RELEASE_VERSION-incubating
-cd $OTAVA_SVN_REL
-svn update && svn status
-
-svn add $RELEASE_VERSION-incubating
-svn ci -m "[otava] Add $RELEASE_VERSION-incubating release artifacts"
+svn mv https://dist.apache.org/repos/dist/dev/incubator/otava/$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE https://dist.apache.org/repos/dist/release/incubator/otava/$RELEASE_VERSION-incubating -m "[otava] Release $RELEASE_VERSION-incubating artifacts"
 ```
 
 ### Publish release tag on Github
