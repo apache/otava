@@ -25,9 +25,14 @@
 ## Introduction
 
 The Otava community treats releases with great importance. They are a public face of the project and most users interact with the project only through the releases. Releases are signed off by the entire Otava community in a public vote.
+
 Each release is executed by a Release Manager, who is selected/proposed by the Otava PMC members. This document describes the process that the Release Manager follows to perform a release. Any changes to this process should be discussed and adopted on the [dev@otava.apache.org](mailto:dev@otava.apache.org) mailing list.
 
-Please remember, that the act of publishing software has both legal and policy significance. This guide complements the foundation-wide [Product Release Policy](https://www.apache.org/dev/release.html) and [Release Distribution Policy](https://www.apache.org/dev/release-distribution).
+Please remember, that the act of publishing software has both legal and policy significance. This guide complements the foundation-wide
+
+* [Product Release Policy](https://www.apache.org/dev/release.html),
+* [Release Distribution Policy](https://infra.apache.org/release-distribution.html),and
+* [Release Download Pages for Projects](https://infra.apache.org/release-download-pages.html)
 
 ## Overview
 
@@ -38,6 +43,8 @@ Apache Otava release consists of:
 * PyPI wheels published to [pypi.org](https://pypi.org/project/apache-otava/).
 * Docker images published to [Dockerhub](https://hub.docker.com/r/apache/otava).
 * Release tag on [GitHub](https://github.com/apache/otava/releases).
+* All of the above published on [https://otava.apache.org/docs/downloads](https://infra.apache.org/release-download-pages.html)
+* ...and on dev@otava.apache.org and general@incubator.org
 
 ### Phases of the release
 
@@ -66,6 +73,32 @@ In general, the community prefers to have a rotating set of 3-5 Release Managers
 
 Before your first release, you should perform one-time configuration steps. This will set up your security keys for signing the release and access to various release repositories.
 
+## Paths
+
+For clarity, we will use the following environment variables when referring to different paths and repositories. You are free to use any path you desire for the values of these repositories:
+
+```bash
+# This is the main development repository, that you cloned from github.com/apache/otava
+export OTAVA_GIT_REPO=$HOME/git/apache/otava
+
+# This is an ASF subversion repository where you can publish preview/release candidate packages before the vote
+# https://dist.apache.org/repos/dist/dev/incubator/otava/
+export OTAVA_SVN_DEV=$HOME/svn/apache/otava-dist-dev-repo
+
+# This is an ASF subversion repository where you publish the tar files, images, etc. after the vote
+# https://dist.apache.org/repos/dist/release/incubator/otava/
+export OTAVA_SVN_REL=$HOME/svn/apache/otava-dist-release-repo
+```
+
+While at it, make sure the paths exist.
+
+```bash
+mkdir -p dirname $OTAVA_GIT_REPO
+mkdir -p dirname $OTAVA_SVN_DEV
+mkdir -p dirname $OTAVA_SVN_REL
+```
+
+
 ### One-time configuration
 
 #### GPG Key
@@ -90,11 +123,17 @@ Here, the key ID is the 8-digit hex string in the pub line: 845E6689.
 Now, add your Apache GPG key to the Otava's KEYS file in the [release](https://dist.apache.org/repos/dist/release/incubator/otava/KEYS) repository at [dist.apache.org](https://dist.apache.org/repos/dist/). Follow the instructions listed at the top of these files. (Note: Only PMC members have write access to the release repository. If you end up getting 403 errors ask on the mailing list for assistance.) PMC members can refer to the following scripts to add your Apache GPG key to the KEYS in the release repository.
 
 ```bash
-svn co https://dist.apache.org/repos/dist/release/incubator/otava otava-dist-release-repo
-cd otava-dist-release-repo
+# Checkout both the dev and release repositories up front
+svn co https://dist.apache.org/repos/dist/dev/incubator/otava $OTAVA_SVN_DEV
+svn co https://dist.apache.org/repos/dist/release/incubator/otava $OTAVA_SVN_REL
+
+# For GPG key we always use the dist/release repo:
+cd $OTAVA_SVN_REL
 (gpg --list-sigs <YOUR_KEY_ID> && gpg --armor --export <YOUR_KEY_ID>) >> KEYS
 svn ci -m "[otava] Add <YOUR_NAME>'s public key"
 ```
+
+*NOTE: Never remove keys from the above file, if they have been used to sign a release. This is true even for expired keys.*
 
 Configure git to use this key when signing code by giving it your key ID, as follows:
 
@@ -144,6 +183,12 @@ The core of the release process is the build-vote-fix cycle. Each cycle produces
 ```bash
 export RELEASE_VERSION=...
 export RELEASE_CANDIDATE=rc...
+
+# And the repository paths from above
+export OTAVA_GIT_REPO=
+export OTAVA_SVN_DEV=
+export OTAVA_SVN_REL=
+
 ```
 
 For example,
@@ -151,9 +196,35 @@ For example,
 ```bash
 export RELEASE_VERSION=0.7.0
 export RELEASE_CANDIDATE=rc1
+...
 ```
 
-### Create new Github tag
+### Create the release commit
+
+Open  `/docs/release-notes/$RELEASE_VERSION-incubating` in your favorite text editor.
+Draft and save the release notes. You can use the following template:
+
+```
+# $RELEASE_VERSION-incubating
+
+Write a few sentences that highlight the main feature(s) in this release.
+
+Call out backward incompatible changes, known issues, or anything users have to take into account when upgrading.
+
+Go to https://github.com/apache/otava/compare/$PREVIOUS_RELEASE_VERSION-incubating...$RELEASE_VERSION-incubating
+to generate the list of all commits between this release and the previous. Copy the list here, and delete small
+or low impact commmits. Leave the summary list of changes here.
+
+To view the full list of new features, bug fixes and other commits in this release, please go to https://github.com/apache/otava/compare/$PREVIOUS_RELEASE_VERSION-incubating...$RELEASE_VERSION-incubating
+```
+
+Check /pyproject.toml, it should have a line:
+
+```
+version = $RELEASE_VERSION
+```
+
+IMPORTANT: Note that above the pyproject version and the release-notes file are already set to $RELEASE_VERSION-incubating, but below tag and commit message will be $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE. If there are several release candidates, you should edit/add to the same release-notes file as above. (This is git, after all...) The commit message on the other hand should use @RELEASE_VERSION-incubating-$RELEASE_CANDIDATE and if there are more than one candidate and vote, then the following commit and tag increase by 1.
 
 ```bash
 git tag -a $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE -m "$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE"
@@ -220,11 +291,27 @@ sha512sum --check apache_otava-$RELEASE_VERSION-py3-none-any.whl.sha512
 ### Publish Release Candidate
 
 ```bash
-cp -r release ../otava-dist-release-repo/$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE
-cd ../otava-dist-release-repo
+cp -r release $OTAVA_SVN_DEV/$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE
+cd $OTAVA_SVN_DEV
+svn update && svn status
+
 svn add $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE/
-svn ci -m "[otava] Add $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE"
+svn ci -m "[otava] Upload $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE for review and voting"
 ```
+
+### Publish PyPI artifacts on test.pypi.org
+
+In svn dev/preview directory:
+
+```bash
+# Go to dev/preview svn directory
+cd $OTAVA_SVN_DEV
+cd  $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE/pypi
+# Publish to Test PyPI
+twine upload --verbose --repository testpypi apache_otava-$RELEASE_VERSION-py3-none-any.whl apache_otava-$RELEASE_VERSION.tar.gz
+# Verify at https://test.pypi.org/project/apache-otava/
+```
+
 
 ## Vote on the release candidate
 
@@ -241,8 +328,10 @@ Hello everyone,
 
 Please review and vote for the releasing Apache Otava (incubating) $RELEASE_VERSION-$RELEASE_CANDIDATE.
 
-Changelog for this release candidate <>.
-The official Apache source release has been deployed to https://dist.apache.org/repos/dist/dev/incubator/otava/$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE/.
+Release notes for this release candidate
+https://github.com/apache/otava/blob/$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE/docs/release-notes/$RELEASE_VERSION-incubating
+
+The official ASF source release has been deployed to https://dist.apache.org/repos/dist/dev/incubator/otava/$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE/.
 GH tag for release https://github.com/apache/otava/releases/tag/$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE.
 The release has been signed with a key <your-signature> available here https://downloads.apache.org/incubator/otava/KEYS.
 
@@ -323,6 +412,7 @@ The vote thread: <link-to-the-project-vote-thread>
 Vote result: <link-to-the-project-vote-result-thread>
 Release candidate: https://dist.apache.org/repos/dist/dev/incubator/otava/$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE/
 GH tag for release https://github.com/apache/otava/releases/tag/$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE.
+Release notes: https://github.com/apache/otava/blob/$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE/docs/release-notes/$RELEASE_VERSION-incubating
 
 The release has been signed with Key <your-signature>, corresponding to <your-apache-email> available here https://downloads.apache.org/incubator/otava/KEYS.
 
@@ -373,12 +463,8 @@ Once the release candidate has been reviewed and approved by the project and Inc
 
 ### Publish Source Release
 
-In `otava-dist-release-repo`:
-
 ```bash
-cp -r $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE $RELEASE_VERSION-incubating
-svn add $RELEASE_VERSION-incubating
-svn ci -m "[otava] Add $RELEASE_VERSION-incubating"
+svn mv https://dist.apache.org/repos/dist/dev/incubator/otava/$RELEASE_VERSION-incubating-$RELEASE_CANDIDATE https://dist.apache.org/repos/dist/release/incubator/otava/$RELEASE_VERSION-incubating -m "[otava] Release $RELEASE_VERSION-incubating artifacts"
 ```
 
 ### Publish release tag on Github
@@ -389,24 +475,33 @@ git tag -a $RELEASE_VERSION-incubating -m "$RELEASE_VERSION-incubating"
 git push origin $RELEASE_VERSION-incubating
 ```
 
-Go to Github releases page and create a new release for the tag `$RELEASE_VERSION-incubating`.
+Go to the [Github releases page](https://github.com/apache/otava/releases) and
+click on `Draft a new release` and select the tag `$RELEASE_VERSION-incubating`.
+
+Copy paste the release announcement and changelog from `$OTAVA_GIT_REPO/docs/release-notes` and publish the release.
 
 ### Update the website download page
 
 Update the list of releases on the website at https://otava.apache.org/docs/download to include the new release.
 
+**Congratulations! You have now completed the official ASF release, which is the source release.**
+
+But there is more...
+
 ### Publish PyPI artifacts
 
 In svn release directory:
 
+
 ```bash
 # Go to release pypi directory
+cd $OTAVA_SVN_REL
+svn update && svn status
+
 cd  $RELEASE_VERSION-incubating/pypi
 
-# Publish to Test PyPI
-twine upload --verbose --repository testpypi apache_otava-$RELEASE_VERSION-py3-none-any.whl apache_otava-$RELEASE_VERSION.tar.gz
-# verify that test PyPI page looks good, then publish to real PyPi
 twine upload --verbose  apache_otava-$RELEASE_VERSION-py3-none-any.whl apache_otava-$RELEASE_VERSION.tar.gz
+# Verify at https://pypi.org/project/apache-otava/
 ```
 
 ### Publish Docker Image
@@ -429,6 +524,8 @@ RELEASE_VERSION=$RELEASE_VERSION-incubating uv run tox -e docker-push
 In `otava-dist-release-repo`:
 
 ```bash
+cd $OTAVA_SVN_REL
+svn update && svn status
 svn rm $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE
 svn ci -m "[otava] Remove $RELEASE_VERSION-incubating-$RELEASE_CANDIDATE"
 ```
@@ -463,8 +560,8 @@ Highlights of $RELEASE_VERSION release are:
 - ...
 
 $RELEASE_VERSION is available as:
-- Source release https://dist.apache.org/repos/dist/dev/incubator/otava/$RELEASE_VERSION-incubating/
-- Github release https://github.com/apache/otava/releases/tag/$RELEASE_VERSION-incubating
+- Source release https://otava.apache.org/docs/download
+- Github release https://github.com/apache/otava/releases/
 - PyPI https://pypi.org/project/apache-otava/
 - Docker image https://hub.docker.com/r/apache/otava
 
