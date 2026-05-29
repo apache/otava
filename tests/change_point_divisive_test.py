@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 
 from otava.analysis import TTestSignificanceTester, TTestStats
-from otava.change_point_divisive.base import ChangePointOtava
+from otava.change_point_divisive.base import ChangePoint
 from otava.change_point_divisive.calculator import PairDistanceCalculator
 from otava.change_point_divisive.detector import ChangePointDetector
 from otava.change_point_divisive.significance_test import PermutationsSignificanceTester
@@ -124,9 +124,9 @@ def test_get_intervals_requires_sorted_change_points():
 
     # Sorted change points should work
     sorted_cps = [
-        ChangePointOtava(index=5, qhat=1.0, stats=stats),
-        ChangePointOtava(index=10, qhat=1.0, stats=stats),
-        ChangePointOtava(index=15, qhat=1.0, stats=stats),
+        ChangePoint(index=5, qhat=1.0, stats=stats),
+        ChangePoint(index=10, qhat=1.0, stats=stats),
+        ChangePoint(index=15, qhat=1.0, stats=stats),
     ]
     intervals = tester.get_intervals(sorted_cps)
     assert len(intervals) == 4
@@ -137,9 +137,9 @@ def test_get_intervals_requires_sorted_change_points():
 
     # Unsorted change points should raise AssertionError
     unsorted_cps = [
-        ChangePointOtava(index=10, qhat=1.0, stats=stats),
-        ChangePointOtava(index=5, qhat=1.0, stats=stats),
-        ChangePointOtava(index=15, qhat=1.0, stats=stats),
+        ChangePoint(index=10, qhat=1.0, stats=stats),
+        ChangePoint(index=5, qhat=1.0, stats=stats),
+        ChangePoint(index=15, qhat=1.0, stats=stats),
     ]
     with pytest.raises(AssertionError, match="Change points must be sorted by index"):
         tester.get_intervals(unsorted_cps)

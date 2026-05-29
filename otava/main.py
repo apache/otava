@@ -243,9 +243,10 @@ class Otava:
     def update_postgres(self, test: PostgresTestConfig, series: AnalyzedSeries):
         postgres = self.__get_postgres()
         for metric_name, change_points in series.change_points.items():
-            for cp in change_points:
+            for cpg in change_points:
+                cp = cpg[metric_name]
                 attributes = series.attributes_at(cp.index)
-                postgres.insert_change_point(test, metric_name, attributes, cp)
+                postgres.insert_change_point(test, metric_name, attributes, cpg)
 
     def update_bigquery(self, test: BigQueryTestConfig, series: AnalyzedSeries):
         bigquery = self.__get_bigquery()

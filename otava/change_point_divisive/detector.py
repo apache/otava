@@ -21,7 +21,7 @@ import numpy as np
 
 from otava.change_point_divisive.base import (
     Calculator,
-    ChangePointOtava,
+    ChangePoint,
     GenericStats,
     SignificanceTester,
 )
@@ -32,7 +32,7 @@ class ChangePointDetector:
         self.tester = significance_tester
         self.calculator = calculator
 
-    def get_change_points(self, series: Sequence[SupportsFloat], start: Optional[int] = None, end: Optional[int] = None) -> List[ChangePointOtava[GenericStats]]:
+    def get_change_points(self, series: Sequence[SupportsFloat], start: Optional[int] = None, end: Optional[int] = None) -> List[ChangePoint[GenericStats]]:
         '''Finds change points in `series[start : end]`.'''
         if not isinstance(series, np.ndarray):
             series = np.array(series[start : end], dtype=np.float64)

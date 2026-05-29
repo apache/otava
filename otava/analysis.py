@@ -25,7 +25,7 @@ from scipy.stats import ttest_ind_from_stats
 from otava.change_point_divisive.base import (
     BaseStats,
     CandidateChangePoint,
-    ChangePointOtava,
+    ChangePoint,
     GenericStats,
     SignificanceTester,
 )
@@ -98,11 +98,11 @@ class TTestStats(BaseStats):
 
 
 # Generic Change Point List
-GenCPList = List[ChangePointOtava[GenericStats]]
+GenCPList = List[ChangePoint[GenericStats]]
 # Permutation Change Point List
-PermCPList = List[ChangePointOtava[PermutationStats]]
+PermCPList = List[ChangePoint[PermutationStats]]
 # T-test Change Point List
-TtestCPList = List[ChangePointOtava[TTestStats]]
+TtestCPList = List[ChangePoint[TTestStats]]
 
 
 class TTestSignificanceTester(SignificanceTester):
@@ -112,6 +112,7 @@ class TTestSignificanceTester(SignificanceTester):
     This test is good if the data between the change points have normal distribution.
     It works well even with tiny numbers of points (<10).
     """
+
     def compare(self, left: Sequence[SupportsFloat], right: Sequence[SupportsFloat]) -> TTestStats:
         if len(left) == 0 or len(right) == 0:
             raise ValueError
@@ -130,8 +131,11 @@ class TTestSignificanceTester(SignificanceTester):
         return TTestStats(mean_1=mean_l, mean_2=mean_r, std_1=std_l, std_2=std_r, pvalue=p)
 
     def change_point(
-        self, candidate: CandidateChangePoint, series: Sequence[SupportsFloat], intervals: List[slice]
-    ) -> ChangePointOtava[TTestStats]:
+        self,
+        candidate: CandidateChangePoint,
+        series: Sequence[SupportsFloat],
+        intervals: List[slice],
+    ) -> ChangePoint[TTestStats]:
         """
         Computes properties of the change point if the Candidate Change Point based on the provided intervals.
 
@@ -164,11 +168,13 @@ class TTestSignificanceTester(SignificanceTester):
                 right_interval = slice(candidate.index, interval.stop)
                 break
         else:
-            raise ValueError(f"Candidate Change Point at index={candidate.index} doesn't correspond to any interval in {intervals}.")
+            raise ValueError(
+                f"Candidate Change Point at index={candidate.index} doesn't correspond to any interval in {intervals}."
+            )
         left = series[left_interval]
         right = series[right_interval]
         stats = self.compare(left, right)
-        return ChangePointOtava.from_candidate(candidate, stats)
+        return ChangePoint.from_candidate(candidate, stats)
 
 
 def fill_missing(data: Sequence[SupportsFloat]):
@@ -202,7 +208,6 @@ def merge(
     """
     tester = TTestSignificanceTester(max_pvalue)
     while change_points:
-
         # Select the change point with weakest unacceptable P-value
         # If all points have acceptable P-values, select the change-point with
         # the least relative change:

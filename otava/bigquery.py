@@ -22,7 +22,7 @@ from typing import Dict, List, Optional
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
-from otava.analysis import ChangePointOtava
+from otava.analysis import ChangePoint
 from otava.test_config import BigQueryTestConfig
 
 
@@ -87,7 +87,7 @@ class BigQuery:
         test: BigQueryTestConfig,
         metric_name: str,
         attributes: Dict,
-        change_point: ChangePointOtava,
+        change_point: ChangePoint,
     ):
         kwargs = {**attributes, **{test.time_column: datetime.utcfromtimestamp(change_point.time)}}
         update_stmt = test.update_stmt.format(

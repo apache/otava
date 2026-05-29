@@ -25,7 +25,7 @@ from otava.change_point_divisive.base import (
     BaseStats,
     Calculator,
     CandidateChangePoint,
-    ChangePointOtava,
+    ChangePoint,
     SignificanceTester,
 )
 
@@ -50,7 +50,7 @@ class PermutationsSignificanceTester(SignificanceTester):
         self.seed = seed
         self.rng = np.random.default_rng(seed)
 
-    def change_point(self, candidate: CandidateChangePoint, series: NDArray, intervals: List[slice]) -> ChangePointOtava[PermutationStats]:
+    def change_point(self, candidate: CandidateChangePoint, series: NDArray, intervals: List[slice]) -> ChangePoint[PermutationStats]:
         '''Perform permutation test within candidate cluster'''
 
         # 1. Find permutated Qhats
@@ -74,4 +74,4 @@ class PermutationsSignificanceTester(SignificanceTester):
             extreme_qhat_perm=extreme_qhat_perm,
             n_perm=self.permutations
         )
-        return ChangePointOtava.from_candidate(candidate, stats)
+        return ChangePoint.from_candidate(candidate, stats)

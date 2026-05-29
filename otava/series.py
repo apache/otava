@@ -18,7 +18,6 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from itertools import groupby
 from typing import Any, Dict, Iterable, List, Optional
 
 from otava.analysis import (
@@ -28,7 +27,13 @@ from otava.analysis import (
     compute_change_points_orig,
     fill_missing,
 )
-from otava.change_point_divisive.base import ChangePointOtava
+from otava.change_point_divisive.base import (
+    ChangePoint,
+    ChangePointGroup,
+    ChangePoints,
+    ChangePointsByMetric,
+    ChangePointsByTime,
+)
 
 
 @dataclass
@@ -49,7 +54,7 @@ class AnalysisOptions:
             "window_len": self.window_len,
             "max_pvalue": self.max_pvalue,
             "min_magnitude": self.min_magnitude,
-            "orig_edivisive": self.orig_edivisive
+            "orig_edivisive": self.orig_edivisive,
         }
 
 
@@ -65,90 +70,7 @@ class Metric:
         self.unit = ""
 
     def to_json(self):
-        return {
-            "direction": self.direction,
-            "scale": self.scale,
-            "unit": self.unit
-        }
-
-
-@dataclass
-class ChangePointHunter(ChangePointOtava[TTestStats]):
-    """A change-point for a single metric"""
-    metric: str
-    time: int
-
-    def forward_change_percent(self) -> float:
-        return self.stats.forward_rel_change() * 100.0
-
-    def backward_change_percent(self) -> float:
-        return self.stats.backward_rel_change() * 100.0
-
-    def magnitude(self):
-        return self.stats.change_magnitude()
-
-    def mean_before(self):
-        return self.stats.mean_1
-
-    def mean_after(self):
-        return self.stats.mean_2
-
-    def stddev_before(self):
-        return self.stats.std_1
-
-    def stddev_after(self):
-        return self.stats.std_2
-
-    def pvalue(self):
-        return self.stats.pvalue
-
-    def to_json(self, rounded=True):
-        if rounded:
-            return {
-                "metric": self.metric,
-                "index": int(self.index),
-                "time": self.time,
-                "forward_change_percent": f"{self.forward_change_percent():.0f}",
-                "magnitude": f"{self.magnitude():-0f}",
-                "mean_before": f"{self.mean_before():-0f}",
-                "stddev_before": f"{self.stddev_before():-0f}",
-                "mean_after": f"{self.mean_after():-0f}",
-                "stddev_after": f"{self.stddev_after():-0f}",
-                "pvalue": f"{self.pvalue():-0f}",
-            }
-
-        else:
-            return {
-                "metric": self.metric,
-                "index": int(self.index),
-                "time": self.time,
-                "forward_change_percent": self.forward_change_percent(),
-                "magnitude": self.magnitude(),
-                "mean_before": self.mean_before(),
-                "stddev_before": self.stddev_before(),
-                "mean_after": self.mean_after(),
-                "stddev_after": self.stddev_after(),
-                "pvalue": self.pvalue(),
-            }
-
-
-@dataclass
-class ChangePointGroup:
-    """A group of change points on multiple metrics, at the same time"""
-
-    index: int
-    time: float
-    prev_time: int
-    attributes: Dict[str, str]
-    prev_attributes: Dict[str, str]
-    changes: List[ChangePointHunter]
-
-    def to_json(self, rounded=False):
-        return {
-            "time": self.time,
-            "attributes": self.attributes,
-            "changes": [cp.to_json(rounded=rounded) for cp in self.changes],
-        }
+        return {"direction": self.direction, "scale": self.scale, "unit": self.unit}
 
 
 class Series:
@@ -185,7 +107,7 @@ class Series:
 
     def attributes_at(self, index: int) -> Dict[str, str]:
         result = {}
-        for (k, v) in self.attributes.items():
+        for k, v in self.attributes.items():
             result[k] = v[index]
         return result
 
@@ -216,13 +138,16 @@ class AnalyzedSeries:
 
     __series: Series
     options: AnalysisOptions
-    change_points: Dict[str, List[ChangePointHunter]]
-    change_points_by_time: List[ChangePointGroup]
+    change_points: Dict[str, ChangePointGroup]
+    change_points_by_time: ChangePoints
     change_points_timestamp: Any
 
-    def __init__(self, series: Series, options: AnalysisOptions, change_points: Dict[str, ChangePointHunter] = None):
+    def __init__(
+        self, series: Series, options: AnalysisOptions, change_points: Dict[str, ChangePoint] = None
+    ):
         self.__series = series
         self.options = options
+        # record when these change points were calculated
         self.change_points_timestamp = datetime.now(tz=timezone.utc)
         self.change_points = None
         if change_points is not None:
@@ -236,7 +161,8 @@ class AnalyzedSeries:
     @staticmethod
     def __compute_change_points(
         series: Series, options: AnalysisOptions
-    ) -> Dict[str, List[ChangePointHunter]]:
+    ) -> (ChangePointsByMetric, ChangePointsByMetric):
+        # To find change points, go one metric at a time
         result = {}
         weak_change_points = {}
         for metric in series.data.keys():
@@ -249,16 +175,15 @@ class AnalyzedSeries:
                     values,
                     max_pvalue=options.max_pvalue,
                 )
-                tester = TTestSignificanceTester(options.max_pvalue)
-                intervals = tester.get_intervals(change_points)
+                result[metric] = []
                 for c in change_points:
-                    cp_ttest = tester.change_point(c.to_candidate(), values, intervals)
-                    result[metric].append(
-                        ChangePoint(
-                            index=cp_ttest.index, qhat=cp_ttest.qhat,
-                            time=series.time[cp_ttest.index], metric=metric, stats=cp_ttest.stats
-                        )
+                    c.metric = metric
+                    cpg = ChangePointGroup(
+                        time=series.time[c.index],
+                        attributes=series.attributes_at(c.index),
+                        changes={metric: c},
                     )
+                    result[metric].append(cpg)
             else:
                 change_points, weak_cps = compute_change_points(
                     values,
@@ -267,43 +192,29 @@ class AnalyzedSeries:
                     min_magnitude=options.min_magnitude,
                 )
                 for c in weak_cps:
-                    weak_change_points[metric].append(
-                        ChangePointHunter(
-                            index=c.index, qhat=0.0, time=series.time[c.index], metric=metric, stats=c.stats
-                        )
+                    c.metric = metric
+                    cpg = ChangePointGroup(
+                        time=series.time[c.index],
+                        attributes=series.attributes_at(c.index),
+                        changes={metric: c},
                     )
+                    weak_change_points[metric].append(cpg)
                 for c in change_points:
-                    result[metric].append(
-                        ChangePointHunter(
-                            index=c.index, qhat=0.0, time=series.time[c.index], metric=metric, stats=c.stats
-                        )
+                    c.metric = metric
+                    cpg = ChangePointGroup(
+                        time=series.time[c.index],
+                        attributes=series.attributes_at(c.index),
+                        changes={metric: c},
                     )
-        # If you got an exception and are wondering about the next row...
-        # weak_cps is an optimization which you can ignore
-        return result, weak_change_points
+                    result[metric].append(cpg)
+
+        return ChangePointsByMetric(result), ChangePointsByMetric(weak_change_points)
 
     @staticmethod
     def __group_change_points_by_time(
-        series: Series, change_points: Dict[str, List[ChangePointHunter]]
-    ) -> List[ChangePointGroup]:
-        changes: List[ChangePointHunter] = []
-        for metric in change_points.keys():
-            changes += change_points[metric]
-
-        changes.sort(key=lambda c: c.index)
-        points = []
-        for k, g in groupby(changes, key=lambda c: c.index):
-            cp = ChangePointGroup(
-                index=k,
-                time=series.time[k],
-                prev_time=series.time[k - 1],
-                attributes=series.attributes_at(k),
-                prev_attributes=series.attributes_at(k - 1),
-                changes=list(g),
-            )
-            points.append(cp)
-
-        return points
+        series: Series, change_points: ChangePoints
+    ) -> ChangePointsByTime:
+        return ChangePointsByTime(change_points)
 
     def get_stable_range(self, metric: str, index: int) -> (int, int):
         """
@@ -316,13 +227,13 @@ class AnalyzedSeries:
         It follows that there are no change points between A and B.
         """
         begin = 0
-        for cp in self.change_points[metric]:
+        for cp in self.change_points.get_change_points_for_metric(metric):
             if cp.index > index:
                 break
             begin = cp.index
 
         end = len(self.time())
-        for cp in reversed(self.change_points[metric]):
+        for cp in reversed(self.change_points.get_change_points_for_metric(metric)):
             if cp.index <= index:
                 break
             end = cp.index
@@ -347,7 +258,9 @@ class AnalyzedSeries:
         max_time = max(self.__series.time)
         for t in time:
             if t <= max_time:
-                return ValueError("time must be monotonously increasing if you use append() time={}".format(time))
+                return ValueError(
+                    "time must be monotonously increasing if you use append() time={}".format(time)
+                )
 
         return None
 
@@ -377,7 +290,7 @@ class AnalyzedSeries:
 
         for metric in self.__series.data.keys():
             if metric not in new_data:
-                weak_change_points[metric] = self.weak_change_points[metric]
+                weak_change_points[metric] = self.weak_change_points.select_metrics(metric)
                 continue
 
             change_points, weak_cps = compute_change_points(
@@ -386,32 +299,40 @@ class AnalyzedSeries:
                 max_pvalue=self.options.max_pvalue,
                 min_magnitude=self.options.min_magnitude,
                 new_data=len(new_data[metric]),
-                old_weak_cp=self.weak_change_points.get(metric, [])
+                old_weak_cp=self.weak_change_points.get_change_points_for_metric(metric),
             )
-            result[metric] = []
+            if metric not in result:
+                result[metric] = []
             for c in change_points:
                 result[metric].append(
-                    ChangePointHunter(
-                        index=c.index, qhat=0.0, time=self.__series.time[c.index], metric=metric, stats=c.stats
+                    ChangePointGroup(
+                        time=self.__series.time[c.index],
+                        changes={metric: c},
+                        attributes=self.__series.attributes_at(c.index),
                     )
                 )
-            weak_change_points[metric] = []
+            if metric not in weak_change_points:
+                weak_change_points[metric] = []
             for c in weak_cps:
                 weak_change_points[metric].append(
-                    ChangePointHunter(
-                        index=c.index, qhat=0.0, time=self.__series.time[c.index], metric=metric, stats=c.stats
+                    ChangePointGroup(
+                        time=self.__series.time[c.index],
+                        changes={metric: c},
+                        attributes=self.__series.attributes_at(c.index),
                     )
                 )
+            # TODO: Remove this. It should not be a requirement that metrics have the same history.
             fill_missing(self.__series.data[metric])
 
-        # If some metrics didn't participate in this round, we still keep them, but update the ones
-        # We did recompute
-        for metric in result.keys():
-            self.change_points[metric] = result[metric]
-        for metric in weak_change_points.keys():
-            self.weak_change_points[metric] = weak_change_points[metric]
-        self.change_points_by_time = self.__group_change_points_by_time(self.__series, self.change_points)
-        return result, weak_change_points
+        r = ChangePointsByMetric(result)
+        w = ChangePointsByMetric(weak_change_points)
+        # print("#", self.change_points.change_points)
+        # print("¤", r.change_points)
+        # print("%", w.change_points)
+        # r has a subset of all metrics, so can't just set change_points to r
+        for metric, cpglist in r.change_points.items():
+            self.change_points.change_points[metric] = cpglist
+        return r, w
 
     def test_name(self) -> str:
         return self.__series.test_name
@@ -445,12 +366,12 @@ class AnalyzedSeries:
 
     def to_json(self):
         change_points_json = {}
-        for metric, cps in self.change_points.items():
-            change_points_json[metric] = [cp.to_json(rounded=False) for cp in cps]
+        for cps in self.change_points:
+            change_points_json = [cp.to_json(rounded=False) for cp in cps]
 
         weak_change_points_json = {}
-        for metric, cps in self.weak_change_points.items():
-            weak_change_points_json[metric] = [cp.to_json(rounded=False) for cp in cps]
+        for cps in self.weak_change_points:
+            weak_change_points_json = [cp.to_json(rounded=False) for cp in cps]
 
         data_json = {}
         for metric, datapoints in self.__series.data.items():
@@ -466,7 +387,7 @@ class AnalyzedSeries:
             "attributes": self.__series.attributes,
             "data": self.__series.data,
             "change_points": change_points_json,
-            "weak_change_points": weak_change_points_json
+            "weak_change_points": weak_change_points_json,
         }
 
     @classmethod
@@ -482,7 +403,7 @@ class AnalyzedSeries:
             analyzed_json["time"],
             new_metrics,
             analyzed_json["data"],
-            analyzed_json["attributes"]
+            analyzed_json["attributes"],
         )
 
         new_options = AnalysisOptions()
@@ -503,9 +424,7 @@ class AnalyzedSeries:
                     pvalue=cp["pvalue"],
                 )
                 new_list.append(
-                    ChangePointHunter(
-                        index=cp["index"], time=cp["time"], metric=cp["metric"], stats=stat
-                    )
+                    ChangePoint(index=cp["index"], time=cp["time"], metric=cp["metric"], stats=stat)
                 )
             new_change_points[metric] = new_list
 
@@ -521,9 +440,7 @@ class AnalyzedSeries:
                     pvalue=cp["pvalue"],
                 )
                 new_list.append(
-                    ChangePointHunter(
-                        index=cp["index"], time=cp["time"], metric=cp["metric"], stats=stat
-                    )
+                    ChangePoint(index=cp["index"], time=cp["time"], metric=cp["metric"], stats=stat)
                 )
             new_weak_change_points[metric] = new_list
 
@@ -532,6 +449,8 @@ class AnalyzedSeries:
 
         if "change_points_timestamp" in analyzed_json.keys():
             analyzed_series.change_points_timestamp = analyzed_json["change_points_timestamp"]
-            analyzed_series.change_points_by_time = AnalyzedSeries.__group_change_points_by_time(analyzed_series.__series, analyzed_series.change_points)
+            analyzed_series.change_points_by_time = AnalyzedSeries.__group_change_points_by_time(
+                analyzed_series.__series, analyzed_series.change_points
+            )
 
         return analyzed_series

@@ -21,7 +21,7 @@ from typing import Dict
 
 import pg8000
 
-from otava.analysis import ChangePointOtava
+from otava.change_point_divisive.base import ChangePointGroup, ChangePointSerializer
 from otava.test_config import PostgresTestConfig
 
 
@@ -88,10 +88,11 @@ class Postgres:
         test: PostgresTestConfig,
         metric_name: str,
         attributes: Dict,
-        change_point: ChangePointOtava,
+        change_point_group: ChangePointGroup,
     ):
         cursor = self.__get_conn().cursor()
-        kwargs = {**attributes, **{test.time_column: datetime.utcfromtimestamp(change_point.time)}}
+        change_point = ChangePointSerializer(change_point_group[metric_name])
+        kwargs = {**attributes, **{test.time_column: datetime.utcfromtimestamp(change_point_group.time)}}
         update_stmt = test.update_stmt.format(metric=metric_name, **kwargs)
         cursor.execute(
             update_stmt,

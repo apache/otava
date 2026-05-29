@@ -86,8 +86,7 @@ def test_json_report(report):
                                                         'metric': 'series2',
                                                         'pvalue': '0.000000',
                                                         'stddev_after': '0.026954',
-                                                        'stddev_before': '0.011180',
-                                                        'time': 4}],
+                                                        'stddev_before': '0.011180'}],
                                           'time': 4},
                                           {'attributes': {},
                                           'changes': [{'forward_change_percent': '-49',
@@ -98,8 +97,10 @@ def test_json_report(report):
                                                        'metric': 'series1',
                                                        'pvalue': '0.000000',
                                                        'stddev_after': '0.025768',
-                                                       'stddev_before': '0.067495',
-                                                       'time': 6}],
+                                                       'stddev_before': '0.067495'}],
                                            'time': 6}]}
     assert isinstance(obj, dict)
+    from pprint import pprint
+    pprint(obj)
+    pprint(expected)
     assert obj == expected
