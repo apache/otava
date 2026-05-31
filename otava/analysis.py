@@ -17,7 +17,7 @@
 
 import copy
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, SupportsFloat, Tuple
+from typing import List, Optional, Sequence, SupportsFloat, Tuple, cast
 
 import numpy as np
 from scipy.stats import ttest_ind_from_stats
@@ -43,59 +43,8 @@ class TTestStats(BaseStats):
     Keeps statistics of two series of data and the probability both series
     have the same distribution.
     """
-
-    mean_1: float
-    mean_2: float
-    std_1: float
-    std_2: float
-
-    def forward_rel_change(self, value_if_nan=0):
-        """Relative change from left to right"""
-        if self.mean_1 == 0:
-            return value_if_nan
-
-        return self.mean_2 / self.mean_1 - 1.0
-
-    def backward_rel_change(self, value_if_nan=0):
-        """Relative change from right to left"""
-        if self.mean_2 == 0:
-            return value_if_nan
-
-        return self.mean_1 / self.mean_2 - 1.0
-
-    def forward_change_percent(self) -> float:
-        return self.forward_rel_change() * 100.0
-
-    def backward_change_percent(self) -> float:
-        return self.backward_rel_change() * 100.0
-
-    def change_magnitude(self):
-        """Maximum of absolutes of rel_change and rel_change_reversed"""
-        return max(abs(self.forward_rel_change()), abs(self.backward_rel_change()))
-
-    def mean_before(self):
-        return self.mean_1
-
-    def mean_after(self):
-        return self.mean_2
-
-    def stddev_before(self):
-        return self.std_1
-
-    def stddev_after(self):
-        return self.std_2
-
-    def to_json(self):
-        return {
-            "forward_change_percent": f"{self.forward_change_percent():-0f}",
-            "magnitude": f"{self.change_magnitude():-0f}",
-            "mean_before": f"{self.mean_before():-0f}",
-            "stddev_before": f"{self.stddev_before():-0f}",
-            "mean_after": f"{self.mean_after():-0f}",
-            "stddev_after": f"{self.stddev_after():-0f}",
-            "pvalue": f"{self.pvalue:-0f}",
-        }
-
+    # TODO
+    pass
 
 # Generic Change Point List
 GenCPList = List[ChangePoint[GenericStats]]
@@ -105,6 +54,7 @@ PermCPList = List[ChangePoint[PermutationStats]]
 TtestCPList = List[ChangePoint[TTestStats]]
 
 
+# TODO: Move to change_point_divisive.significance_test
 class TTestSignificanceTester(SignificanceTester):
     """
     Uses two-sided Student's T-test to decide if a candidate change point
@@ -114,21 +64,15 @@ class TTestSignificanceTester(SignificanceTester):
     """
 
     def compare(self, left: Sequence[SupportsFloat], right: Sequence[SupportsFloat]) -> TTestStats:
-        if len(left) == 0 or len(right) == 0:
-            raise ValueError
-
-        mean_l = np.mean(left)
-        mean_r = np.mean(right)
-        std_l = np.std(left) if len(left) >= 2 else 0.0
-        std_r = np.std(right) if len(right) >= 2 else 0.0
-
+        base_stats = super().compare(left, right)
         if len(left) + len(right) > 2:
             (_, p) = ttest_ind_from_stats(
-                mean_l, std_l, len(left), mean_r, std_r, len(right), alternative="two-sided"
+                base_stats.mean_1, base_stats.std_1, len(left), base_stats.mean_2, base_stats.std_2, len(right), alternative="two-sided"
             )
         else:
             p = 1.0
-        return TTestStats(mean_1=mean_l, mean_2=mean_r, std_1=std_l, std_2=std_r, pvalue=p)
+
+        return TTestStats(pvalue=p, mean_1=base_stats.mean_1, mean_2=base_stats.mean_2, std_1=base_stats.std_1, std_2=base_stats.std_2)
 
     def change_point(
         self,
@@ -136,43 +80,7 @@ class TTestSignificanceTester(SignificanceTester):
         series: Sequence[SupportsFloat],
         intervals: List[slice],
     ) -> ChangePoint[TTestStats]:
-        """
-        Computes properties of the change point if the Candidate Change Point based on the provided intervals.
-
-        The method works in both steps of the algorithm:
-        1. Split step:
-           if the candidate is a new potential change point, i.e., its index is inside any interval, then
-           we split the interval by the candidate's index to get left and right subseries.
-        2. Merge step:
-           if the candidate is an existing change point, i.e., it matches the end of two intervals, then
-           it's a potential weak change point, and we don't need to split the intervals anymore (just take
-           both intervals as left and right subseries).
-
-        """
-        for i, interval in enumerate(intervals):
-            if interval.stop == candidate.index:
-                # Merge step
-                left_interval = interval
-                right_interval = intervals[i + 1]
-                break
-            elif (interval.start is None or interval.start < candidate.index) and (interval.stop is None or candidate.index < interval.stop):
-                # Split step
-                # Note: handles slices with omitted indexes:
-                #
-                #       array[0 : i] == array[:i] == array[slice(None, i)] == array[slice(0, i)],
-                #       i.e., interval.start == None and interval.start == 0 are equivalent.
-                #
-                #       array[i: len(array)] == array[i:] == array[slice(i, None)] == array[slice(i, len(array))],
-                #       i.e., interval.stop == None and interval.stop == len(array) are equivalent.
-                left_interval = slice(interval.start, candidate.index)
-                right_interval = slice(candidate.index, interval.stop)
-                break
-        else:
-            raise ValueError(
-                f"Candidate Change Point at index={candidate.index} doesn't correspond to any interval in {intervals}."
-            )
-        left = series[left_interval]
-        right = series[right_interval]
+        left, right = self.get_sides(candidate, series, intervals)
         stats = self.compare(left, right)
         return ChangePoint.from_candidate(candidate, stats)
 
@@ -181,6 +89,8 @@ def fill_missing(data: Sequence[SupportsFloat]):
     """
     Forward-fills None occurrences with nearest previous non-None values.
     Initial None values are back-filled with the nearest future non-None value.
+
+    TODO: Remove this.
     """
     prev = None
     for i in range(len(data)):

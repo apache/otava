@@ -68,10 +68,19 @@ class PermutationsSignificanceTester(SignificanceTester):
         # 2. Estimate p-value
         extreme_qhat_perm = np.sum(qhats >= candidate.qhat)
         pval = extreme_qhat_perm / (self.permutations + 1)
+
+        # 3. Add general statistics together with the above
+        left, right = self.get_sides(candidate, series, intervals)
+        generic_stats = self.compare(left, right, pval)
+
         stats = PermutationStats(
             pvalue=pval,
             permuted_qhats=qhats,
             extreme_qhat_perm=extreme_qhat_perm,
-            n_perm=self.permutations
+            n_perm=self.permutations,
+            mean_1=generic_stats.mean_1,
+            mean_2=generic_stats.mean_2,
+            std_1=generic_stats.std_1,
+            std_2=generic_stats.std_2,
         )
         return ChangePoint.from_candidate(candidate, stats)

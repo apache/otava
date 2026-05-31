@@ -48,8 +48,9 @@ Hierarchy of ChangePoint classes:
 from collections import OrderedDict
 from dataclasses import dataclass, fields
 from datetime import UTC, datetime
-from typing import Dict, Generic, List, Optional, TypeVar
+from typing import Dict, Generic, List, Optional, TypeVar, Sequence, SupportsFloat, Any
 
+import numpy as np
 from numpy.typing import NDArray
 
 
@@ -67,7 +68,83 @@ class BaseStats:
 
     # The pvalue for this change point. Exact value depends on the algorithm that was used.
     pvalue: float
+    mean_1: float
+    mean_2: float
+    std_1: float
+    std_2: float
 
+    def __init__(self, left: Sequence[SupportsFloat], right: Sequence[SupportsFloat], pvalue=None) -> Any:
+        """
+        Basic statsistics about the left and right side, and the change between them.
+
+        Calculate basic statistics about the left and right sides of a change point, such as mean
+        standard deviation. p-value depeds on the significance test used, so we cannot know or compute
+        it here, but if the caller knows p already, they can supply it as argument.
+        """
+        self.calculate_base_stats(left, right, pvalue)
+
+    def calculate_base_stats(self, left, right, pvalue=None):
+        if pvalue is not None and pvalue >= 0.0 and pvalue <= 1.0:
+            self.pvalue = pvalue
+        else:
+            self.pvalue = 1.0
+
+        if len(left) == 0 or len(right) == 0:
+            raise ValueError
+
+        self.mean_1 = np.mean(left)
+        self.mean_2 = np.mean(right)
+        self.std_1 = np.std(left) if len(left) >= 2 else 0.0
+        self.std_2 = np.std(right) if len(right) >= 2 else 0.0
+
+        return self
+
+    def forward_rel_change(self, value_if_nan=0):
+        """Relative change from left to right"""
+        if self.mean_1 == 0:
+            return value_if_nan
+
+        return self.mean_2 / self.mean_1 - 1.0
+
+    def backward_rel_change(self, value_if_nan=0):
+        """Relative change from right to left"""
+        if self.mean_2 == 0:
+            return value_if_nan
+
+        return self.mean_1 / self.mean_2 - 1.0
+
+    def forward_change_percent(self) -> float:
+        return self.forward_rel_change() * 100.0
+
+    def backward_change_percent(self) -> float:
+        return self.backward_rel_change() * 100.0
+
+    def change_magnitude(self):
+        """Maximum of absolutes of rel_change and rel_change_reversed"""
+        return max(abs(self.forward_rel_change()), abs(self.backward_rel_change()))
+
+    def mean_before(self):
+        return self.mean_1
+
+    def mean_after(self):
+        return self.mean_2
+
+    def stddev_before(self):
+        return self.std_1
+
+    def stddev_after(self):
+        return self.std_2
+
+    def to_json(self):
+        return {
+            "forward_change_percent": f"{self.forward_change_percent():-0f}",
+            "magnitude": f"{self.change_magnitude():-0f}",
+            "mean_before": f"{self.mean_before():-0f}",
+            "stddev_before": f"{self.stddev_before():-0f}",
+            "mean_after": f"{self.mean_after():-0f}",
+            "stddev_after": f"{self.stddev_after():-0f}",
+            "pvalue": f"{self.pvalue:-0f}",
+        }
 
 # Abstract variable type for statistics, corresponds to BaseStats class and its subclasses.
 GenericStats = TypeVar("GenericStats", bound=BaseStats)
@@ -520,6 +597,55 @@ class SignificanceTester(Generic[GenericStats]):
     def __init__(self, max_pvalue: float):
         self.max_pvalue = max_pvalue
 
+    def compare(self, left: Sequence[SupportsFloat], right: Sequence[SupportsFloat], p: float = None) -> GenericStats:
+        if len(left) == 0 or len(right) == 0:
+            raise ValueError
+        return BaseStats(left, right, p)
+
+
+    def get_sides(
+            self, candidate: CandidateChangePoint, series: Sequence[SupportsFloat], intervals: List[slice]
+        ) -> (Sequence, Sequence):
+        """
+        Computes properties of the change point if the Candidate Change Point based on the provided intervals.
+
+        The method works in both steps of the algorithm:
+        1. Split step:
+           if the candidate is a new potential change point, i.e., its index is inside any interval, then
+           we split the interval by the candidate's index to get left and right subseries.
+        2. Merge step:
+           if the candidate is an existing change point, i.e., it matches the end of two intervals, then
+           it's a potential weak change point, and we don't need to split the intervals anymore (just take
+           both intervals as left and right subseries).
+
+        """
+        for i, interval in enumerate(intervals):
+            if interval.stop == candidate.index:
+                # Merge step
+                left_interval = interval
+                right_interval = intervals[i + 1]
+                break
+            elif (interval.start is None or interval.start < candidate.index) and (interval.stop is None or candidate.index < interval.stop):
+                # Split step
+                # Note: handles slices with omitted indexes:
+                #
+                #       array[0 : i] == array[:i] == array[slice(None, i)] == array[slice(0, i)],
+                #       i.e., interval.start == None and interval.start == 0 are equivalent.
+                #
+                #       array[i: len(array)] == array[i:] == array[slice(i, None)] == array[slice(i, len(array))],
+                #       i.e., interval.stop == None and interval.stop == len(array) are equivalent.
+                left_interval = slice(interval.start, candidate.index)
+                right_interval = slice(candidate.index, interval.stop)
+                break
+        else:
+            raise ValueError(
+                f"Candidate Change Point at index={candidate.index} doesn't correspond to any interval in {intervals}."
+            )
+        left = series[left_interval]
+        right = series[right_interval]
+        return left, right
+
+
     def get_intervals(self, change_points: List[ChangePoint[GenericStats]]) -> List[slice]:
         """Returns list of slices of the series. Change points must be sorted by index."""
         assert all(
@@ -544,7 +670,6 @@ class SignificanceTester(Generic[GenericStats]):
     ) -> ChangePoint[GenericStats]:
         """Computes stats for a change point candidate and wraps it into ChangePoint class"""
         ...
-
 
 class Calculator:
     """Abstract class for calculator. Calculator provides an interface to get best change point candidate"""
