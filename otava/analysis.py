@@ -17,9 +17,8 @@
 
 import copy
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, SupportsFloat, Tuple, cast
+from typing import List, Optional, Sequence, SupportsFloat, Tuple
 
-import numpy as np
 from scipy.stats import ttest_ind_from_stats
 
 from otava.change_point_divisive.base import (
