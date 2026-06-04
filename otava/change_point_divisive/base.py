@@ -47,7 +47,7 @@ Hierarchy of ChangePoint classes:
 
 from collections import OrderedDict
 from dataclasses import dataclass, fields
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Generic, List, Optional, Sequence, SupportsFloat, TypeVar
 
 import numpy as np
@@ -293,7 +293,7 @@ class ChangePointGroup:
         return self.attribute_at(idx).get("commit")
 
     def datetime(self):
-        return datetime.fromtimestamp(self.time, UTC)
+        return datetime.fromtimestamp(self.time, timezone.UTC)
 
     def select_metrics(self, m: list[str] | str):
         if not isinstance(m, list):
