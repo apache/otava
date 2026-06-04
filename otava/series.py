@@ -147,7 +147,7 @@ class AnalyzedSeries:
         self.__series = series
         self.options = options
         # record when these change points were calculated
-        self.change_points_timestamp = datetime.now(tz=timezone.utc)
+        self.change_points_timestamp = datetime.now(timezone.utc)
         self.change_points = None
         if change_points is not None:
             self.change_points = change_points
