@@ -43,7 +43,7 @@ class TTestStats(BaseStats):
     have the same distribution.
     """
     # TODO
-    pass
+
 
 # Generic Change Point List
 GenCPList = List[ChangePoint[GenericStats]]

@@ -52,8 +52,8 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
 
-      - name: Install tox
-        run: uv tool install tox --with tox-uv
+      # - name: Install tox
+        # run: uv tool install tox --with tox-uv
 
       - name: Run tox
         run: tox -e py

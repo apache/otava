@@ -48,7 +48,7 @@ Hierarchy of ChangePoint classes:
 from collections import OrderedDict
 from dataclasses import dataclass, fields
 from datetime import UTC, datetime
-from typing import Dict, Generic, List, Optional, TypeVar, Sequence, SupportsFloat, Any
+from typing import Any, Dict, Generic, List, Optional, Sequence, SupportsFloat, TypeVar
 
 import numpy as np
 from numpy.typing import NDArray
@@ -145,6 +145,7 @@ class BaseStats:
             "stddev_after": f"{self.stddev_after():-0f}",
             "pvalue": f"{self.pvalue:-0f}",
         }
+
 
 # Abstract variable type for statistics, corresponds to BaseStats class and its subclasses.
 GenericStats = TypeVar("GenericStats", bound=BaseStats)
@@ -602,10 +603,9 @@ class SignificanceTester(Generic[GenericStats]):
             raise ValueError
         return BaseStats(left, right, p)
 
-
     def get_sides(
-            self, candidate: CandidateChangePoint, series: Sequence[SupportsFloat], intervals: List[slice]
-        ) -> (Sequence, Sequence):
+        self, candidate: CandidateChangePoint, series: Sequence[SupportsFloat], intervals: List[slice]
+    ) -> (Sequence, Sequence):
         """
         Computes properties of the change point if the Candidate Change Point based on the provided intervals.
 
@@ -645,7 +645,6 @@ class SignificanceTester(Generic[GenericStats]):
         right = series[right_interval]
         return left, right
 
-
     def get_intervals(self, change_points: List[ChangePoint[GenericStats]]) -> List[slice]:
         """Returns list of slices of the series. Change points must be sorted by index."""
         assert all(
@@ -670,6 +669,7 @@ class SignificanceTester(Generic[GenericStats]):
     ) -> ChangePoint[GenericStats]:
         """Computes stats for a change point candidate and wraps it into ChangePoint class"""
         ...
+
 
 class Calculator:
     """Abstract class for calculator. Calculator provides an interface to get best change point candidate"""
