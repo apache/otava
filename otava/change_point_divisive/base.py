@@ -364,6 +364,14 @@ class ChangePoints:
                 )
         self.change_points = cps
 
+    def by_time(self) -> ChangePointsByTime:
+        cps = ChangePointsByTime()
+        cps.change_points = self.change_points
+        return cps
+
+    def by_metric(self) -> ChangePointsByMetric:
+        return self.pivot()
+
     def append(self, cpg: ChangePointGroup):
         if not isinstance(cpg, ChangePointGroup):
             raise TypeError("ChangePoints.append() takes as argument one ChangePointGroup.")
@@ -453,6 +461,14 @@ class ChangePoints:
         """
         Return the same object as ChangePointsByMetric.
         """
+        raise NotImplementedError()
+
+
+class ChangePointsByTime(ChangePoints):
+    def pivot(self):
+        """
+        Return the same object as ChangePointsByMetric.
+        """
         by_metric = ChangePointsByMetric()
 
         for row in sorted(self.change_points, key=lambda cpg: cpg.time):
@@ -461,13 +477,9 @@ class ChangePoints:
             by_metric.append(row)
 
 
-class ChangePointsByTime(ChangePoints):
-    pass
-
-
 class ChangePointsByMetric(ChangePoints):
     """
-    Provides same interface as ChangePoints, but internally stores with metric first.
+    Provides same interface as ChangePointsByTime, but internally stores with metric first.
     """
 
     def __init__(self, cps=None):
@@ -517,6 +529,8 @@ class ChangePointsByMetric(ChangePoints):
         if not isinstance(cpg, ChangePointGroup):
             raise TypeError("ChangePoints.append() takes as argument one ChangePointGroup.")
         for metric in cpg.metrics():
+            if metric not in self.change_points:
+                self.change_points[metric] = []
             self.change_points[metric].append(cpg.select_metrics(metric))
 
     def extend(self, cps):

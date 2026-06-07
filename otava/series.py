@@ -162,11 +162,9 @@ class AnalyzedSeries:
         series: Series, options: AnalysisOptions
     ) -> (ChangePointsByMetric, ChangePointsByMetric):
         # To find change points, go one metric at a time
-        result = {}
-        weak_change_points = {}
+        result = ChangePointsByMetric()
+        weak_change_points = ChangePointsByMetric()
         for metric in series.data.keys():
-            result[metric] = []
-            weak_change_points[metric] = []
             values = series.data[metric].copy()
             fill_missing(values)
             if options.orig_edivisive:
@@ -174,7 +172,6 @@ class AnalyzedSeries:
                     values,
                     max_pvalue=options.max_pvalue,
                 )
-                result[metric] = []
                 for c in change_points:
                     c.metric = metric
                     cpg = ChangePointGroup(
@@ -182,7 +179,7 @@ class AnalyzedSeries:
                         attributes=series.attributes_at(c.index),
                         changes={metric: c},
                     )
-                    result[metric].append(cpg)
+                    result.append(cpg)
             else:
                 change_points, weak_cps = compute_change_points(
                     values,
@@ -197,7 +194,7 @@ class AnalyzedSeries:
                         attributes=series.attributes_at(c.index),
                         changes={metric: c},
                     )
-                    weak_change_points[metric].append(cpg)
+                    weak_change_points.append(cpg)
                 for c in change_points:
                     c.metric = metric
                     cpg = ChangePointGroup(
@@ -205,9 +202,9 @@ class AnalyzedSeries:
                         attributes=series.attributes_at(c.index),
                         changes={metric: c},
                     )
-                    result[metric].append(cpg)
+                    result.append(cpg)
 
-        return ChangePointsByMetric(result), ChangePointsByMetric(weak_change_points)
+        return result, weak_change_points
 
     @staticmethod
     def __group_change_points_by_time(
