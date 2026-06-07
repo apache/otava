@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import List, Optional, Type
 
 import numpy as np
@@ -36,6 +36,10 @@ class PermutationStats(BaseStats):
     permuted_qhats: NDArray
     extreme_qhat_perm: int
     n_perm: int
+
+    def copy(self):
+        # replace() preserves the subclass; deep-copy the array so the copy is independent
+        return replace(self, permuted_qhats=self.permuted_qhats.copy())
 
 
 class PermutationsSignificanceTester(SignificanceTester):

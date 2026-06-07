@@ -42,7 +42,6 @@ class TTestStats(BaseStats):
     Keeps statistics of two series of data and the probability both series
     have the same distribution.
     """
-    # TODO
 
 
 # Generic Change Point List

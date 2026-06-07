@@ -45,10 +45,9 @@ Hierarchy of ChangePoint classes:
           .pivot()                         < - - >  .pivot()
 """
 
-from collections import OrderedDict
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from datetime import datetime, timezone
-from typing import Any, Dict, Generic, List, Optional, Sequence, SupportsFloat, TypeVar
+from typing import Dict, Generic, List, Optional, Sequence, SupportsFloat, TypeVar
 
 import numpy as np
 from numpy.typing import NDArray
@@ -73,31 +72,34 @@ class BaseStats:
     std_1: float
     std_2: float
 
-    def __init__(self, left: Sequence[SupportsFloat], right: Sequence[SupportsFloat], pvalue=None) -> Any:
+    @staticmethod
+    def calculate(left: Sequence[SupportsFloat], right: Sequence[SupportsFloat], pvalue=None):
         """
-        Basic statsistics about the left and right side, and the change between them.
+        Compute basic statistics for the left and right sides of a change point.
 
-        Calculate basic statistics about the left and right sides of a change point, such as mean
-        standard deviation. p-value depeds on the significance test used, so we cannot know or compute
-        it here, but if the caller knows p already, they can supply it as argument.
+        Returns a new BaseStats holding the mean and standard deviation of each side. The
+        p-value depends on the significance test used, so we cannot compute it here; if the
+        caller already knows it they can pass it in, otherwise it defaults to 1.0.
         """
-        self.calculate_base_stats(left, right, pvalue)
-
-    def calculate_base_stats(self, left, right, pvalue=None):
-        if pvalue is not None and pvalue >= 0.0 and pvalue <= 1.0:
-            self.pvalue = pvalue
-        else:
-            self.pvalue = 1.0
-
         if len(left) == 0 or len(right) == 0:
             raise ValueError
 
-        self.mean_1 = np.mean(left)
-        self.mean_2 = np.mean(right)
-        self.std_1 = np.std(left) if len(left) >= 2 else 0.0
-        self.std_2 = np.std(right) if len(right) >= 2 else 0.0
+        if pvalue is not None and 0.0 <= pvalue <= 1.0:
+            p = pvalue
+        else:
+            p = 1.0
 
-        return self
+        return BaseStats(
+            pvalue=p,
+            mean_1=np.mean(left),
+            mean_2=np.mean(right),
+            std_1=np.std(left) if len(left) >= 2 else 0.0,
+            std_2=np.std(right) if len(right) >= 2 else 0.0,
+        )
+
+    def copy(self):
+        """Return a copy of these statistics, preserving the concrete (sub)class."""
+        return replace(self)
 
     def forward_rel_change(self, value_if_nan=0):
         """Relative change from left to right"""
@@ -173,6 +175,16 @@ class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
     stats: GenericStats
     # Which metric this change point belongs to. (This is redundant and for convenience.)
     metric: Optional[str] = None
+
+    def copy(self):
+        """
+        Copy constructor.
+
+        :return: A deep copy of self, recursively calls also stats.copy().
+        """
+        return ChangePoint(
+            index=self.index, qhat=self.qhat, stats=self.stats.copy(), metric=self.metric
+        )
 
     def __eq__(self, other):
         """Helpful to identify new Change Points during divisive algorithm"""
@@ -283,17 +295,23 @@ class ChangePointGroup:
             "changes": changes,
         }
 
+    def copy(self):
+        new_attributes = {k: v for k, v in self.attributes.items()}
+        new_changes = {metric: cp.copy() for metric, cp in self.changes.items()}
+        new_obj = ChangePointGroup(time=self.time, attributes=new_attributes, changes=new_changes)
+        return new_obj
+
     def __getitem__(self, metric):
         return self.changes[metric]
 
     def metrics(self):
         return self.changes.keys()
 
-    def commit(self, idx: int):
-        return self.attribute_at(idx).get("commit")
+    def commit(self):
+        return self.attributes.get("commit")
 
     def datetime(self):
-        return datetime.fromtimestamp(self.time, timezone.UTC)
+        return datetime.fromtimestamp(self.time, timezone.utc)
 
     def select_metrics(self, m: list[str] | str):
         if not isinstance(m, list):
@@ -326,50 +344,69 @@ class ChangePoints:
     Subclass ChangePointsByTime is this same class, but can be used if you explicitly want to mark the ordering.
     """
 
-    def __init__(self, cps=None):
-        if isinstance(cps, dict) and not isinstance(cps, OrderedDict):
-            raise TypeError(
-                "ChangePointsByTime doesn't accept a dict() as constructor input. Did you want ChangePointsByMetric()?"
-            )
-        if isinstance(cps, OrderedDict):
-            for k, v in cps.items():
-                if not isinstance(k, float):
-                    raise TypeError(
-                        "ChangePointsByTime with OrderedDict() as constructor input requires the keys to be float (timestamps)?"
-                    )
-                if not isinstance(v, ChangePointGroup):
-                    raise TypeError(
-                        "ChangePointsByTime input must be an OrderedDict() of ChangePointGroup objects as values."
-                    )
-            self.change_points = sorted(cps, key=lambda cpg: cpg.time)
-            return
-        if cps is None:
-            self.change_points = []
-            return
+    def __init__(self):
+        # The constructor only creates an empty container. To build one from
+        # existing data, use the explicit from_list() / from_dict() classmethods.
+        self.change_points = []
 
-        if isinstance(cps, ChangePointsByTime):
-            self.change_points = sorted(cps.change_points, key=lambda cpg: cpg.time)
-            return
-        if isinstance(cps, ChangePointsByMetric):
-            self.change_points = cps.pivot().change_points
-            return
-
+    @classmethod
+    def from_list(cls, cps: list):
+        """Build from a list of ChangePointGroup objects, ordered by time."""
         if not isinstance(cps, list):
-            cps = [cps]
-        for obj in sorted(cps, key=lambda cpg: cpg.time):
-            if not isinstance(obj, ChangePointGroup):
-                t = type(obj)
+            raise TypeError(
+                f"from_list() takes a list of ChangePointGroup objects. Got {type(cps)}."
+            )
+        for cpg in cps:
+            if not isinstance(cpg, ChangePointGroup):
                 raise TypeError(
-                    f"ChangePoints() takes as argument one or more ChangePointGroup objects. Got {t}."
+                    f"from_list() takes a list of ChangePointGroup objects. Got {type(cpg)}."
                 )
-        self.change_points = cps
+        obj = cls()
+        for cpg in sorted(cps, key=lambda cpg: cpg.time):
+            obj.append(cpg)
+        return obj
 
-    def by_time(self) -> ChangePointsByTime:
-        cps = ChangePointsByTime()
-        cps.change_points = self.change_points
-        return cps
+    @classmethod
+    def from_dict(cls, cps: dict):
+        """
+        Build a ChangePointsByMetric from a dict[str, list[ChangePointGroup]].
 
-    def by_metric(self) -> ChangePointsByMetric:
+        A dict is inherently keyed by metric, so from_dict() returns a
+        ChangePointsByMetric. (This is asymmetric with from_list(), which returns
+        whichever class you call it on.) ChangePointsByTime overrides this to reject
+        a dict outright.
+        """
+        if not isinstance(cps, dict):
+            raise TypeError(
+                f"from_dict() takes a dict[str, list[ChangePointGroup]]. Got {type(cps)}."
+            )
+        obj = ChangePointsByMetric()
+        for metric, cpglist in cps.items():
+            for cpg in cpglist:
+                if not isinstance(cpg, ChangePointGroup):
+                    raise TypeError(
+                        "from_dict() takes a dict[str, list[ChangePointGroup]]."
+                    )
+            # store each metric's groups sorted by timestamp
+            obj.change_points[metric] = sorted(cpglist, key=lambda cpg: cpg.time)
+        return obj
+
+    def copy(self):
+        """
+        Copy constructor.
+
+        Returns a deep copy of this object.
+        """
+        new_obj = ChangePointsByTime()
+        new_obj.change_points = [
+            cpg.copy() for cpg in sorted(self.change_points, key=lambda cpg: cpg.time)
+        ]
+        return new_obj
+
+    def by_time(self):
+        return self
+
+    def by_metric(self):
         return self.pivot()
 
     def append(self, cpg: ChangePointGroup):
@@ -420,7 +457,7 @@ class ChangePoints:
     def metrics(self) -> set:
         all_metrics = set()
         for row in self.change_points:
-            all_metrics.add(row.metrics())
+            all_metrics.update(row.metrics())
         return all_metrics
 
     def select_metrics(self, m: list[str] | str):
@@ -441,7 +478,11 @@ class ChangePoints:
 
     def get_change_points_for_metric(self, m: str):
         single_metric = self.select_metrics(m)
-        return [list(cpg.changes.values())[0] for cpg in single_metric.change_points]
+        return [
+            list(cpg.changes.values())[0]
+            for cpg in single_metric.change_points
+            if cpg.changes
+        ]
 
     def at_timestamp(self, t: float):
         for cpg in self.change_points:
@@ -465,6 +506,14 @@ class ChangePoints:
 
 
 class ChangePointsByTime(ChangePoints):
+    @classmethod
+    def from_dict(cls, cps: dict):
+        # A ChangePointsByTime is stored as a flat list of rows, not keyed by
+        # metric, so a dict has no meaningful representation here.
+        raise TypeError(
+            "ChangePointsByTime doesn't accept a dict. Did you want ChangePointsByMetric.from_dict()?"
+        )
+
     def pivot(self):
         """
         Return the same object as ChangePointsByMetric.
@@ -475,6 +524,7 @@ class ChangePointsByTime(ChangePoints):
             assert isinstance(row, ChangePointGroup)
             # append() does the necessary shuffling into separate columns
             by_metric.append(row)
+        return by_metric
 
 
 class ChangePointsByMetric(ChangePoints):
@@ -482,36 +532,28 @@ class ChangePointsByMetric(ChangePoints):
     Provides same interface as ChangePointsByTime, but internally stores with metric first.
     """
 
-    def __init__(self, cps=None):
-        if isinstance(cps, ChangePointsByMetric):
-            self.change_points = cps.change_points
-        if isinstance(cps, ChangePointsByTime):
-            self.change_points = cps.pivot().change_points
+    def __init__(self):
+        # The constructor only creates an empty container. To build one from
+        # existing data, use the explicit from_list() / from_dict() classmethods.
+        # from_list() is inherited from ChangePoints; append() shuffles each
+        # group's metrics into their own column.
+        self.change_points = {}
 
-        if cps is None:
-            self.change_points = OrderedDict()
-            return
-        if isinstance(cps, list):
-            cpm = []
-            for obj in sorted(cps, key=lambda cpg: cpg.time):
-                if not isinstance(obj, ChangePointGroup):
-                    t = type(obj)
-                    raise TypeError(
-                        f"ChangePointsByMetric() takes as input a list of ChangePointGroup objects. Got {t}."
-                    )
-                cpm.append(obj)
+    # from_dict() is inherited from ChangePoints: it already builds and returns a
+    # ChangePointsByMetric, which is exactly what we want here.
 
-            self.change_points = cpm
-        if isinstance(cps, dict):
-            # We actually don't need the ordering in this case, but we want the type to match the other class
-            self.change_points = OrderedDict()
-            for metric, cpglist in cps.items():
-                for cpg in cpglist:
-                    if not isinstance(cpg, ChangePointGroup):
-                        raise TypeError(
-                            "ChangePointsByMetric takes as constructor argument a dict of ChangePointGroup objects: dict[str, list[ChangePointGroup]]"
-                        )
-                self.change_points[metric] = sorted(cpglist, key=lambda cpg: cpg.time)
+    def copy(self):
+        """
+        Copy constructor.
+
+        Returns a deep copy of this object.
+        """
+        new_obj = ChangePointsByMetric()
+        new_obj.change_points = {
+            metric: [cpg.copy() for cpg in cpglist]
+            for metric, cpglist in self.change_points.items()
+        }
+        return new_obj
 
     def pivot(self):
         # Now we pivot (metric,time) to (time,metric) so that we return ChangePoints() objects
@@ -541,6 +583,12 @@ class ChangePointsByMetric(ChangePoints):
             if not isinstance(obj, ChangePointGroup):
                 raise TypeError(errmsg)
             self.append(obj)
+
+    def by_time(self):
+        return self.pivot()
+
+    def by_metric(self):
+        return self
 
     def items(self):
         return self.change_points.items()
@@ -615,7 +663,7 @@ class SignificanceTester(Generic[GenericStats]):
     def compare(self, left: Sequence[SupportsFloat], right: Sequence[SupportsFloat], p: float = None) -> GenericStats:
         if len(left) == 0 or len(right) == 0:
             raise ValueError
-        return BaseStats(left, right, p)
+        return BaseStats.calculate(left, right, p)
 
     def get_sides(
         self, candidate: CandidateChangePoint, series: Sequence[SupportsFloat], intervals: List[slice]

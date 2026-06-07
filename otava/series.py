@@ -210,7 +210,7 @@ class AnalyzedSeries:
     def __group_change_points_by_time(
         series: Series, change_points: ChangePoints
     ) -> ChangePointsByTime:
-        return ChangePointsByTime(change_points)
+        return change_points.by_time()
 
     def get_stable_range(self, metric: str, index: int) -> (int, int):
         """
@@ -320,8 +320,8 @@ class AnalyzedSeries:
             # TODO: Remove this. It should not be a requirement that metrics have the same history.
             fill_missing(self.__series.data[metric])
 
-        r = ChangePointsByMetric(result)
-        w = ChangePointsByMetric(weak_change_points)
+        r = ChangePointsByMetric.from_dict(result)
+        w = ChangePointsByMetric.from_dict(weak_change_points)
         # print("#", self.change_points.change_points)
         # print("¤", r.change_points)
         # print("%", w.change_points)
