@@ -39,10 +39,10 @@ def test_change_point_detection():
 
     cps = test.analyze().change_points_by_time
     assert len(cps) == 2
-    assert cps.change_points[0].time == 4
-    assert cps.change_points[0].changes["series2"].metric == "series2"
-    assert cps.change_points[1].time == 6
-    assert cps.change_points[1].changes["series1"].metric == "series1"
+    assert cps._change_points[0].time == 4
+    assert cps._change_points[0].changes["series2"].metric == "series2"
+    assert cps._change_points[1].time == 6
+    assert cps._change_points[1].changes["series1"].metric == "series1"
 
 
 def test_change_point_detection_many():
@@ -94,7 +94,7 @@ def test_change_point_detection_many():
     analyzed_series = test.analyze(options)
     assert len(list(analyzed_series.change_points)) == 3
     cps_by_time = analyzed_series.change_points_by_time
-    assert len(cps_by_time.change_points) == 3
+    assert len(cps_by_time._change_points) == 3
     assert analyzed_series.change_points[0].time == 5
     assert "series3" in analyzed_series.change_points[0].changes
 
@@ -116,7 +116,7 @@ def test_change_point_min_magnitude():
     options.min_magnitude = 0.2
     cps = test.analyze(options).change_points_by_time
     assert len(cps) == 1
-    assert cps.change_points[0].time == 6
+    assert cps._change_points[0].time == 6
     assert "series1" in cps[0].changes
 
     for change_point in cps:

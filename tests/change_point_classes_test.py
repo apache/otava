@@ -384,7 +384,7 @@ def test_bymetric_dict_constructor_sorts_by_time():
     g1, g2 = make_group(1.0, "m"), make_group(2.0, "m")
     bm = ChangePointsByMetric.from_dict({"m": [g2, g1]})  # unsorted input
     assert isinstance(bm, ChangePointsByMetric)
-    assert [g.time for g in bm.change_points["m"]] == [1.0, 2.0]
+    assert [g.time for g in bm._change_points["m"]] == [1.0, 2.0]
 
 
 def test_bymetric_dict_constructor_rejects_non_group():
@@ -453,8 +453,16 @@ def test_bymetric_copy_is_deep():
     clone = bm.copy()
     assert isinstance(clone, ChangePointsByMetric)
     assert clone.metrics() == {"a"}
-    clone.change_points["a"][0].changes["a"].stats.mean_1 = -1.0
-    assert bm.change_points["a"][0].changes["a"].stats.mean_1 != -1.0
+    clone._change_points["a"][0].changes["a"].stats.mean_1 = -1.0
+    assert bm._change_points["a"][0].changes["a"].stats.mean_1 != -1.0
+
+
+def test_bymetric__setitem_in():
+    bm = ChangePointsByMetric.from_list([make_group(1.0, "a"), make_group(2.0, "a")])
+    bm["x"] = make_group(99.9, metric="x", index=55)
+    assert "x" in bm._change_points
+    assert bm._change_points["x"].time == 99.9
+    assert bm._change_points["x"].changes["x"].index == 55
 
 
 # --------------------------------------------------------------------------- #

@@ -322,12 +322,9 @@ class AnalyzedSeries:
 
         r = ChangePointsByMetric.from_dict(result)
         w = ChangePointsByMetric.from_dict(weak_change_points)
-        # print("#", self.change_points.change_points)
-        # print("¤", r.change_points)
-        # print("%", w.change_points)
         # r has a subset of all metrics, so can't just set change_points to r
-        for metric, cpglist in r.change_points.items():
-            self.change_points.change_points[metric] = cpglist
+        for metric, cpglist in r.items():
+            self.change_points[metric] = cpglist
         return r, w
 
     def test_name(self) -> str:

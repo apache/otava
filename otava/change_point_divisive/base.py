@@ -41,7 +41,7 @@ Hierarchy of ChangePoint classes:
             |
                                                    ^
         ChangePointsByTime                         `ChangePointsByMetric
-          .change_points: list(ChangePointGroup)    .change_points: dict[metric, list(ChangePointGroup)]
+          ._change_points: list(ChangePointGroup)    ._change_points: dict[metric, list(ChangePointGroup)]
           .pivot()                         < - - >  .pivot()
 """
 
@@ -347,7 +347,7 @@ class ChangePoints:
     def __init__(self):
         # The constructor only creates an empty container. To build one from
         # existing data, use the explicit from_list() / from_dict() classmethods.
-        self.change_points = []
+        self._change_points = []
 
     @classmethod
     def from_list(cls, cps: list):
@@ -388,7 +388,7 @@ class ChangePoints:
                         "from_dict() takes a dict[str, list[ChangePointGroup]]."
                     )
             # store each metric's groups sorted by timestamp
-            obj.change_points[metric] = sorted(cpglist, key=lambda cpg: cpg.time)
+            obj._change_points[metric] = sorted(cpglist, key=lambda cpg: cpg.time)
         return obj
 
     def copy(self):
@@ -398,8 +398,8 @@ class ChangePoints:
         Returns a deep copy of this object.
         """
         new_obj = ChangePointsByTime()
-        new_obj.change_points = [
-            cpg.copy() for cpg in sorted(self.change_points, key=lambda cpg: cpg.time)
+        new_obj._change_points = [
+            cpg.copy() for cpg in sorted(self._change_points, key=lambda cpg: cpg.time)
         ]
         return new_obj
 
@@ -413,16 +413,16 @@ class ChangePoints:
         if not isinstance(cpg, ChangePointGroup):
             raise TypeError("ChangePoints.append() takes as argument one ChangePointGroup.")
 
-        if (not self.change_points) or cpg.time > self.change_points[-1].time:
-            self.change_points.append(cpg)
-        elif self.change_points and cpg.time == self.change_points[-1].time:
+        if (not self._change_points) or cpg.time > self._change_points[-1].time:
+            self._change_points.append(cpg)
+        elif self._change_points and cpg.time == self._change_points[-1].time:
             for metric, cp in cpg.changes.items():
-                if metric in self.change_points[-1].changes:
+                if metric in self._change_points[-1].changes:
                     raise KeyError("Duplicate keys. Shouldn't happen.")
-                self.change_points[-1].changes[metric] = cp
+                self._change_points[-1].changes[metric] = cp
         else:
             # TODO: logging
-            # print(self.change_points)
+            # print(self._change_points)
             # print(cpg)
             raise ValueError(
                 "ChangePoints.append() can only be used such that time is monotonically increasing"
@@ -435,8 +435,8 @@ class ChangePoints:
         for obj in cps:
             if not isinstance(obj, ChangePointGroup):
                 raise TypeError(errmsg)
-            if (not self.change_points) or obj.time > self.change_points[-1].time:
-                self.change_points.append(obj)
+            if (not self._change_points) or obj.time > self._change_points[-1].time:
+                self._change_points.append(obj)
             else:
                 raise ValueError(
                     "ChangePoints.extend() can only be used such that time is monotonically increasing"
@@ -446,17 +446,17 @@ class ChangePoints:
         return self.pivot().items()
 
     def __iter__(self):
-        return iter(self.change_points)
+        return iter(self._change_points)
 
     def __len__(self):
-        return len(self.change_points)
+        return len(self._change_points)
 
     def __getitem__(self, n):
-        return self.change_points[n]
+        return self._change_points[n]
 
     def metrics(self) -> set:
         all_metrics = set()
-        for row in self.change_points:
+        for row in self._change_points:
             all_metrics.update(row.metrics())
         return all_metrics
 
@@ -472,7 +472,7 @@ class ChangePoints:
         Use ChangePointsByMetric if you need this to be fast.
         """
         filtered = ChangePoints()
-        for cpg in self.change_points:
+        for cpg in self._change_points:
             filtered.append(cpg.select_metrics(m))
         return filtered
 
@@ -480,12 +480,12 @@ class ChangePoints:
         single_metric = self.select_metrics(m)
         return [
             list(cpg.changes.values())[0]
-            for cpg in single_metric.change_points
+            for cpg in single_metric._change_points
             if cpg.changes
         ]
 
     def at_timestamp(self, t: float):
-        for cpg in self.change_points:
+        for cpg in self._change_points:
             if cpg.time == t:
                 return cpg
             if abs(cpg.time - t) < 0.0001:
@@ -520,7 +520,7 @@ class ChangePointsByTime(ChangePoints):
         """
         by_metric = ChangePointsByMetric()
 
-        for row in sorted(self.change_points, key=lambda cpg: cpg.time):
+        for row in sorted(self._change_points, key=lambda cpg: cpg.time):
             assert isinstance(row, ChangePointGroup)
             # append() does the necessary shuffling into separate columns
             by_metric.append(row)
@@ -537,7 +537,7 @@ class ChangePointsByMetric(ChangePoints):
         # existing data, use the explicit from_list() / from_dict() classmethods.
         # from_list() is inherited from ChangePoints; append() shuffles each
         # group's metrics into their own column.
-        self.change_points = {}
+        self._change_points = {}
 
     # from_dict() is inherited from ChangePoints: it already builds and returns a
     # ChangePointsByMetric, which is exactly what we want here.
@@ -549,16 +549,16 @@ class ChangePointsByMetric(ChangePoints):
         Returns a deep copy of this object.
         """
         new_obj = ChangePointsByMetric()
-        new_obj.change_points = {
+        new_obj._change_points = {
             metric: [cpg.copy() for cpg in cpglist]
-            for metric, cpglist in self.change_points.items()
+            for metric, cpglist in self._change_points.items()
         }
         return new_obj
 
     def pivot(self):
         # Now we pivot (metric,time) to (time,metric) so that we return ChangePoints() objects
         intermediate = []
-        for metric, points in self.change_points.items():
+        for metric, points in self._change_points.items():
             for cpg in sorted(points, key=lambda cpg: cpg.time):
                 assert isinstance(cpg, ChangePointGroup)
                 intermediate.append(cpg)
@@ -571,9 +571,9 @@ class ChangePointsByMetric(ChangePoints):
         if not isinstance(cpg, ChangePointGroup):
             raise TypeError("ChangePoints.append() takes as argument one ChangePointGroup.")
         for metric in cpg.metrics():
-            if metric not in self.change_points:
-                self.change_points[metric] = []
-            self.change_points[metric].append(cpg.select_metrics(metric))
+            if metric not in self._change_points:
+                self._change_points[metric] = []
+            self._change_points[metric].append(cpg.select_metrics(metric))
 
     def extend(self, cps):
         errmsg = "ChangePoints.extend() takes as argument a list of ChangePointGroup objects."
@@ -591,18 +591,18 @@ class ChangePointsByMetric(ChangePoints):
         return self
 
     def items(self):
-        return self.change_points.items()
+        return self._change_points.items()
 
     def __iter__(self):
         return self.pivot().__iter__()
 
     def __len__(self):
-        return max([len(cpg) for metric, cpg in self.change_points.items()])
+        return max([len(cpg) for metric, cpg in self._change_points.items()])
 
     def __getitem__(self, n):
         if not isinstance(n, int):
             raise KeyError("n must be integer index")
-        cpgrow = [cpg[n] for metric, cpg in self.change_points.items() if len(cpg) > n]
+        cpgrow = [cpg[n] for metric, cpg in self._change_points.items() if len(cpg) > n]
         if not cpgrow:
             KeyError(f"Nice try {n}. This ChangePoints object only has {len(self)} items.")
         cpg = None
@@ -616,8 +616,14 @@ class ChangePointsByMetric(ChangePoints):
 
         return cpg
 
+    def __setitem__(self, metric: str, cpglist: ChangePointGroup):
+        self._change_points[metric] = cpglist
+
+    def __in__(self, metric):
+        return metric in self._change_points
+
     def metrics(self):
-        return set(self.change_points.keys())
+        return set(self._change_points.keys())
 
     def select_metrics(self, m: list[str] | str):
         """
@@ -630,13 +636,13 @@ class ChangePointsByMetric(ChangePoints):
 
         filtered = ChangePointsByMetric()
         for metric in m:
-            filtered.change_points[metric] = self.change_points[metric]
+            filtered._change_points[metric] = self._change_points[metric]
         return filtered
 
     def get_change_points_for_metric(self, m: str):
         single_metric = self.select_metrics(m)
         metric_change_points = []
-        for metric, cpg in single_metric.change_points.items():
+        for metric, cpg in single_metric._change_points.items():
             for c in cpg:
                 metric_change_points.append(c.changes[metric])
         return metric_change_points
