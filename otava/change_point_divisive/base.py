@@ -345,8 +345,10 @@ class ChangePoints:
     """
 
     def __init__(self):
-        # The constructor only creates an empty container. To build one from
-        # existing data, use the explicit from_list() / from_dict() classmethods.
+        """
+        The constructor only creates an empty container. To build one from
+        existing data, use the explicit from_list() / from_dict() classmethods.
+        """
         self._change_points = []
 
     @classmethod
@@ -354,7 +356,7 @@ class ChangePoints:
         """Build from a list of ChangePointGroup objects, ordered by time."""
         if not isinstance(cps, list):
             raise TypeError(
-                f"from_list() takes a list of ChangePointGroup objects. Got {type(cps)}."
+                f"from_list() argument must be a list. Got {type(cps)}."
             )
         for cpg in cps:
             if not isinstance(cpg, ChangePointGroup):
@@ -387,6 +389,9 @@ class ChangePoints:
                     raise TypeError(
                         "from_dict() takes a dict[str, list[ChangePointGroup]]."
                     )
+                for cp in cpg:
+                    if cp.metric and cp.metric != metric:
+                        raise ValueError(f"metric field is not internally consistent. {cp.metric} != {metric} at {cpg.time}")
             # store each metric's groups sorted by timestamp
             obj._change_points[metric] = sorted(cpglist, key=lambda cpg: cpg.time)
         return obj
@@ -499,17 +504,16 @@ class ChangePoints:
         raise LookupError(sha)
 
     def pivot(self):
-        """
-        Return the same object as ChangePointsByMetric.
-        """
         raise NotImplementedError()
 
 
 class ChangePointsByTime(ChangePoints):
     @classmethod
     def from_dict(cls, cps: dict):
-        # A ChangePointsByTime is stored as a flat list of rows, not keyed by
-        # metric, so a dict has no meaningful representation here.
+        """
+        A ChangePointsByTime is stored as a flat list of rows, not keyed by
+        metric, so a dict has no meaningful representation here.
+        """
         raise TypeError(
             "ChangePointsByTime doesn't accept a dict. Did you want ChangePointsByMetric.from_dict()?"
         )
@@ -533,10 +537,12 @@ class ChangePointsByMetric(ChangePoints):
     """
 
     def __init__(self):
-        # The constructor only creates an empty container. To build one from
-        # existing data, use the explicit from_list() / from_dict() classmethods.
-        # from_list() is inherited from ChangePoints; append() shuffles each
-        # group's metrics into their own column.
+        """
+        The constructor only creates an empty container. To build one from
+        existing data, use the explicit from_list() / from_dict() classmethods.
+        from_list() is inherited from ChangePoints; append() shuffles each
+        group's metrics into their own column.
+        """
         self._change_points = {}
 
     # from_dict() is inherited from ChangePoints: it already builds and returns a
@@ -556,7 +562,9 @@ class ChangePointsByMetric(ChangePoints):
         return new_obj
 
     def pivot(self):
-        # Now we pivot (metric,time) to (time,metric) so that we return ChangePoints() objects
+        """
+        Pivot (metric,time) to (time,metric) so that we return ChangePointsByTime() objects
+        """
         intermediate = []
         for metric, points in self._change_points.items():
             for cpg in sorted(points, key=lambda cpg: cpg.time):
@@ -600,21 +608,13 @@ class ChangePointsByMetric(ChangePoints):
         return max([len(cpg) for metric, cpg in self._change_points.items()])
 
     def __getitem__(self, n):
-        if not isinstance(n, int):
-            raise KeyError("n must be integer index")
-        cpgrow = [cpg[n] for metric, cpg in self._change_points.items() if len(cpg) > n]
-        if not cpgrow:
-            KeyError(f"Nice try {n}. This ChangePoints object only has {len(self)} items.")
-        cpg = None
-        for c in cpgrow:
-            if cpg is None:
-                # First element
-                cpg = c
-                continue
-            for metric in cpg.metrics():
-                cpg[metric] = c
+        """
+        Returns the same ChangePointGroup as (ChangePointsByTime)[n] would.
 
-        return cpg
+        Hence this calls pivot() and is slow.
+        Alternatively please use .at_timestamp(), .at_commit() or .get_change_points_for_metric() instead.
+        """
+        return self.by_time()[n]
 
     def __setitem__(self, metric: str, cpglist: ChangePointGroup):
         self._change_points[metric] = cpglist
