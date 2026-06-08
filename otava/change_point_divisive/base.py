@@ -336,7 +336,10 @@ class ChangePoints:
     Typical usage of this would be to hold all the change points over a history of a single test,
     the test producing one or more metrics. Note that this is a sparse structure: It is NOT
     guaranteed that each row (each GhangePointGroup) has each metric. Similarly it is not guaranteed
-    that a given metric will hold the full sequence.
+    that a given metric will hold the full sequence. For example this could happen if a test configuration
+    adds more metrics to track over time. Then their indexing starts at different points in time and cannot ever
+    be the same. There could also be gaps, for example if some thread level failed, but others succeeded,
+    in the most recent results, then we can still use Otava on each history of results, each with their own index.
 
     Companion class ChangePointsByMetric is expected to provide functionally equivalent interface, but
     storing each series separately by metric, which is used in parts of the code base, in particular, what
@@ -645,11 +648,11 @@ class ChangePointsByMetric(ChangePoints):
         single_metric = self.select_metrics(m)
         metric_change_points = []
         for metric1, cpglist in single_metric._change_points.items():
-                for cpg in cpglist:
-                    for metric2, cp in cpg.changes.items():
-                        if metric1 != metric2 or cp.metric and metric1!= cp.metric:
-                            raise ValueError(f"metric field is not internally consistent. {metric1} != {cp.metric} at {cpg.time}")
-                        metric_change_points.append(cp)
+            for cpg in cpglist:
+                for metric2, cp in cpg.changes.items():
+                    if metric1 != metric2 or cp.metric and metric1 != cp.metric:
+                        raise ValueError(f"metric field is not internally consistent. {metric1} != {cp.metric} at {cpg.time}")
+                    metric_change_points.append(cp)
 
         return metric_change_points
 
