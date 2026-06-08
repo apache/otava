@@ -483,11 +483,13 @@ class ChangePoints:
 
     def get_change_points_for_metric(self, m: str):
         single_metric = self.select_metrics(m)
-        return [
-            list(cpg.changes.values())[0]
-            for cpg in single_metric._change_points
-            if cpg.changes
-        ]
+        metric_change_points = []
+        for cpg in single_metric._change_points:
+            for metric, cp in cpg.changes.items():
+                if cp.metric and cp.metric != metric:
+                    raise ValueError(f"metric field is not internally consistent. {cp.metric} != {metric} at {cpg.time}")
+                metric_change_points.append(cp)
+        return metric_change_points
 
     def at_timestamp(self, t: float):
         for cpg in self._change_points:
@@ -642,9 +644,13 @@ class ChangePointsByMetric(ChangePoints):
     def get_change_points_for_metric(self, m: str):
         single_metric = self.select_metrics(m)
         metric_change_points = []
-        for metric, cpg in single_metric._change_points.items():
-            for c in cpg:
-                metric_change_points.append(c.changes[metric])
+        for metric1, cpglist in single_metric._change_points.items():
+                for cpg in cpglist:
+                    for metric2, cp in cpg.changes.items():
+                        if metric1 != metric2 or cp.metric and metric1!= cp.metric:
+                            raise ValueError(f"metric field is not internally consistent. {metric1} != {cp.metric} at {cpg.time}")
+                        metric_change_points.append(cp)
+
         return metric_change_points
 
     def at_timestamp(self, t: float):
