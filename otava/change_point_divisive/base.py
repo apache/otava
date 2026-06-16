@@ -277,8 +277,20 @@ class ChangePointSerializer(ChangePoint):
 
 @dataclass
 class ChangePointGroup:
-    """A group of change points on multiple metrics, at the same time"""
+    """
+    A group of change points on multiple metrics, at the same point in time.
 
+    If you think of ChangePoints as a 2D table, then ChangePointGroup are rows, and the metrics are the columns.
+    One ChangePointGroup has only the metrics where a ChangePoint was found at this time(stamp).
+    Note that there is no .index at this level. This is because each metric is an independent sequence of results,
+    and each such sequence may have started at different times in the past, and may also be missing observations
+    where others do have some. Because of this, each ChangePoint has its own .index in
+    ChangePointGroup.changes[metric_name].index
+
+    :param time: The unix timestamp for the results that ChangePoint(s) were found at. Decimals are milliseconds.
+    :param attributes: The attributes of the test result at this timestamp. Commit and test metadata.
+    :param changes: For each metric that has a change point at this time(stamp), the ChangePoint object.
+    """
     time: float
     attributes: Dict[str, str]
     # ChangePointGroup.changes.keys() stores the set of metrics that were used at this ChangePointGroup.time.
@@ -334,17 +346,15 @@ class ChangePoints:
     A list of ChangePointGroup objects.
 
     Typical usage of this would be to hold all the change points over a history of a single test,
-    the test producing one or more metrics. Note that this is a sparse structure: It is NOT
-    guaranteed that each row (each GhangePointGroup) has each metric. Similarly it is not guaranteed
-    that a given metric will hold the full sequence. For example this could happen if a test configuration
-    adds more metrics to track over time. Then their indexing starts at different points in time and cannot ever
-    be the same. There could also be gaps, for example if some thread level failed, but others succeeded,
-    in the most recent results, then we can still use Otava on each history of results, each with their own index.
+    the test producing one or more metrics. Note that this is a sparse structure. It only
+    holds ChangePoint objects at the time and metric (row and column...) that one was found.
+
+    Specifically: it is NOT guaranteed that each row (each GhangePointGroup) has each metric.
 
     Companion class ChangePointsByMetric is expected to provide functionally equivalent interface, but
     storing each series separately by metric, which is used in parts of the code base, in particular, what
     Series.analyze() returns.
-    Subclass ChangePointsByTime is this same class, but can be used if you explicitly want to mark the ordering.
+    Subclass ChangePointsByTime is this same class, but can be used if you explicitly want to mark the ordering used.
     """
 
     def __init__(self):
@@ -355,7 +365,7 @@ class ChangePoints:
         self._change_points = []
 
     @classmethod
-    def from_list(cls, cps: list):
+    def from_list(cls, cps: list[ChangePointGroup]):
         """Build from a list of ChangePointGroup objects, ordered by time."""
         if not isinstance(cps, list):
             raise TypeError(
@@ -436,7 +446,7 @@ class ChangePoints:
                 "ChangePoints.append() can only be used such that time is monotonically increasing"
             )
 
-    def extend(self, cps):
+    def extend(self, cps: list[ChangePointGroup]):
         errmsg = "ChangePoints.extend() takes as argument a list of ChangePointGroup objects."
         if not isinstance(cps, list):
             raise TypeError(errmsg)
@@ -473,10 +483,10 @@ class ChangePoints:
         Get a new ChangePoints object holding only the given metric(s).
 
         If you think of a ChangePoints object as timestamps being rows, and
-        the metrics being columns, then this returns a single column.
+        the metrics being columns, then this returns a subset of the columns.
 
         Note: The internal data structure doesn't do anything to make this
-        request efficient. This will loop over all ChangePointGroups.
+        request efficient. This will loop over all ChangePointGroup s.
         Use ChangePointsByMetric if you need this to be fast.
         """
         filtered = ChangePoints()
@@ -509,7 +519,16 @@ class ChangePoints:
         raise LookupError(sha)
 
     def pivot(self):
-        raise NotImplementedError()
+        """
+        Return the same object as ChangePointsByMetric.
+        """
+        by_metric = ChangePointsByMetric()
+
+        for row in sorted(self._change_points, key=lambda cpg: cpg.time):
+            assert isinstance(row, ChangePointGroup)
+            # append() does the necessary shuffling into separate columns
+            by_metric.append(row)
+        return by_metric
 
 
 class ChangePointsByTime(ChangePoints):
@@ -522,18 +541,6 @@ class ChangePointsByTime(ChangePoints):
         raise TypeError(
             "ChangePointsByTime doesn't accept a dict. Did you want ChangePointsByMetric.from_dict()?"
         )
-
-    def pivot(self):
-        """
-        Return the same object as ChangePointsByMetric.
-        """
-        by_metric = ChangePointsByMetric()
-
-        for row in sorted(self._change_points, key=lambda cpg: cpg.time):
-            assert isinstance(row, ChangePointGroup)
-            # append() does the necessary shuffling into separate columns
-            by_metric.append(row)
-        return by_metric
 
 
 class ChangePointsByMetric(ChangePoints):
@@ -588,7 +595,7 @@ class ChangePointsByMetric(ChangePoints):
                 self._change_points[metric] = []
             self._change_points[metric].append(cpg.select_metrics(metric))
 
-    def extend(self, cps):
+    def extend(self, cps: list[ChangePointGroup]):
         errmsg = "ChangePoints.extend() takes as argument a list of ChangePointGroup objects."
         if not isinstance(cps, list):
             raise TypeError(errmsg)
@@ -724,10 +731,12 @@ class SignificanceTester(Generic[GenericStats]):
 
     def get_intervals(self, change_points: List[ChangePoint[GenericStats]]) -> List[slice]:
         """Returns list of slices of the series. Change points must be sorted by index."""
-        assert all(
+        if not all(
             change_points[i].index <= change_points[i + 1].index
             for i in range(len(change_points) - 1)
-        ), "Change points must be sorted by index"
+        ):
+            raise ValueError("Change points must be sorted by index")
+
         intervals = [
             slice(
                 0 if i == 0 else change_points[i - 1].index,

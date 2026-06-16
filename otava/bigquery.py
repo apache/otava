@@ -22,7 +22,7 @@ from typing import Dict, List, Optional
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
-from otava.analysis import ChangePoint
+from otava.change_point_divisive.base import ChangePointGroup
 from otava.test_config import BigQueryTestConfig
 
 
@@ -87,9 +87,10 @@ class BigQuery:
         test: BigQueryTestConfig,
         metric_name: str,
         attributes: Dict,
-        change_point: ChangePoint,
+        change_point_group: ChangePointGroup,
     ):
-        kwargs = {**attributes, **{test.time_column: datetime.utcfromtimestamp(change_point.time)}}
+        change_point = change_point_group[metric_name]
+        kwargs = {**attributes, **{test.time_column: datetime.utcfromtimestamp(change_point_group.time)}}
         update_stmt = test.update_stmt.format(
             metric=metric_name,
             forward_change_percent=change_point.forward_change_percent(),

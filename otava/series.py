@@ -18,7 +18,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 from otava.analysis import (
     TTestStats,
@@ -137,9 +137,9 @@ class AnalyzedSeries:
 
     __series: Series
     options: AnalysisOptions
-    change_points: Dict[str, ChangePointGroup]
-    change_points_by_time: ChangePoints
-    change_points_timestamp: Any
+    change_points: ChangePointsByMetric
+    change_points_by_time: ChangePointsByTime
+    change_points_timestamp: ChangePointsByMetric
 
     def __init__(
         self, series: Series, options: AnalysisOptions, change_points: Dict[str, ChangePoint] = None

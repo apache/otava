@@ -16,7 +16,7 @@
 # under the License.
 
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import List, Optional, Sequence, SupportsFloat, Tuple
 
 from scipy.stats import ttest_ind_from_stats
@@ -91,7 +91,6 @@ class TTestSignificanceTester(SignificanceTester):
             (t, p) = ttest_ind_from_stats(
                 base_stats.mean_1, base_stats.std_1, len(left), base_stats.mean_2, base_stats.std_2, len(right), alternative="two-sided"
             )
-
 
         return TTestStats(pvalue=p, mean_1=base_stats.mean_1, mean_2=base_stats.mean_2, std_1=base_stats.std_1, std_2=base_stats.std_2, tstatistic=t, degrees_of_freedom=df)
 

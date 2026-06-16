@@ -142,7 +142,7 @@ class Otava:
         logging.info(f"Found {len(old_annotations_for_test)} annotations")
 
         created_count = 0
-        for metric_name, change_points in series.change_points.items():
+        for metric_name, cpg_list in series.change_points.items():
             path = test.get_path(series.branch_name(), metric_name)
             metric_tag = f"metric:{metric_name}"
             tags_to_create = (
@@ -171,13 +171,12 @@ class Otava:
             old_annotation_times = set((a.time for a in old_annotations if a.tags))
 
             target_annotations = []
-            for cp in change_points:
-                attributes = series.attributes_at(cp.index)
-                annotation_text = get_back_links(attributes)
+            for cpg in cpg_list:
+                annotation_text = get_back_links(cpg.attributes)
                 target_annotations.append(
                     Annotation(
                         id=None,
-                        time=datetime.fromtimestamp(cp.time, tz=pytz.UTC),
+                        time=datetime.fromtimestamp(cpg.time, tz=pytz.UTC),
                         text=annotation_text,
                         tags=tags_to_create,
                     )
@@ -242,18 +241,15 @@ class Otava:
 
     def update_postgres(self, test: PostgresTestConfig, series: AnalyzedSeries):
         postgres = self.__get_postgres()
-        for metric_name, change_points in series.change_points.items():
-            for cpg in change_points:
-                cp = cpg[metric_name]
-                attributes = series.attributes_at(cp.index)
-                postgres.insert_change_point(test, metric_name, attributes, cpg)
+        for metric_name, cpg_list in series.change_points.items():
+            for cpg in cpg_list:
+                postgres.insert_change_point(test, metric_name, cpg.attributes, cpg)
 
     def update_bigquery(self, test: BigQueryTestConfig, series: AnalyzedSeries):
         bigquery = self.__get_bigquery()
-        for metric_name, change_points in series.change_points.items():
-            for cp in change_points:
-                attributes = series.attributes_at(cp.index)
-                bigquery.insert_change_point(test, metric_name, attributes, cp)
+        for metric_name, cpg_list in series.change_points.items():
+            for cpg in cpg_list:
+                bigquery.insert_change_point(test, metric_name, cpg.attributes, cpg)
 
     def __maybe_create_slack_notifier(self):
         if not self.__conf.slack:

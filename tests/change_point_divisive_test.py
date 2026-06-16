@@ -141,5 +141,5 @@ def test_get_intervals_requires_sorted_change_points():
         ChangePoint(index=5, qhat=1.0, stats=stats),
         ChangePoint(index=15, qhat=1.0, stats=stats),
     ]
-    with pytest.raises(AssertionError, match="Change points must be sorted by index"):
+    with pytest.raises(ValueError, match="Change points must be sorted by index"):
         tester.get_intervals(unsorted_cps)
