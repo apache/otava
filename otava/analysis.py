@@ -39,9 +39,12 @@ from otava.change_point_divisive.significance_test import (
 @dataclass
 class TTestStats(BaseStats):
     """
-    Keeps statistics of two series of data and the probability both series
-    have the same distribution.
+    Statistics related to the calculation of a two-sided Student's T-test.
+
+    Note that p-value is already in BaseStats.
     """
+    tstatistic: float = 0.0
+    degrees_of_freedom: int = 0
 
 
 # Generic Change Point List
@@ -62,15 +65,24 @@ class TTestSignificanceTester(SignificanceTester):
     """
 
     def compare(self, left: Sequence[SupportsFloat], right: Sequence[SupportsFloat]) -> TTestStats:
+        # defaults
+        p = 1.0
+        t = 0.0
+
         base_stats = super().compare(left, right)
-        if len(left) + len(right) > 2:
-            (_, p) = ttest_ind_from_stats(
+        df = len(left) + len(right) - 2
+        # While "degrees of freedom" is a parameter that is here coming out of the use of T-Test,
+        # this is actually the same requirement as can be expressed more intuitively as:
+        # We need at least 3 data points to find a statistically significant change point.
+        # This is because if we had only 2 points, they can be either equal or different, but if they
+        # are different, we have no context for how different they have to be to be statistically significant.
+        if df > 0:
+            (t, p) = ttest_ind_from_stats(
                 base_stats.mean_1, base_stats.std_1, len(left), base_stats.mean_2, base_stats.std_2, len(right), alternative="two-sided"
             )
-        else:
-            p = 1.0
 
-        return TTestStats(pvalue=p, mean_1=base_stats.mean_1, mean_2=base_stats.mean_2, std_1=base_stats.std_1, std_2=base_stats.std_2)
+
+        return TTestStats(pvalue=p, mean_1=base_stats.mean_1, mean_2=base_stats.mean_2, std_1=base_stats.std_1, std_2=base_stats.std_2, tstatistic=t, degrees_of_freedom=df)
 
     def change_point(
         self,
