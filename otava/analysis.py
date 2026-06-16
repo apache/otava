@@ -46,6 +46,17 @@ class TTestStats(BaseStats):
     tstatistic: float = 0.0
     degrees_of_freedom: int = 0
 
+    def copy(self):
+        # replace() preserves the subclass; deep-copy the array so the copy is independent
+        return replace(self, permuted_qhats=self.permuted_qhats.copy())
+
+    def to_json(self):
+        obj = super().to_json()
+        obj["permuted_qhats"] = self.permuted_qhats.tolist()
+        obj["extreme_qhat_perm"] = self.extreme_qhat_perm
+        obj["n_perm"] = self.n_perm
+        return obj
+
 
 # Generic Change Point List
 GenCPList = List[ChangePoint[GenericStats]]

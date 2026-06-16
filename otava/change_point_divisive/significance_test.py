@@ -41,6 +41,13 @@ class PermutationStats(BaseStats):
         # replace() preserves the subclass; deep-copy the array so the copy is independent
         return replace(self, permuted_qhats=self.permuted_qhats.copy())
 
+    def to_json(self):
+        obj = super().to_json()
+        obj["permuted_qhats"] = self.permuted_qhats.tolist()
+        obj["extreme_qhat_perm"] = self.extreme_qhat_perm
+        obj["n_perm"] = self.n_perm
+        return obj
+
 
 class PermutationsSignificanceTester(SignificanceTester):
     def __init__(self, max_pvalue: float, permutations: int, calculator: Type[Calculator], seed: Optional[int]):
