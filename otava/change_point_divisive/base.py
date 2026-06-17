@@ -253,6 +253,7 @@ class ChangePointSerializer(ChangePoint):
                 "metric": self.metric,
                 "index": int(self.index),
                 "forward_change_percent": f"{self.forward_change_percent():.0f}",
+                "backward_change_percent": f"{self.backward_change_percent():.0f}",
                 "magnitude": f"{self.magnitude():-0f}",
                 "mean_before": f"{self.mean_before():-0f}",
                 "stddev_before": f"{self.stddev_before():-0f}",
@@ -472,6 +473,15 @@ class ChangePoints:
     def __getitem__(self, n):
         return self._change_points[n]
 
+    def __contains__(self, metric):
+        """
+        True if this container holds at least one ChangePoint where metric==metric
+
+        This makes more sense, and is more efficient, for ChangePointsByMetric class, but we provide
+        the same functionality here for consistency.
+        """
+        return metric in self.metrics()
+
     def metrics(self) -> set:
         all_metrics = set()
         for row in self._change_points:
@@ -593,16 +603,34 @@ class ChangePointsByMetric(ChangePoints):
         for metric in cpg.metrics():
             if metric not in self._change_points:
                 self._change_points[metric] = []
-            self._change_points[metric].append(cpg.select_metrics(metric))
+            for metric1, cp in cpg.changes.items():
+                if metric1 != cp.metric:
+                    raise ValueError(f"metric field is not internally consistent. {metric1} != {cp.metric} at {cpg.time}")
+            if (not self._change_points[metric]) or cpg.time > self._change_points[metric][-1].time:
+                self._change_points[metric].append(cpg.select_metrics(metric))
+            else:
+                raise ValueError(
+                    "ChangePoints.extend() can only be used such that time is monotonically increasing"
+                )
 
     def extend(self, cps: list[ChangePointGroup]):
         errmsg = "ChangePoints.extend() takes as argument a list of ChangePointGroup objects."
         if not isinstance(cps, list):
             raise TypeError(errmsg)
-        for obj in cps:
-            if not isinstance(obj, ChangePointGroup):
+        for cpg in cps:
+            if not isinstance(cpg, ChangePointGroup):
                 raise TypeError(errmsg)
-            self.append(obj)
+            for metric1, cp in cpg.changes.items():
+                if metric1 != cp.metric:
+                    raise ValueError(f"metric field is not internally consistent. {metric1} != {cp.metric} at {cpg.time}")
+                if metric1 not in self._change_points:
+                    self._change_points[metric1] = []
+                if (not self._change_points[metric1]) or cpg.time > self._change_points[metric1][-1].time:
+                    self._change_points[metric1].append(cpg)
+                else:
+                    raise ValueError(
+                        "ChangePoints.extend() can only be used such that time is monotonically increasing"
+                    )
 
     def by_time(self):
         return self.pivot()
@@ -612,6 +640,9 @@ class ChangePointsByMetric(ChangePoints):
 
     def items(self):
         return self._change_points.items()
+
+    def keys(self):
+        return self._change_points.keys()
 
     def __iter__(self):
         return self.pivot().__iter__()
@@ -631,7 +662,7 @@ class ChangePointsByMetric(ChangePoints):
     def __setitem__(self, metric: str, cpglist: ChangePointGroup):
         self._change_points[metric] = cpglist
 
-    def __in__(self, metric):
+    def __contains__(self, metric):
         return metric in self._change_points
 
     def metrics(self):

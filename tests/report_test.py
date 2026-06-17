@@ -79,6 +79,7 @@ def test_json_report(report):
     obj = json.loads(output)
     expected = {'test_name_from_config': [{'attributes': {},
                                            'changes': [{'forward_change_percent': '-11',
+                                                        'backward_change_percent': '12',
                                                         'index': 4,
                                                         'magnitude': '0.124108',
                                                         'mean_after': '1.801429',
@@ -90,6 +91,7 @@ def test_json_report(report):
                                           'time': 4},
                                           {'attributes': {},
                                           'changes': [{'forward_change_percent': '-49',
+                                                       'backward_change_percent': '98',
                                                        'index': 6,
                                                        'magnitude': '0.977513',
                                                        'mean_after': '0.504000',
@@ -100,7 +102,4 @@ def test_json_report(report):
                                                        'stddev_before': '0.067495'}],
                                            'time': 6}]}
     assert isinstance(obj, dict)
-    from pprint import pprint
-    pprint(obj)
-    pprint(expected)
     assert obj == expected

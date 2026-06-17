@@ -48,13 +48,12 @@ class TTestStats(BaseStats):
 
     def copy(self):
         # replace() preserves the subclass; deep-copy the array so the copy is independent
-        return replace(self, permuted_qhats=self.permuted_qhats.copy())
+        return replace(self)
 
     def to_json(self):
         obj = super().to_json()
-        obj["permuted_qhats"] = self.permuted_qhats.tolist()
-        obj["extreme_qhat_perm"] = self.extreme_qhat_perm
-        obj["n_perm"] = self.n_perm
+        obj["tstatistic"] = self.tstatistic
+        obj["degrees_of_freedom"] = self.degrees_of_freedom
         return obj
 
 

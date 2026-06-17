@@ -42,9 +42,7 @@ from otava.change_point_divisive.base import (
 )
 
 
-# --------------------------------------------------------------------------- #
 # Helpers
-# --------------------------------------------------------------------------- #
 def make_stats(left=(1.0, 1.0), right=(5.0, 5.0), pvalue=0.01):
     return BaseStats.calculate(list(left), list(right), pvalue)
 
@@ -61,9 +59,7 @@ def make_group(time, metric="m", index=3, commit="sha"):
     )
 
 
-# --------------------------------------------------------------------------- #
 # BaseStats
-# --------------------------------------------------------------------------- #
 def test_basestats_calculate_means_and_std():
     s = BaseStats.calculate([10.0, 10.0, 10.0], [20.0, 20.0, 20.0], 0.02)
     assert s.mean_1 == 10.0
@@ -141,9 +137,7 @@ def test_basestats_copy_is_independent_and_keeps_class():
     assert s.mean_1 != 999.0
 
 
-# --------------------------------------------------------------------------- #
 # CandidateChangePoint / ChangePoint / ChangePointSerializer
-# --------------------------------------------------------------------------- #
 def test_changepoint_from_and_to_candidate():
     candidate = CandidateChangePoint(index=7, qhat=2.5)
     stats = make_stats()
@@ -208,9 +202,7 @@ def test_changepoint_to_json_delegates_to_serializer():
     assert cp.to_json(rounded=False) == ChangePointSerializer(cp).to_json(rounded=False)
 
 
-# --------------------------------------------------------------------------- #
 # ChangePointGroup
-# --------------------------------------------------------------------------- #
 def test_group_getitem_metrics_and_iter():
     g = ChangePointGroup(
         time=1.0,
@@ -270,9 +262,7 @@ def test_group_copy_is_deep():
     assert g.changes["m"].stats.mean_1 != -1.0
 
 
-# --------------------------------------------------------------------------- #
 # ChangePointsByTime
-# --------------------------------------------------------------------------- #
 def test_bytime_append_keeps_time_order():
     c = ChangePointsByTime()
     c.append(make_group(1.0, metric="a"))
@@ -319,6 +309,11 @@ def test_bytime_constructor_rejects_dict_and_non_group():
         ChangePointsByTime.from_list([object()])
 
 
+def test_bytime_base():
+    with pytest.raises(TypeError):
+        ChangePointsByTime.from_list([object()])
+
+
 def test_bytime_extend():
     c = ChangePointsByTime()
     c.extend([make_group(1.0, "a"), make_group(2.0, "b")])
@@ -349,6 +344,35 @@ def test_bytime_at_commit():
     with pytest.raises(LookupError):
         c.at_commit("nope")
 
+    with pytest.raises(TypeError):
+        c.append("xxx")
+
+    with pytest.raises(TypeError):
+        c.extend("xxx")
+
+    with pytest.raises(TypeError):
+        c.extend(["a", "b"])
+
+
+def test_bytime_append_out_of_order():
+    c = ChangePointsByTime.from_list(
+        [make_group(1.0, "a", commit="c1"), make_group(2.0, "a", commit="c2")]
+    )
+    assert c.at_commit("c2").time == 2.0
+    with pytest.raises(TypeError):
+        c.extend("nope")
+    with pytest.raises(ValueError):
+        c.extend([make_group(1.0, "a", commit="c1")])
+
+    with pytest.raises(TypeError):
+        c.append("xxx")
+
+    with pytest.raises(TypeError):
+        c.extend("xxx")
+
+    with pytest.raises(TypeError):
+        c.extend(["a", "b"])
+
 
 def test_bytime_get_change_points_for_metric_sparse():
     # 'a' appears at t=1 and t=3, 'b' only at t=2 -> sparse columns
@@ -366,6 +390,9 @@ def test_bytime_pivot_and_items():
     assert isinstance(pivoted, ChangePointsByMetric)
     assert pivoted.metrics() == {"a", "b"}
     assert {k for k, _ in c.items()} == {"a", "b"}
+    c = ChangePointsByTime.from_list(
+        [make_group(1.0, "a", commit="c1"), make_group(2.0, "b", commit="c2")]
+    )
 
 
 def test_bytime_copy_is_deep():
@@ -377,9 +404,7 @@ def test_bytime_copy_is_deep():
     assert c[0].changes["a"].stats.mean_1 != -1.0
 
 
-# --------------------------------------------------------------------------- #
 # ChangePointsByMetric
-# --------------------------------------------------------------------------- #
 def test_bymetric_dict_constructor_sorts_by_time():
     g1, g2 = make_group(1.0, "m"), make_group(2.0, "m")
     bm = ChangePointsByMetric.from_dict({"m": [g2, g1]})  # unsorted input
@@ -390,6 +415,14 @@ def test_bymetric_dict_constructor_sorts_by_time():
 def test_bymetric_dict_constructor_rejects_non_group():
     with pytest.raises(TypeError):
         ChangePointsByMetric.from_dict({"m": [object()]})
+
+
+def test_bymetric_dict_constructor_rejects_random():
+    with pytest.raises(TypeError):
+        ChangePointsByMetric.from_dict([{}, {}])
+    with pytest.raises(ValueError):
+        g1, g2 = make_group(1.0, "m"), make_group(2.0, "m")
+        _ = ChangePointsByMetric.from_dict({"XXX": [g1, g2]})  # unsorted input
 
 
 def test_from_dict_is_metric_keyed_and_returns_by_metric():
@@ -416,6 +449,8 @@ def test_bymetric_append_and_len():
     assert bm.metrics() == {"a", "b"}
     # len == longest column
     assert len(bm) == 2
+    with pytest.raises(TypeError):
+        bm.append("xxx")
 
 
 def test_bymetric_select_metrics():
@@ -438,6 +473,56 @@ def test_bymetric_by_time_roundtrip():
     again = bm.by_time()
     assert isinstance(again, ChangePointsByTime)
     assert [g.time for g in again] == [1.0, 2.0]
+
+
+def test_by_time_by_time_self():
+    by_time = ChangePointsByTime.from_list([make_group(1.0, "a"), make_group(2.0, "b")])
+    same = by_time.by_time()
+    # Yes it's the same object, a no-op, not a copy. (Open to other opinions here)
+    assert by_time == same
+    assert by_time.at_timestamp(1.0) == same.at_timestamp(1.0)
+
+
+def test_by_time_bm():
+    by_time = ChangePointsByTime.from_list([make_group(1.0, "a"), make_group(2.0, "b")])
+    same = by_time.by_metric()
+    # Yes it's the same object, a no-op, not a copy. (Open to other opinions here)
+    assert by_time != same
+    assert by_time.at_timestamp(1.0) == same.at_timestamp(1.0)
+
+
+def test_justcp_bm():
+    by_time = ChangePointsByTime.from_list([make_group(1.0, "a"), make_group(2.0, "b")])
+    same = by_time.by_metric()
+    # Yes it's the same object, a no-op, not a copy. (Open to other opinions here)
+    assert by_time != same
+    assert by_time.at_timestamp(1.0) == same.at_timestamp(1.0)
+
+
+def test_bm_bm_self():
+    by_metric = ChangePointsByMetric.from_list([make_group(1.0, "a"), make_group(2.0, "b")])
+    same = by_metric.by_metric()
+    assert by_metric == same
+    assert by_metric.metrics() == same.metrics()
+
+
+def test_by_time_pivot_roundtrip():
+    by_time = ChangePointsByTime.from_list([make_group(1.0, "a"), make_group(2.0, "b")])
+    bm = by_time.pivot()
+    again = bm.pivot()
+    bm_again = again.pivot()
+    assert isinstance(bm, ChangePointsByMetric)
+    assert isinstance(again, ChangePointsByTime)
+    assert isinstance(bm_again, ChangePointsByMetric)
+    assert [g.time for g in again] == [1.0, 2.0]
+
+
+def test_by_time_self():
+    by_time = ChangePointsByTime.from_list([make_group(1.0, "a"), make_group(2.0, "b")])
+    same = by_time.by_time()
+    # Yes it's the same object, a no-op, not a copy. (Open to other opinions here)
+    assert by_time == same
+    assert by_time.at_timestamp(1.0) == same.at_timestamp(1.0)
 
 
 def test_bymetric_at_timestamp_and_at_commit():
@@ -465,9 +550,167 @@ def test_bymetric__setitem_in():
     assert bm._change_points["x"].changes["x"].index == 55
 
 
-# --------------------------------------------------------------------------- #
+def test_bymetric_at_commit():
+    c = ChangePointsByMetric.from_list(
+        [make_group(1.0, "a", commit="c1"), make_group(2.0, "a", commit="c2")]
+    )
+    assert c.at_commit("c2").time == 2.0
+    with pytest.raises(LookupError):
+        c.at_commit("nope")
+
+    with pytest.raises(TypeError):
+        c.append("xxx")
+
+    with pytest.raises(TypeError):
+        c.extend(["a", "b"])
+
+
+def test_bymetric_append_out_of_order():
+    c = ChangePointsByMetric.from_list(
+        [make_group(1.0, "a", commit="c1"), make_group(2.0, "a", commit="c2")]
+    )
+    with pytest.raises(TypeError):
+        c.extend("nope")
+    with pytest.raises(ValueError):
+        c.extend([make_group(1.1, "a", commit="c11")])
+
+    with pytest.raises(TypeError):
+        c.append("xxx")
+
+    with pytest.raises(TypeError):
+        c.extend("xxx")
+
+    with pytest.raises(TypeError):
+        c.extend(["a", "b"])
+
+
+def test_cpbm_getitem():
+    _ = ChangePointsByMetric.from_list(
+        [make_group(1.0, "a", commit="c1"), make_group(2.0, "a", commit="c2")]
+    )
+
+
+def test_cpbm_append():
+    cpbm = ChangePointsByMetric()
+    cpg = make_group(3.0, "b")
+    cpbm.append(cpg)
+
+    cpg = make_group(1.0, "a")
+    cpbm.append(cpg)
+
+    cpg = make_group(2.0, "a")
+    cpbm.append(cpg)
+
+    with pytest.raises(ValueError):
+        cpg = make_group(1.1, "a")
+        cpbm.append(cpg)
+
+    with pytest.raises(ValueError):
+        cpg = make_group(3.0, "b")
+        cpg.changes["b"].metric = "boo"
+        cpbm.append(cpg)
+
+
+def test_cpbm_extend():
+    cpbm = ChangePointsByMetric()
+    cpg = make_group(3.0, "b")
+    cpbm.extend([cpg])
+
+    cpg = make_group(1.0, "a")
+    cpbm.extend([cpg])
+
+    cpg = make_group(2.0, "a")
+    cpbm.extend([cpg])
+
+    with pytest.raises(ValueError):
+        cpg = make_group(1.1, "a")
+        cpbm.extend([cpg])
+
+    with pytest.raises(ValueError):
+        cpg = make_group(3.0, "b")
+        cpg.changes["b"].metric = "boo"
+        cpbm.extend([cpg])
+
+
+def test_contains():
+    cpbm = ChangePointsByMetric()
+    cpg = make_group(1.0, "a")
+    cpbm.extend([cpg])
+    assert "a" in cpbm._change_points
+    assert "b" not in cpbm._change_points
+    assert "a" in cpbm
+    assert "b" not in cpbm
+    assert "a" in cpbm.keys()
+    assert "b" not in cpbm.keys()
+    assert "a" in cpbm.metrics()
+    assert "b" not in cpbm.metrics()
+
+    cpbt = ChangePoints()
+    cpg = make_group(9.0, "x")
+    cpbt.extend([cpg])
+    assert "x" in cpbt
+    assert "y" not in cpbt
+    assert "x" in cpbt.metrics()
+    assert "y" not in cpbt.metrics()
+
+
+def test_len():
+    cpbm = ChangePointsByMetric.from_list([make_group(1, "a"), make_group(2, "a")])
+    assert len(cpbm) == 2
+
+
+def test_inconsistent_metric():
+    cpbm = ChangePointsByMetric()
+    cpg = make_group(1.0, "a")
+    cpbm.append(cpg)
+    cpg = make_group(2.0, "a")
+    cpbm.extend([cpg])
+    with pytest.raises(ValueError):
+        cpg = make_group(3.0, "a")
+        cpg.changes["a"].metric = "foo"
+        cpbm.append(cpg)
+    with pytest.raises(ValueError):
+        cpg = make_group(4.0, "a")
+        cpg.changes["a"].metric = "foo"
+        cpbm.extend([cpg])
+    with pytest.raises(ValueError):
+        cpbm._change_points["a"][0].changes["a"].metric = "foo"
+        _ = cpbm.get_change_points_for_metric("a")
+
+
+def test_inconsistent_metric_by_time():
+    cpbt = ChangePointsByTime.from_list([make_group(1.0, "a"), make_group(2.0, "a")])
+    with pytest.raises(ValueError):
+        cpbt._change_points[0].changes["a"].metric = "foo"
+        _ = cpbt.get_change_points_for_metric("a")
+
+
+def test_select_metrics():
+    cpbm = ChangePointsByMetric.from_list([make_group(1, "a"), make_group(2, "b")])
+
+    metrics = cpbm.select_metrics("a")
+    assert "a" in metrics
+    assert "b" not in metrics
+
+    metrics = cpbm.select_metrics("b")
+    assert "b" in metrics
+    assert "a" not in metrics
+
+    metrics = cpbm.select_metrics(["a", "b"])
+    assert "a" in metrics
+    assert "b" in metrics
+
+    with pytest.raises(KeyError):
+        metrics = cpbm.select_metrics(["a", "b", "c"])
+
+    with pytest.raises(KeyError):
+        metrics = cpbm.select_metrics("c")
+
+    with pytest.raises(TypeError):
+        metrics = cpbm.select_metrics({})
+
+
 # SignificanceTester helpers
-# --------------------------------------------------------------------------- #
 def test_tester_compare_returns_basestats():
     tester = SignificanceTester(0.05)
     stats = tester.compare([1.0, 1.0], [5.0, 5.0], 0.01)
@@ -508,15 +751,22 @@ def test_tester_get_sides_merge_step():
     assert list(right) == [3.0, 4.0, 5.0]
 
 
+def test_tester_get_sides_not_exist():
+    tester = SignificanceTester(0.05)
+    series = np.arange(9, dtype=float)
+    intervals = [slice(0, 3), slice(3, 6), slice(6, None)]
+    # candidate index matches the stop of the first interval -> merge step
+    with pytest.raises(ValueError):
+        left, right = tester.get_sides(CandidateChangePoint(index=-1, qhat=1.0), series, intervals)
+
+
 def test_tester_is_significant():
     tester = SignificanceTester(0.05)
     assert tester.is_significant(make_cp(pvalue=0.01)) is True
     assert tester.is_significant(make_cp(pvalue=0.5)) is False
 
 
-# --------------------------------------------------------------------------- #
 # Base ChangePoints behaviours shared by both representations
-# --------------------------------------------------------------------------- #
 def test_base_changepoints_empty():
     c = ChangePoints()
     assert len(c) == 0

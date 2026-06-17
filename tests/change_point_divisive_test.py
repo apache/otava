@@ -22,7 +22,10 @@ from otava.analysis import TTestSignificanceTester, TTestStats
 from otava.change_point_divisive.base import ChangePoint
 from otava.change_point_divisive.calculator import PairDistanceCalculator
 from otava.change_point_divisive.detector import ChangePointDetector
-from otava.change_point_divisive.significance_test import PermutationsSignificanceTester
+from otava.change_point_divisive.significance_test import (
+    PermutationsSignificanceTester,
+    PermutationStats,
+)
 
 SEQUENCE = np.array([
     0.3, 2.4, 1.5, -0.9, -0.5,
@@ -109,6 +112,15 @@ def test_permutation_test():
     assert [cp.index for cp in cps] == CHANGE_POINTS_INDS
 
 
+def test_permutation_test_integers():
+    seed = 1
+    sequence = np.array([0, 2, 1, -0, -0, 99, 98, 99, 149, 149, 149, 149, 148, 150])
+    st = PermutationsSignificanceTester(max_pvalue=0.01, permutations=100, calculator=PairDistanceCalculator, seed=seed)
+    cpd = ChangePointDetector(significance_tester=st, calculator=PairDistanceCalculator)
+    cps = cpd.get_change_points(series=sequence)
+    assert [cp.index for cp in cps] == CHANGE_POINTS_INDS
+
+
 def test_ttest():
     sequence = SEQUENCE.copy()
     st = TTestSignificanceTester(max_pvalue=0.01)
@@ -120,7 +132,7 @@ def test_ttest():
 def test_get_intervals_requires_sorted_change_points():
     """Test that get_intervals() raises AssertionError when change points are not sorted by index."""
     tester = TTestSignificanceTester(max_pvalue=0.01)
-    stats = TTestStats(mean_1=1.0, mean_2=2.0, std_1=0.1, std_2=0.1, pvalue=0.001)
+    stats = TTestStats(mean_1=1.0, mean_2=2.0, std_1=0.1, std_2=0.1, pvalue=0.001, tstatistic=0.1, degrees_of_freedom=18)
 
     # Sorted change points should work
     sorted_cps = [
@@ -143,3 +155,68 @@ def test_get_intervals_requires_sorted_change_points():
     ]
     with pytest.raises(ValueError, match="Change points must be sorted by index"):
         tester.get_intervals(unsorted_cps)
+
+
+def test_copy_ttest_stats():
+    stats = TTestStats(mean_1=1.0, mean_2=2.0, std_1=0.1, std_2=0.1, pvalue=0.001, tstatistic=0.1, degrees_of_freedom=18)
+    stats2 = stats.copy()
+    stats2.mean_1 = 5.5
+    stats.std_2 = 6.7
+    stats2.tstatistic = 0.2
+
+    assert stats.mean_1 == 1.0
+    assert stats.mean_2 == 2.0
+    assert stats2.mean_1 == 5.5
+    assert stats2.mean_2 == 2.0
+    assert stats.std_2 == 6.7
+    assert stats2.std_2 == 0.1
+    assert stats.tstatistic == 0.1
+    assert stats2.tstatistic == 0.2
+
+
+def test_ttest_stats_tojson():
+    stats = TTestStats(mean_1=1.0, mean_2=2.0, std_1=0.1, std_2=0.1, pvalue=0.001, tstatistic=0.1, degrees_of_freedom=18)
+    obj = stats.to_json()
+    assert obj["degrees_of_freedom"] == 18
+
+
+def test_copy_permutation_stats():
+    pvalue = np.float64(0.05)
+    mean_1 = np.float64(0.125)
+    mean_2 = np.float64(132.5)
+    std_1 = np.float64(1.2)
+    std_2 = np.float64(23.724285624546457)
+    permuted_qhats = np.array([202.13]),
+    extreme_qhat_perm = np.int64(100)
+    n_perm = 1
+
+    stats = PermutationStats(mean_1=mean_1, mean_2=mean_2, std_1=std_1, std_2=std_2, pvalue=pvalue, permuted_qhats=permuted_qhats, extreme_qhat_perm=extreme_qhat_perm, n_perm=n_perm)
+    stats2 = stats.copy()
+
+    stats2.mean_1 = 5.5
+    stats.std_2 = 6.7
+    stats2.extreme_qhat_perm = 101
+
+    assert stats.mean_1 == 0.125
+    assert stats.mean_2 == 132.5
+    assert stats2.mean_1 == 5.5
+    assert stats.std_2 == 6.7
+    assert stats2.std_2 == 23.724285624546457
+    assert stats.extreme_qhat_perm == 100
+    assert stats2.extreme_qhat_perm == 101
+
+
+def test_permutation_stats_tojson():
+    pvalue = np.float64(0.05)
+    mean_1 = np.float64(0.123)
+    mean_2 = np.float64(132.5)
+    std_1 = np.float64(1.2)
+    std_2 = np.float64(23.724285624546457)
+    permuted_qhats = np.array([202.13]),
+    extreme_qhat_perm = np.int64(100)
+    n_perm = 1
+
+    stats = PermutationStats(mean_1=mean_1, mean_2=mean_2, std_1=std_1, std_2=std_2, pvalue=pvalue, permuted_qhats=permuted_qhats, extreme_qhat_perm=extreme_qhat_perm, n_perm=n_perm)
+
+    obj = stats.to_json()
+    assert obj["n_perm"] == 1
