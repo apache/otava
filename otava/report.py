@@ -109,8 +109,9 @@ class Report:
         output = []
         for cpg in self.__change_points:
             regressions = []
-            for cp in cpg.changes:
-                metric = self.__series.metrics[cp.metric]
+            for metric_name, cp in cpg.changes.items():
+                cp = ChangePointSerializer(cp)
+                metric = self.__series.metrics[metric_name]
                 if metric.direction * cp.forward_change_percent() < 0:
                     regressions.append(
                         (

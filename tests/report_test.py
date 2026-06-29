@@ -103,3 +103,21 @@ def test_json_report(report):
                                            'time': 6}]}
     assert isinstance(obj, dict)
     assert obj == expected
+
+def test_regression_only_report(report):
+    output = report.produce_report("test_name_for_regression_only", ReportType.REGRESSIONS_ONLY)
+    assert output
+
+def test_simplereport_regression_only():
+    from otava.series import Metric, Series
+    from otava.report import Report, ReportType
+    s = Series('t', None, list(range(11)),
+        {'a': Metric(1, 1.0), 'b': Metric(1, 1.0)},
+        {'a': [1.02,0.95,0.99,1.00,1.12,0.90,0.50,0.51,0.48,0.48,0.55],
+         'b': [2.02,2.03,2.01,2.04,1.82,1.85,1.79,1.81,1.80,1.76,1.78]},
+         {})
+    out = Report(s, s.analyze().change_points_by_time).produce_report('t', ReportType.REGRESSIONS_ONLY)
+    print(out)
+    assert "Regressions" in out
+    assert "-11.0" in out
+    assert "-49.4" in out
