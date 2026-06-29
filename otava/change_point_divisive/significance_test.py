@@ -19,7 +19,6 @@ from dataclasses import dataclass, replace
 from typing import List, Optional, Type
 
 import numpy as np
-
 from numpy.typing import NDArray
 
 from otava.change_point_divisive.base import (
