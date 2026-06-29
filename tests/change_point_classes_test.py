@@ -152,12 +152,15 @@ def test_changepoint_from_and_to_candidate():
     assert back.qhat == 2.5
 
 
-def test_changepoint_equality_is_by_index():
+def test_changepoint_equality_is_NOT_JUST_by_index():
     a = make_cp(index=3)
     b = make_cp(index=3, left=(2.0, 2.0))  # different stats, same index
     c = make_cp(index=4)
-    assert a == b
+    d = make_cp(index=4)
+    # assert a == b # Used to be true, but was not meaningful as general equality
+    assert a != b
     assert a != c
+    assert c == d
 
 
 def test_changepoint_metric_defaults_to_none():

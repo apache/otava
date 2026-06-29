@@ -47,7 +47,7 @@ class TTestStats(BaseStats):
     degrees_of_freedom: int = 0
 
     def copy(self):
-        # replace() preserves the subclass; deep-copy the array so the copy is independent
+        # replace() preserves the subclass
         return replace(self)
 
     def to_json(self):
@@ -146,8 +146,13 @@ def merge(
             if weakest_cp.stats.change_magnitude() > min_magnitude:
                 return change_points
 
-        # Remove the point from the list
-        weakest_cp_index = change_points.index(weakest_cp)
+        # Remove duplicate change points from the list (that is, at same index)
+        weakest_cp_index = None
+        for i, cp in enumerate(change_points):
+            if cp.index == weakest_cp.index:
+                weakest_cp_index = i
+                break
+        assert weakest_cp_index is not None
         del change_points[weakest_cp_index]
 
         # We can't continue yet, because by removing a change_point
@@ -202,9 +207,11 @@ def split(series: Sequence[SupportsFloat], window_len: int = 30, max_pvalue: flo
         last_new_change_point_index = new_change_points[-1].index if new_change_points else 0
         start = max(last_new_change_point_index, start + step)
         # incremental Otava can duplicate an old cp
+        cpindexes = [cp.index for cp in change_points]
         for cp in new_change_points:
-            if cp not in change_points:
+            if cp.index not in cpindexes:
                 change_points += [cp]
+                cpindexes += [cp.index]
 
     # Sort change points by index; required by get_intervals() and maintained by merge()
     change_points.sort(key=lambda cp: cp.index)

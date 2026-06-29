@@ -158,7 +158,7 @@ class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
     """
     ChangePoint class.
 
-    Defined by index and signigicance test statistic.
+    Defined by index and significance test statistic.
     This class is the basic change point that is used during computation
     and returned as a result. This class does not however carry additional
     attributes like metric, time, or commit sha. Those are in ChangePointGroup
@@ -185,10 +185,6 @@ class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
         return ChangePoint(
             index=self.index, qhat=self.qhat, stats=self.stats.copy(), metric=self.metric
         )
-
-    def __eq__(self, other):
-        """Helpful to identify new Change Points during divisive algorithm"""
-        return isinstance(other, self.__class__) and self.index == other.index
 
     @classmethod
     def from_candidate(
