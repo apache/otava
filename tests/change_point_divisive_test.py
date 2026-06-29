@@ -186,16 +186,19 @@ def test_copy_permutation_stats():
     mean_2 = np.float64(132.5)
     std_1 = np.float64(1.2)
     std_2 = np.float64(23.724285624546457)
-    permuted_qhats = np.array([202.13]),
+    permuted_qhats = np.array([[202.13, 99.0, 105.5],[1,2,3]])
     extreme_qhat_perm = np.int64(100)
     n_perm = 1
 
     stats = PermutationStats(mean_1=mean_1, mean_2=mean_2, std_1=std_1, std_2=std_2, pvalue=pvalue, permuted_qhats=permuted_qhats, extreme_qhat_perm=extreme_qhat_perm, n_perm=n_perm)
+
     stats2 = stats.copy()
 
     stats2.mean_1 = 5.5
     stats.std_2 = 6.7
     stats2.extreme_qhat_perm = 101
+    stats2.permuted_qhats[0][0] = 215.14
+    stats.permuted_qhats[1][1] = 99.99
 
     assert stats.mean_1 == 0.125
     assert stats.mean_2 == 132.5
@@ -204,7 +207,12 @@ def test_copy_permutation_stats():
     assert stats2.std_2 == 23.724285624546457
     assert stats.extreme_qhat_perm == 100
     assert stats2.extreme_qhat_perm == 101
-
+    assert stats.permuted_qhats[0][0] == 202.13
+    assert stats.permuted_qhats[1][1] == 99.99
+    assert stats2.permuted_qhats[0][0] == 215.14
+    assert id(stats) != id(stats2)
+    assert id(stats.permuted_qhats) != id(stats2.permuted_qhats)
+    assert not stats.permuted_qhats is stats2.permuted_qhats
 
 def test_permutation_stats_tojson():
     pvalue = np.float64(0.05)

@@ -19,6 +19,7 @@ from dataclasses import dataclass, replace
 from typing import List, Optional, Type
 
 import numpy as np
+
 from numpy.typing import NDArray
 
 from otava.change_point_divisive.base import (
@@ -38,8 +39,9 @@ class PermutationStats(BaseStats):
     n_perm: int
 
     def copy(self):
-        # replace() preserves the subclass; deep-copy the array so the copy is independent
-        return replace(self, permuted_qhats=self.permuted_qhats)
+        c = replace(self)
+        c.permuted_qhats = self.permuted_qhats.copy()
+        return c
 
     def to_json(self):
         obj = super().to_json()
