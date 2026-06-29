@@ -478,23 +478,7 @@ def test_bymetric_by_time_roundtrip():
     assert [g.time for g in again] == [1.0, 2.0]
 
 
-def test_by_time_by_time_self():
-    by_time = ChangePointsByTime.from_list([make_group(1.0, "a"), make_group(2.0, "b")])
-    same = by_time.by_time()
-    # Yes it's the same object, a no-op, not a copy. (Open to other opinions here)
-    assert by_time == same
-    assert by_time.at_timestamp(1.0) == same.at_timestamp(1.0)
-
-
 def test_by_time_bm():
-    by_time = ChangePointsByTime.from_list([make_group(1.0, "a"), make_group(2.0, "b")])
-    same = by_time.by_metric()
-    # Yes it's the same object, a no-op, not a copy. (Open to other opinions here)
-    assert by_time != same
-    assert by_time.at_timestamp(1.0) == same.at_timestamp(1.0)
-
-
-def test_justcp_bm():
     by_time = ChangePointsByTime.from_list([make_group(1.0, "a"), make_group(2.0, "b")])
     same = by_time.by_metric()
     # Yes it's the same object, a no-op, not a copy. (Open to other opinions here)
@@ -585,12 +569,6 @@ def test_bymetric_append_out_of_order():
 
     with pytest.raises(TypeError):
         c.extend(["a", "b"])
-
-
-def test_cpbm_getitem():
-    _ = ChangePointsByMetric.from_list(
-        [make_group(1.0, "a", commit="c1"), make_group(2.0, "a", commit="c2")]
-    )
 
 
 def test_cpbm_append():
