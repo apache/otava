@@ -538,6 +538,18 @@ class ChangePoints:
 
 
 class ChangePointsByTime(ChangePoints):
+    """
+        Implementation of ChangePoints class where the internal structure is ordered by time/commit.
+
+        In fact, this is the default way, and therefore all of this class' implementation is already
+        in its parent class ChangePoints. However, you can still create instances from this class
+        to make it explicit that your code at that point explicitly wanted a collection of ChangePoints
+        ordered by time.
+
+        The pivot() method will return a new object (a copy) holding the same data, but ordered by metrics
+        as the primary and optimized axis. The method by_metric() can be used for the same purpose. Note
+        that the method by_time() is a no-op and returns self, it doesn't even do a copy.
+    """
     @classmethod
     def from_dict(cls, cps: dict):
         """
@@ -551,7 +563,14 @@ class ChangePointsByTime(ChangePoints):
 
 class ChangePointsByMetric(ChangePoints):
     """
-    Provides same interface as ChangePointsByTime, but internally stores with metric first.
+        Provides same interface as ChangePointsByTime, but internally stores with metric first.
+
+        You can create empty instances of this class, or you can also use the factory method
+        `ChangePoints.from_dict()` to get an instance of this type.
+
+        The pivot() method will return a new object (a copy) holding the same data, but ordered by time
+        as the primary and optimized axis. The method by_time() can be used for the same purpose. Note
+        that the method by_metric() is a no-op and returns self, it doesn't even do a copy.
     """
 
     def __init__(self):
