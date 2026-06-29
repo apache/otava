@@ -139,7 +139,7 @@ class AnalyzedSeries:
     options: AnalysisOptions
     change_points: ChangePointsByMetric
     change_points_by_time: ChangePointsByTime
-    change_points_timestamp: ChangePointsByMetric
+    change_points_timestamp: datetime
 
     def __init__(
         self, series: Series, options: AnalysisOptions, change_points: Dict[str, ChangePoint] = None
