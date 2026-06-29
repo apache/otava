@@ -359,12 +359,18 @@ class AnalyzedSeries:
 
     def to_json(self):
         change_points_json = {}
-        for cps in self.change_points:
-            change_points_json = [cp.to_json(rounded=False) for cp in cps]
+        cpbm = self.change_points.by_metric()
+        for metric_name in self.change_points.metrics():
+            change_points_json[metric_name] = []
+            for cp in cpbm.select_metrics(metric_name):
+                change_points_json[metric_name].append(cp.to_json(rounded=False))
 
         weak_change_points_json = {}
-        for cps in self.weak_change_points:
-            weak_change_points_json = [cp.to_json(rounded=False) for cp in cps]
+        wcpbm = self.change_points.by_metric()
+        for metric_name in self.change_points.metrics():
+            weak_change_points_json[metric_name] = []
+            for cp in wcpbm.select_metrics(metric_name):
+                weak_change_points_json[metric_name].append(cp.to_json(rounded=False))
 
         data_json = {}
         for metric, datapoints in self.__series.data.items():
