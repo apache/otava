@@ -182,6 +182,20 @@ def add_service_option_groups(parser) -> None:
     BigQueryConfig.add_parser_args(parser.add_argument_group('BigQuery Options', 'Options for BigQuery configuration'))
 
 
+def argument_group(parser, title: str):
+    """Return the existing argument group named `title` on `parser`.
+
+    Subparsers inherit the service option groups from the shared parent parser,
+    so options that belong to a service must be added to that service's group
+    instead of the parser's default group. Falls back to creating the group if
+    it is not present.
+    """
+    for group in parser._action_groups:
+        if group.title == title:
+            return group
+    return parser.add_argument_group(title)
+
+
 def create_subparser_parent() -> configargparse.ArgumentParser:
     """Create a parent parser for subparsers that accepts --config-file and service options."""
     parent = configargparse.ArgumentParser(add_help=False)
