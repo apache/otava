@@ -104,26 +104,6 @@ class TTestSignificanceTester(SignificanceTester):
         return ChangePoint.from_candidate(candidate, stats)
 
 
-def fill_missing(data: Sequence[SupportsFloat]):
-    """
-    Forward-fills None occurrences with nearest previous non-None values.
-    Initial None values are back-filled with the nearest future non-None value.
-
-    TODO: Remove this.
-    """
-    prev = None
-    for i in range(len(data)):
-        if data[i] is None and prev is not None:
-            data[i] = prev
-        prev = data[i]
-
-    prev = None
-    for i in reversed(range(len(data))):
-        if data[i] is None and prev is not None:
-            data[i] = prev
-        prev = data[i]
-
-
 def merge(
     change_points: TtestCPList, series: Sequence[SupportsFloat], max_pvalue: float, min_magnitude: float
 ) -> TtestCPList:
