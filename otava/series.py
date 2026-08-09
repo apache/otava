@@ -306,21 +306,25 @@ class AnalyzedSeries:
             if metric not in result:
                 result[metric] = []
             for c in change_points:
+                cp = c.copy()
+                cp.metric = metric
                 result[metric].append(
                     ChangePointGroup(
-                        time=self.__series.time[c.index],
-                        changes={metric: c},
-                        attributes=self.__series.attributes_at(c.index),
+                        time=self.__series.time[cp.index],
+                        changes={metric: cp},
+                        attributes=self.__series.attributes_at(cp.index),
                     )
                 )
             if metric not in weak_change_points:
                 weak_change_points[metric] = []
             for c in weak_cps:
+                cp = c.copy()
+                cp.metric = metric
                 weak_change_points[metric].append(
                     ChangePointGroup(
-                        time=self.__series.time[c.index],
-                        changes={metric: c},
-                        attributes=self.__series.attributes_at(c.index),
+                        time=self.__series.time[cp.index],
+                        changes={metric: cp},
+                        attributes=self.__series.attributes_at(cp.index),
                     )
                 )
             # TODO: Remove this. It should not be a requirement that metrics have the same history.
@@ -399,6 +403,50 @@ class AnalyzedSeries:
 
     @classmethod
     def from_json(cls, analyzed_json):
+        def stats_from_json(cp_json):
+            return TTestStats(
+                mean_1=cp_json["mean_before"],
+                mean_2=cp_json["mean_after"],
+                std_1=cp_json["stddev_before"],
+                std_2=cp_json["stddev_after"],
+                pvalue=cp_json["pvalue"],
+            )
+
+        def change_point_from_json(metric, cp_json):
+            return ChangePoint(
+                index=cp_json["index"],
+                qhat=cp_json.get("qhat", 0.0),
+                metric=cp_json.get("metric") or metric,
+                stats=stats_from_json(cp_json),
+            )
+
+        def change_points_from_json(change_points_json):
+            new_change_points = {}
+            for metric, groups in change_points_json.items():
+                new_change_points[metric] = []
+                for group in groups:
+                    if "changes" in group:
+                        changes = {
+                            cp_json.get("metric") or metric: change_point_from_json(metric, cp_json)
+                            for cp_json in group["changes"]
+                        }
+                        new_change_points[metric].append(
+                            ChangePointGroup(
+                                time=group["time"],
+                                attributes=group["attributes"],
+                                changes=changes,
+                            )
+                        )
+                    else:
+                        new_change_points[metric].append(
+                            ChangePointGroup(
+                                time=group["time"],
+                                attributes=group.get("attributes", {}),
+                                changes={metric: change_point_from_json(metric, group)},
+                            )
+                        )
+            return ChangePointsByMetric.from_dict(new_change_points)
+
         new_metrics = {}
 
         for metric_name, unit in analyzed_json["metrics"].items():
@@ -419,37 +467,10 @@ class AnalyzedSeries:
         new_options.min_magnitude = analyzed_json["options"]["min_magnitude"]
         new_options.orig_edivisive = analyzed_json["options"]["orig_edivisive"]
 
-        new_change_points = {}
-        for metric, change_points in analyzed_json["change_points"].items():
-            new_list = list()
-            for cp in change_points:
-                stat = TTestStats(
-                    mean_1=cp["mean_before"],
-                    mean_2=cp["mean_after"],
-                    std_1=cp["stddev_before"],
-                    std_2=cp["stddev_after"],
-                    pvalue=cp["pvalue"],
-                )
-                new_list.append(
-                    ChangePoint(index=cp["index"], time=cp["time"], metric=cp["metric"], stats=stat)
-                )
-            new_change_points[metric] = new_list
-
-        new_weak_change_points = {}
-        for metric, change_points in analyzed_json.get("weak_change_points", {}).items():
-            new_list = list()
-            for cp in change_points:
-                stat = TTestStats(
-                    mean_1=cp["mean_before"],
-                    mean_2=cp["mean_after"],
-                    std_1=cp["stddev_before"],
-                    std_2=cp["stddev_after"],
-                    pvalue=cp["pvalue"],
-                )
-                new_list.append(
-                    ChangePoint(index=cp["index"], time=cp["time"], metric=cp["metric"], stats=stat)
-                )
-            new_weak_change_points[metric] = new_list
+        new_change_points = change_points_from_json(analyzed_json["change_points"])
+        new_weak_change_points = change_points_from_json(
+            analyzed_json.get("weak_change_points", {})
+        )
 
         analyzed_series = cls(new_series, new_options, new_change_points)
         analyzed_series.weak_change_points = new_weak_change_points
