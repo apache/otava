@@ -172,9 +172,6 @@ options:
   -h, --help            show this help message and exit
   --config-file CONFIG_FILE
                         Otava config file path [env var: OTAVA_CONFIG]
-  --update-grafana      Update Grafana dashboards with appropriate annotations of change points
-  --update-postgres     Update PostgreSQL database results with change points
-  --update-bigquery     Update BigQuery database results with change points
   --notify-slack NOTIFY_SLACK [NOTIFY_SLACK ...]
                         Send notification containing a summary of change points to given Slack
                         channels
@@ -233,6 +230,7 @@ Grafana Options:
                         Grafana server user [env var: GRAFANA_USER]
   --grafana-password GRAFANA_PASSWORD
                         Grafana server password [env var: GRAFANA_PASSWORD]
+  --update-grafana      Update Grafana dashboards with appropriate annotations of change points
 
 Slack Options:
   Options for Slack configuration
@@ -254,6 +252,7 @@ PostgreSQL Options:
                         PostgreSQL password [env var: POSTGRES_PASSWORD]
   --postgres-database POSTGRES_DATABASE
                         PostgreSQL database name [env var: POSTGRES_DATABASE]
+  --update-postgres     Update PostgreSQL database results with change points
 
 BigQuery Options:
   Options for BigQuery configuration
@@ -264,6 +263,7 @@ BigQuery Options:
                         BigQuery dataset [env var: BIGQUERY_DATASET]
   --bigquery-credentials BIGQUERY_CREDENTIALS
                         BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
+  --update-bigquery     Update BigQuery database results with change points
 
  In general, command-line values override environment variables which override defaults.
 """

@@ -483,17 +483,17 @@ def create_otava_cli_parser() -> argparse.ArgumentParser:
         parents=[subparser_parent],
     )
     analyze_parser.add_argument("tests", help="name of the test or group of the tests", nargs="+")
-    analyze_parser.add_argument(
+    config.argument_group(analyze_parser, "Grafana Options").add_argument(
         "--update-grafana",
         help="Update Grafana dashboards with appropriate annotations of change points",
         action="store_true",
     )
-    analyze_parser.add_argument(
+    config.argument_group(analyze_parser, "PostgreSQL Options").add_argument(
         "--update-postgres",
         help="Update PostgreSQL database results with change points",
         action="store_true",
     )
-    analyze_parser.add_argument(
+    config.argument_group(analyze_parser, "BigQuery Options").add_argument(
         "--update-bigquery",
         help="Update BigQuery database results with change points",
         action="store_true",
