@@ -289,13 +289,19 @@ class AnalyzedSeries:
                 weak_change_points[metric] = self.weak_change_points.select_metrics(metric)
                 continue
 
+            new_data_len = len(new_data[metric])
+            old_weak_cp = [
+                cp
+                for cp in self.weak_change_points.get_change_points_for_metric(metric)
+                if cp.index < len(self.__series.data[metric]) - new_data_len - 1
+            ]
             change_points, weak_cps = compute_change_points(
                 self.__series.data[metric],
                 window_len=self.options.window_len,
                 max_pvalue=self.options.max_pvalue,
                 min_magnitude=self.options.min_magnitude,
-                new_data=len(new_data[metric]),
-                old_weak_cp=self.weak_change_points.get_change_points_for_metric(metric),
+                new_data=new_data_len,
+                old_weak_cp=old_weak_cp,
             )
             if metric not in result:
                 result[metric] = []
@@ -325,6 +331,7 @@ class AnalyzedSeries:
         # r has a subset of all metrics, so can't just set change_points to r
         for metric, cpglist in r.items():
             self.change_points[metric] = cpglist
+        self.weak_change_points = w
         self.change_points_by_time = self.change_points.by_time()
         return r, w
 

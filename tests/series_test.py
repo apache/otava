@@ -212,6 +212,9 @@ def test_incremental_otava():
     change_points = analyzed_series.change_points
     assert [c.index for c in change_points.get_change_points_for_metric("series1")] == [6]
     assert [c.index for c in change_points.get_change_points_for_metric("series2")] == [4]
+    assert [
+        c.index for c in analyzed_series.weak_change_points.get_change_points_for_metric("series2")
+    ] == [4, 11]
 
     analyzed_series.append(time=[len(time)], new_data={"series1": [0.51]}, attributes={})
     change_points = analyzed_series.change_points
@@ -223,9 +226,13 @@ def test_incremental_otava():
     assert [c.index for c in change_points.get_change_points_for_metric("series1")] == [6]
     assert [c.index for c in change_points.get_change_points_for_metric("series2")] == [4, 12]
     assert [
-        (cpg.time, sorted(cpg.changes))
-        for cpg in analyzed_series.change_points_by_time
-    ] == [(4, ["series2"]), (6, ["series1"]), (12, ["series2"])]
+        c.index for c in analyzed_series.weak_change_points.get_change_points_for_metric("series2")
+    ] == [4, 12]
+    assert [(cpg.time, sorted(cpg.changes)) for cpg in analyzed_series.change_points_by_time] == [
+        (4, ["series2"]),
+        (6, ["series1"]),
+        (12, ["series2"]),
+    ]
 
 
 def test_validate():
