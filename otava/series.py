@@ -374,8 +374,8 @@ class AnalyzedSeries:
                 change_points_json[metric_name].append(cp.to_json(rounded=False))
 
         weak_change_points_json = {}
-        wcpbm = self.change_points.by_metric()
-        for metric_name in self.change_points.metrics():
+        wcpbm = self.weak_change_points.by_metric()
+        for metric_name in self.weak_change_points.metrics():
             weak_change_points_json[metric_name] = []
             for cp in wcpbm.select_metrics(metric_name):
                 weak_change_points_json[metric_name].append(cp.to_json(rounded=False))

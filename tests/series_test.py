@@ -215,6 +215,10 @@ def test_incremental_otava():
     assert [
         c.index for c in analyzed_series.weak_change_points.get_change_points_for_metric("series2")
     ] == [4, 11]
+    assert [
+        cpg["changes"][0]["index"]
+        for cpg in analyzed_series.to_json()["weak_change_points"]["series2"]
+    ] == [4, 11]
 
     analyzed_series.append(time=[len(time)], new_data={"series1": [0.51]}, attributes={})
     change_points = analyzed_series.change_points
