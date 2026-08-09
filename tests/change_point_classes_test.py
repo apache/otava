@@ -456,6 +456,10 @@ def test_bymetric_append_and_len():
         bm.append("xxx")
 
 
+def test_bymetric_empty_len():
+    assert len(ChangePointsByMetric()) == 0
+
+
 def test_bymetric_select_metrics():
     bm = ChangePointsByMetric.from_list([make_group(1.0, "a"), make_group(1.0, "b")])
     only_a = bm.select_metrics("a")

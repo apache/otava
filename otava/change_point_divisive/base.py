@@ -663,6 +663,8 @@ class ChangePointsByMetric(ChangePoints):
         return self.pivot().__iter__()
 
     def __len__(self):
+        if not self._change_points:
+            return 0
         return max([len(cpg) for metric, cpg in self._change_points.items()])
 
     def __getitem__(self, n):
