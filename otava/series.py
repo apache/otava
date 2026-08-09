@@ -325,6 +325,7 @@ class AnalyzedSeries:
         # r has a subset of all metrics, so can't just set change_points to r
         for metric, cpglist in r.items():
             self.change_points[metric] = cpglist
+        self.change_points_by_time = self.change_points.by_time()
         return r, w
 
     def test_name(self) -> str:
