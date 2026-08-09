@@ -15,20 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# IntelliJ IDEA files
-.idea/
-*.iml
-
-# pyenv version info
-.python-version
-
-# Python 3 cache
-__pycache__/
-
-# Other Python dev dirs
-build/
-dist/
-venv/
-.tox/
-.docker/
-docs/_build/
+Sphinx>=8.1,<9
+myst-parser>=4,<5
+sphinx-rtd-theme>=3,<4

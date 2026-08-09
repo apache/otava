@@ -39,7 +39,7 @@ Please remember, that the act of publishing software has both legal and policy s
 ### What is in Apache Otava Release
 
 Apache Otava release consists of:
-* ASF source zips archived on [dist.apache.org](dist.apache.org).
+* ASF source zips archived on [dist.apache.org](https://dist.apache.org).
 * PyPI wheels published to [pypi.org](https://pypi.org/project/apache-otava/).
 * Docker images published to [Dockerhub](https://hub.docker.com/r/apache/otava).
 * Release tag on [GitHub](https://github.com/apache/otava/releases).
@@ -64,7 +64,7 @@ Deciding to release and selecting a Release Manager is the first step of the rel
 Anybody can propose a release on the dev@ mailing list, giving a solid argument and nominating a committer as the Release Manager (including themselves). There’s no formal process, no vote requirements, and no timing requirements. Any objections should be resolved by consensus before starting the release.
 In general, the community prefers to have a rotating set of 3-5 Release Managers. Keeping a small core set of managers allows enough people to build expertise in this area and improve processes over time, without Release Managers needing to re-learn the processes for each release. That said, if you are a committer interested in serving the community in this way, please reach out to the community on the dev@ mailing list.
 
-#### Checklist to proceed to the next step
+### Checklist to proceed to the next step
 
 1. Community agrees to release
 2. Community selects a Release Manager
