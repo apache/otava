@@ -15,10 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from dataclasses import dataclass
+import copy
+from dataclasses import dataclass, replace
 from typing import List, Optional, Sequence, SupportsFloat, Tuple
 
-import numpy as np
 from scipy.stats import ttest_ind_from_stats
 
 from otava.change_point_divisive.base import (
@@ -39,61 +39,22 @@ from otava.change_point_divisive.significance_test import (
 @dataclass
 class TTestStats(BaseStats):
     """
-    Keeps statistics of two series of data and the probability both series
-    have the same distribution.
+    Statistics related to the calculation of a two-sided Student's T-test.
+
+    Note that p-value is already in BaseStats.
     """
+    tstatistic: float = 0.0
+    degrees_of_freedom: int = 0
 
-    mean_1: float
-    mean_2: float
-    std_1: float
-    std_2: float
-
-    def forward_rel_change(self, value_if_nan=0):
-        """Relative change from left to right"""
-        if self.mean_1 == 0:
-            return value_if_nan
-
-        return self.mean_2 / self.mean_1 - 1.0
-
-    def backward_rel_change(self, value_if_nan=0):
-        """Relative change from right to left"""
-        if self.mean_2 == 0:
-            return value_if_nan
-
-        return self.mean_1 / self.mean_2 - 1.0
-
-    def forward_change_percent(self) -> float:
-        return self.forward_rel_change() * 100.0
-
-    def backward_change_percent(self) -> float:
-        return self.backward_rel_change() * 100.0
-
-    def change_magnitude(self):
-        """Maximum of absolutes of rel_change and rel_change_reversed"""
-        return max(abs(self.forward_rel_change()), abs(self.backward_rel_change()))
-
-    def mean_before(self):
-        return self.mean_1
-
-    def mean_after(self):
-        return self.mean_2
-
-    def stddev_before(self):
-        return self.std_1
-
-    def stddev_after(self):
-        return self.std_2
+    def copy(self):
+        # replace() preserves the subclass
+        return replace(self)
 
     def to_json(self):
-        return {
-            "forward_change_percent": f"{self.forward_change_percent():-0f}",
-            "magnitude": f"{self.change_magnitude():-0f}",
-            "mean_before": f"{self.mean_before():-0f}",
-            "stddev_before": f"{self.stddev_before():-0f}",
-            "mean_after": f"{self.mean_after():-0f}",
-            "stddev_after": f"{self.stddev_after():-0f}",
-            "pvalue": f"{self.pvalue:-0f}",
-        }
+        obj = super().to_json()
+        obj["tstatistic"] = self.tstatistic
+        obj["degrees_of_freedom"] = self.degrees_of_freedom
+        return obj
 
 
 # Generic Change Point List
@@ -104,6 +65,7 @@ PermCPList = List[ChangePoint[PermutationStats]]
 TtestCPList = List[ChangePoint[TTestStats]]
 
 
+# TODO: Move to change_point_divisive.significance_test
 class TTestSignificanceTester(SignificanceTester):
     """
     Uses two-sided Student's T-test to decide if a candidate change point
@@ -111,61 +73,33 @@ class TTestSignificanceTester(SignificanceTester):
     This test is good if the data between the change points have normal distribution.
     It works well even with tiny numbers of points (<10).
     """
+
     def compare(self, left: Sequence[SupportsFloat], right: Sequence[SupportsFloat]) -> TTestStats:
-        if len(left) == 0 or len(right) == 0:
-            raise ValueError
+        # defaults
+        p = 1.0
+        t = 0.0
 
-        mean_l = np.mean(left)
-        mean_r = np.mean(right)
-        std_l = np.std(left) if len(left) >= 2 else 0.0
-        std_r = np.std(right) if len(right) >= 2 else 0.0
-
-        if len(left) + len(right) > 2:
-            (_, p) = ttest_ind_from_stats(
-                mean_l, std_l, len(left), mean_r, std_r, len(right), alternative="two-sided"
+        base_stats = super().compare(left, right)
+        df = len(left) + len(right) - 2
+        # While "degrees of freedom" is a parameter that is here coming out of the use of T-Test,
+        # this is actually the same requirement as can be expressed more intuitively as:
+        # We need at least 3 data points to find a statistically significant change point.
+        # This is because if we had only 2 points, they can be either equal or different, but if they
+        # are different, we have no context for how different they have to be to be statistically significant.
+        if df > 0:
+            (t, p) = ttest_ind_from_stats(
+                base_stats.mean_1, base_stats.std_1, len(left), base_stats.mean_2, base_stats.std_2, len(right), alternative="two-sided"
             )
-        else:
-            p = 1.0
-        return TTestStats(mean_1=mean_l, mean_2=mean_r, std_1=std_l, std_2=std_r, pvalue=p)
+
+        return TTestStats(pvalue=p, mean_1=base_stats.mean_1, mean_2=base_stats.mean_2, std_1=base_stats.std_1, std_2=base_stats.std_2, tstatistic=t, degrees_of_freedom=df)
 
     def change_point(
-        self, candidate: CandidateChangePoint, series: Sequence[SupportsFloat], intervals: List[slice]
+        self,
+        candidate: CandidateChangePoint,
+        series: Sequence[SupportsFloat],
+        intervals: List[slice],
     ) -> ChangePoint[TTestStats]:
-        """
-        Computes properties of the change point if the Candidate Change Point based on the provided intervals.
-
-        The method works in both steps of the algorithm:
-        1. Split step:
-           if the candidate is a new potential change point, i.e., its index is inside any interval, then
-           we split the interval by the candidate's index to get left and right subseries.
-        2. Merge step:
-           if the candidate is an existing change point, i.e., it matches the end of two intervals, then
-           it's a potential weak change point, and we don't need to split the intervals anymore (just take
-           both intervals as left and right subseries).
-
-        """
-        for i, interval in enumerate(intervals):
-            if interval.stop == candidate.index:
-                # Merge step
-                left_interval = interval
-                right_interval = intervals[i + 1]
-                break
-            elif (interval.start is None or interval.start < candidate.index) and (interval.stop is None or candidate.index < interval.stop):
-                # Split step
-                # Note: handles slices with omitted indexes:
-                #
-                #       array[0 : i] == array[:i] == array[slice(None, i)] == array[slice(0, i)],
-                #       i.e., interval.start == None and interval.start == 0 are equivalent.
-                #
-                #       array[i: len(array)] == array[i:] == array[slice(i, None)] == array[slice(i, len(array))],
-                #       i.e., interval.stop == None and interval.stop == len(array) are equivalent.
-                left_interval = slice(interval.start, candidate.index)
-                right_interval = slice(candidate.index, interval.stop)
-                break
-        else:
-            raise ValueError(f"Candidate Change Point at index={candidate.index} doesn't correspond to any interval in {intervals}.")
-        left = series[left_interval]
-        right = series[right_interval]
+        left, right = self.get_sides(candidate, series, intervals)
         stats = self.compare(left, right)
         return ChangePoint.from_candidate(candidate, stats)
 
@@ -174,6 +108,8 @@ def fill_missing(data: Sequence[SupportsFloat]):
     """
     Forward-fills None occurrences with nearest previous non-None values.
     Initial None values are back-filled with the nearest future non-None value.
+
+    TODO: Remove this.
     """
     prev = None
     for i in range(len(data)):
@@ -201,7 +137,6 @@ def merge(
     """
     tester = TTestSignificanceTester(max_pvalue)
     while change_points:
-
         # Select the change point with weakest unacceptable P-value
         # If all points have acceptable P-values, select the change-point with
         # the least relative change:
@@ -211,8 +146,13 @@ def merge(
             if weakest_cp.stats.change_magnitude() > min_magnitude:
                 return change_points
 
-        # Remove the point from the list
-        weakest_cp_index = change_points.index(weakest_cp)
+        # Remove duplicate change points from the list (that is, at same index)
+        weakest_cp_index = None
+        for i, cp in enumerate(change_points):
+            if cp.index == weakest_cp.index:
+                weakest_cp_index = i
+                break
+        assert weakest_cp_index is not None
         del change_points[weakest_cp_index]
 
         # We can't continue yet, because by removing a change_point
@@ -267,9 +207,11 @@ def split(series: Sequence[SupportsFloat], window_len: int = 30, max_pvalue: flo
         last_new_change_point_index = new_change_points[-1].index if new_change_points else 0
         start = max(last_new_change_point_index, start + step)
         # incremental Otava can duplicate an old cp
+        cpindexes = [cp.index for cp in change_points]
         for cp in new_change_points:
-            if cp not in change_points:
+            if cp.index not in cpindexes:
                 change_points += [cp]
+                cpindexes += [cp.index]
 
     # Sort change points by index; required by get_intervals() and maintained by merge()
     change_points.sort(key=lambda cp: cp.index)
@@ -323,4 +265,4 @@ def compute_change_points(
     """
     first_pass_pvalue = max_pvalue * 10 if max_pvalue < 0.05 else (max_pvalue * 2 if max_pvalue < 0.5 else max_pvalue)
     weak_change_points = split(series, window_len, first_pass_pvalue, new_points=new_data, old_cp=old_weak_cp)
-    return merge(weak_change_points, series, max_pvalue, min_magnitude), weak_change_points
+    return merge(copy.copy(weak_change_points), series, max_pvalue, min_magnitude), weak_change_points

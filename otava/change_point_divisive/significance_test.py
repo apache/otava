@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import List, Optional, Type
 
 import numpy as np
@@ -36,6 +36,18 @@ class PermutationStats(BaseStats):
     permuted_qhats: NDArray
     extreme_qhat_perm: int
     n_perm: int
+
+    def copy(self):
+        c = replace(self)
+        c.permuted_qhats = self.permuted_qhats.copy()
+        return c
+
+    def to_json(self):
+        obj = super().to_json()
+        obj["permuted_qhats"] = self.permuted_qhats
+        obj["extreme_qhat_perm"] = self.extreme_qhat_perm
+        obj["n_perm"] = self.n_perm
+        return obj
 
 
 class PermutationsSignificanceTester(SignificanceTester):
@@ -68,10 +80,19 @@ class PermutationsSignificanceTester(SignificanceTester):
         # 2. Estimate p-value
         extreme_qhat_perm = np.sum(qhats >= candidate.qhat)
         pval = extreme_qhat_perm / (self.permutations + 1)
+
+        # 3. Add general statistics together with the above
+        left, right = self.get_sides(candidate, series, intervals)
+        generic_stats = self.compare(left, right, pval)
+
         stats = PermutationStats(
             pvalue=pval,
             permuted_qhats=qhats,
             extreme_qhat_perm=extreme_qhat_perm,
-            n_perm=self.permutations
+            n_perm=self.permutations,
+            mean_1=generic_stats.mean_1,
+            mean_2=generic_stats.mean_2,
+            std_1=generic_stats.std_1,
+            std_2=generic_stats.std_2,
         )
         return ChangePoint.from_candidate(candidate, stats)

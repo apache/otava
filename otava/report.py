@@ -21,7 +21,8 @@ from typing import List
 
 from tabulate import tabulate
 
-from otava.series import ChangePointGroup, Series
+from otava.change_point_divisive.base import ChangePoints, ChangePointSerializer
+from otava.series import Series
 from otava.util import format_timestamp, insert_multiple, remove_common_prefix
 
 
@@ -37,9 +38,9 @@ class ReportType(Enum):
 
 class Report:
     __series: Series
-    __change_points: List[ChangePointGroup]
+    __change_points: ChangePoints
 
-    def __init__(self, series: Series, change_points: List[ChangePointGroup]):
+    def __init__(self, series: Series, change_points: ChangePoints):
         self.__series = series
         self.__change_points = change_points
 
@@ -74,19 +75,19 @@ class Report:
         """Returns test log with change points marked as horizontal lines"""
         lines = self.__format_log().split("\n")
         col_widths = self.__column_widths(lines)
-        indexes = [cp.index for cp in self.__change_points]
+        indexes = [list(cpg.changes.values())[0].index for cpg in self.__change_points]
         separators = []
         columns = list(
             OrderedDict.fromkeys(["time", *self.__series.attributes, *self.__series.data])
         )
-        for cp in self.__change_points:
+        for cpg in self.__change_points:
             separator = ""
             info = ""
             for col_index, col_name in enumerate(columns):
                 col_width = col_widths[col_index]
-                change = [c for c in cp.changes if c.metric == col_name]
+                change = [c for m, c in cpg.changes.items() if m == col_name]
                 if change:
-                    change = change[0]
+                    change = ChangePointSerializer(change[0])
                     change_percent = change.forward_change_percent()
                     separator += "·" * col_width + "  "
                     info += f"{change_percent:+.1f}%".rjust(col_width) + "  "
@@ -108,8 +109,9 @@ class Report:
         output = []
         for cpg in self.__change_points:
             regressions = []
-            for cp in cpg.changes:
-                metric = self.__series.metrics[cp.metric]
+            for metric_name, cp in cpg.changes.items():
+                cp = ChangePointSerializer(cp)
+                metric = self.__series.metrics[metric_name]
                 if metric.direction * cp.forward_change_percent() < 0:
                     regressions.append(
                         (

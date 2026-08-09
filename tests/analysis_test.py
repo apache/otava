@@ -65,6 +65,22 @@ def test_single_series():
     indexes = [c.index for c in cps]
     assert indexes == [10]
 
+    # incremental change point detection:
+    cps, _ = compute_change_points(series, max_pvalue=0.0001, new_data=0.47, old_weak_cp=cps)
+    indexes = [c.index for c in cps]
+    assert indexes == [10]
+
+    # decrease window_len to generate more cp and hit the last two lines in code cov...
+    cps, _ = compute_change_points(series+[0.47, 0.48, 0.45, 0.01, 0.1, 0.22], max_pvalue=0.0001, new_data=0.27, old_weak_cp=cps, window_len=5)
+    indexes = [c.index for c in cps]
+    assert indexes == [10, 23]
+
+    cps = [cps[0]]
+    cps[0].index = 2
+    cps, _ = compute_change_points(series+[0.47, 0.48, 0.45, 0.01, 0.1, 0.22], max_pvalue=0.0001, new_data=0.27, old_weak_cp=cps, window_len=5)
+    indexes = [c.index for c in cps]
+    assert indexes == [10, 23]
+
 
 def test_single_series_original():
     series = [

@@ -51,6 +51,7 @@ def report(series, change_points):
 def test_report(series, change_points):
     report = Report(series, change_points)
     output = report.produce_report("test", ReportType.LOG)
+
     assert "series1" in output
     assert "series2" in output
     assert "1.02" in output
@@ -71,6 +72,7 @@ def test_json_report(report):
     obj = json.loads(output)
     expected = {'test_name_from_config': [{'attributes': {},
                                            'changes': [{'forward_change_percent': '-11',
+                                                        'backward_change_percent': '12',
                                                         'index': 4,
                                                         'magnitude': '0.124108',
                                                         'mean_after': '1.801429',
@@ -78,11 +80,11 @@ def test_json_report(report):
                                                         'metric': 'series2',
                                                         'pvalue': '0.000000',
                                                         'stddev_after': '0.026954',
-                                                        'stddev_before': '0.011180',
-                                                        'time': 4}],
+                                                        'stddev_before': '0.011180'}],
                                           'time': 4},
                                           {'attributes': {},
                                           'changes': [{'forward_change_percent': '-49',
+                                                       'backward_change_percent': '98',
                                                        'index': 6,
                                                        'magnitude': '0.977513',
                                                        'mean_after': '0.504000',
@@ -90,8 +92,25 @@ def test_json_report(report):
                                                        'metric': 'series1',
                                                        'pvalue': '0.000000',
                                                        'stddev_after': '0.025768',
-                                                       'stddev_before': '0.067495',
-                                                       'time': 6}],
+                                                       'stddev_before': '0.067495'}],
                                            'time': 6}]}
     assert isinstance(obj, dict)
     assert obj == expected
+
+
+def test_regression_only_report(report):
+    output = report.produce_report("test_name_for_regression_only", ReportType.REGRESSIONS_ONLY)
+    assert output
+
+
+def test_simplereport_regression_only():
+    s = Series('t', None, list(range(11)),
+               {'a': Metric(1, 1.0), 'b': Metric(1, 1.0)},
+               {'a': [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55],
+                'b': [2.02, 2.03, 2.01, 2.04, 1.82, 1.85, 1.79, 1.81, 1.80, 1.76, 1.78]},
+               {})
+    out = Report(s, s.analyze().change_points_by_time).produce_report('t', ReportType.REGRESSIONS_ONLY)
+    print(out)
+    assert "Regressions" in out
+    assert "-11.0" in out
+    assert "-49.4" in out

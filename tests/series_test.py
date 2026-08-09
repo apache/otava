@@ -20,7 +20,8 @@ from random import random
 
 import pytest
 
-from otava.series import AnalysisOptions, Metric, Series
+from otava.change_point_divisive.base import ChangePointSerializer
+from otava.series import AnalysisOptions, AnalyzedSeries, Metric, Series
 
 
 def test_change_point_detection():
@@ -36,12 +37,66 @@ def test_change_point_detection():
         attributes={},
     )
 
-    change_points = test.analyze().change_points_by_time
-    assert len(change_points) == 2
-    assert change_points[0].index == 4
-    assert change_points[0].changes[0].metric == "series2"
-    assert change_points[1].index == 6
-    assert change_points[1].changes[0].metric == "series1"
+    cps = test.analyze().change_points_by_time
+    assert len(cps) == 2
+    assert cps._change_points[0].time == 4
+    assert cps._change_points[0].changes["series2"].metric == "series2"
+    assert cps._change_points[1].time == 6
+    assert cps._change_points[1].changes["series1"].metric == "series1"
+
+
+def test_change_point_detection_many():
+    series_3 = [
+        1,
+        1,
+        1,
+        1,
+        1,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+    ]
+    time = list(range(len(series_3)))
+    test = Series(
+        "test",
+        branch=None,
+        time=time,
+        metrics={"series3": Metric(1, 1.0)},
+        data={"series3": series_3},
+        attributes={},
+    )
+
+    options = AnalysisOptions()
+    options.min_magnitude = 0.0
+    options.max_pvalue = 0.05
+    analyzed_series = test.analyze(options)
+    assert len(list(analyzed_series.change_points)) == 3
+    cps_by_time = analyzed_series.change_points_by_time
+    assert len(cps_by_time._change_points) == 3
+    assert analyzed_series.change_points[0].time == 5
+    assert "series3" in analyzed_series.change_points[0].changes
 
 
 def test_change_point_min_magnitude():
@@ -59,16 +114,16 @@ def test_change_point_min_magnitude():
 
     options = AnalysisOptions()
     options.min_magnitude = 0.2
-    change_points = test.analyze(options).change_points_by_time
-    assert len(change_points) == 1
-    assert change_points[0].index == 6
-    assert change_points[0].changes[0].metric == "series1"
+    cps = test.analyze(options).change_points_by_time
+    assert len(cps) == 1
+    assert cps._change_points[0].time == 6
+    assert "series1" in cps[0].changes
 
-    for change_point in change_points:
-        for change in change_point.changes:
-            assert (
-                change.magnitude() >= options.min_magnitude
-            ), f"All change points must have magnitude greater than {options.min_magnitude}"
+    for change_point in cps:
+        for metric, change in change_point.changes.items():
+            assert ChangePointSerializer(change).magnitude() >= options.min_magnitude, (
+                f"All change points must have magnitude greater than {options.min_magnitude}"
+            )
 
 
 # Divide by zero is only a RuntimeWarning, but for testing we want to make sure it's a failure
@@ -90,7 +145,7 @@ def test_div_by_zero():
     cpjson = analyzed_series.to_json()
     assert cpjson
     assert len(change_points) == 2
-    assert change_points[0].index == 3
+    assert change_points[0].time == 3
 
 
 def test_change_point_detection_performance():
@@ -151,20 +206,66 @@ def test_incremental_otava():
     )
 
     analyzed_series = test.analyze()
-    analyzed_series.append(time=[len(time)], new_data={"series1": [0.5], "series2": [1.97]}, attributes={})
+    analyzed_series.append(
+        time=[len(time)], new_data={"series1": [0.5], "series2": [1.97]}, attributes={}
+    )
     change_points = analyzed_series.change_points
-    assert [c.index for c in change_points["series1"]] == [6]
-    assert [c.index for c in change_points["series2"]] == [4]
+    assert [c.index for c in change_points.get_change_points_for_metric("series1")] == [6]
+    assert [c.index for c in change_points.get_change_points_for_metric("series2")] == [4]
+    assert [
+        c.index for c in analyzed_series.weak_change_points.get_change_points_for_metric("series2")
+    ] == [4, 11]
+    assert [
+        cpg["changes"][0]["index"]
+        for cpg in analyzed_series.to_json()["weak_change_points"]["series2"]
+    ] == [4, 11]
 
     analyzed_series.append(time=[len(time)], new_data={"series1": [0.51]}, attributes={})
     change_points = analyzed_series.change_points
-    assert [c.index for c in change_points["series1"]] == [6]
-    assert [c.index for c in change_points["series2"]] == [4]
+    assert [c.index for c in change_points.get_change_points_for_metric("series1")] == [6]
+    assert [c.index for c in change_points.get_change_points_for_metric("series2")] == [4]
 
     analyzed_series.append(time=[len(time)], new_data={"series2": [33.33, 46.46]}, attributes={})
     change_points = analyzed_series.change_points
-    assert [c.index for c in change_points["series1"]] == [6]
-    assert [c.index for c in change_points["series2"]] == [4, 12]
+    assert [c.index for c in change_points.get_change_points_for_metric("series1")] == [6]
+    assert [c.index for c in change_points.get_change_points_for_metric("series2")] == [4, 12]
+    assert [
+        c.index for c in analyzed_series.weak_change_points.get_change_points_for_metric("series2")
+    ] == [4, 12]
+    assert [(cpg.time, sorted(cpg.changes)) for cpg in analyzed_series.change_points_by_time] == [
+        (4, ["series2"]),
+        (6, ["series1"]),
+        (12, ["series2"]),
+    ]
+
+
+def test_analyzed_series_json_round_trip():
+    series_1 = [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55]
+    series_2 = [2.02, 2.03, 2.01, 2.04, 1.82, 1.85, 1.79, 1.81, 1.80, 1.76, 1.78]
+    time = list(range(len(series_1)))
+    series = Series(
+        "test",
+        branch=None,
+        time=time,
+        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
+        data={"series1": series_1, "series2": series_2},
+        attributes={},
+    )
+
+    analyzed_series = series.analyze()
+    analyzed_series.append(
+        time=[len(time)], new_data={"series1": [0.5], "series2": [1.97]}, attributes={}
+    )
+
+    payload = analyzed_series.to_json()
+    restored = AnalyzedSeries.from_json(payload)
+
+    assert [c.index for c in restored.change_points.get_change_points_for_metric("series2")] == [4]
+    assert [
+        c.index for c in restored.weak_change_points.get_change_points_for_metric("series2")
+    ] == [4, 11]
+    assert restored.to_json()["change_points"] == payload["change_points"]
+    assert restored.to_json()["weak_change_points"] == payload["weak_change_points"]
 
 
 def test_validate():
@@ -190,13 +291,19 @@ def test_validate():
 
     analyzed_series_fail = test_fail.analyze()
     analyzed_series_fail.change_points = None
-    err = analyzed_series_fail._validate_append(time=[len(time)], new_data={"series1": [0.51]}, attributes={})
+    err = analyzed_series_fail._validate_append(
+        time=[len(time)], new_data={"series1": [0.51]}, attributes={}
+    )
     assert isinstance(err, RuntimeError)
 
     analyzed_series = test.analyze()
-    analyzed_series.append(time=[len(time)], new_data={"series1": [0.5], "series2": [1.97]}, attributes={})
+    analyzed_series.append(
+        time=[len(time)], new_data={"series1": [0.5], "series2": [1.97]}, attributes={}
+    )
 
-    err = analyzed_series._validate_append(time=[len(time)], new_data={"series1": [0.51]}, attributes={})
+    err = analyzed_series._validate_append(
+        time=[len(time)], new_data={"series1": [0.51]}, attributes={}
+    )
     assert err is None
 
     err = analyzed_series._validate_append(time=[5], new_data={"series1": [0.51]}, attributes={})
@@ -220,7 +327,9 @@ def test_can_append():
     )
 
     analyzed_series = test.analyze()
-    analyzed_series.append(time=[len(time)], new_data={"series1": [0.5], "series2": [1.97]}, attributes={})
+    analyzed_series.append(
+        time=[len(time)], new_data={"series1": [0.5], "series2": [1.97]}, attributes={}
+    )
 
     can = analyzed_series.can_append(time=[len(time)], new_data={"series1": [0.51]}, attributes={})
     assert can
