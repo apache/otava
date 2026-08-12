@@ -21,21 +21,8 @@ from otava.analysis import (
     TTestSignificanceTester,
     compute_change_points,
     compute_change_points_orig,
-    fill_missing,
 )
 from otava.change_point_divisive.base import CandidateChangePoint
-
-
-def test_fill_missing():
-    list1 = [None, None, 1.0, 1.2, 0.5]
-    list2 = [1.0, 1.2, None, None, 4.3]
-    list3 = [1.0, 1.2, 0.5, None, None]
-    fill_missing(list1)
-    fill_missing(list2)
-    fill_missing(list3)
-    assert list1 == [1.0, 1.0, 1.0, 1.2, 0.5]
-    assert list2 == [1.0, 1.2, 1.2, 1.2, 4.3]
-    assert list3 == [1.0, 1.2, 0.5, 0.5, 0.5]
 
 
 def test_single_series():

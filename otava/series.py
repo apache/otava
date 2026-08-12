@@ -24,7 +24,6 @@ from otava.analysis import (
     TTestStats,
     compute_change_points,
     compute_change_points_orig,
-    fill_missing,
 )
 from otava.change_point_divisive.base import (
     ChangePoint,
@@ -166,7 +165,6 @@ class AnalyzedSeries:
         weak_change_points = ChangePointsByMetric()
         for metric in series.data.keys():
             values = series.data[metric].copy()
-            fill_missing(values)
             if options.orig_edivisive:
                 change_points, _ = compute_change_points_orig(
                     values,
@@ -327,8 +325,6 @@ class AnalyzedSeries:
                         attributes=self.__series.attributes_at(cp.index),
                     )
                 )
-            # TODO: Remove this. It should not be a requirement that metrics have the same history.
-            fill_missing(self.__series.data[metric])
 
         r = ChangePointsByMetric.from_dict(result)
         w = ChangePointsByMetric.from_dict(weak_change_points)

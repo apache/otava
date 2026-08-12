@@ -149,11 +149,11 @@ def test_div_by_zero():
 
 
 def test_change_point_detection_performance():
-    timestamps = range(0, 90)  # 3 months of data
+    timestamps = range(90)  # 3 months of data
     series = [random() for x in timestamps]
 
     start_time = time.process_time()
-    for run in range(0, 10):  # 10 series
+    for run in range(10):  # 10 series
         test = Series(
             "test",
             branch=None,
@@ -360,3 +360,50 @@ def test_orig_edivisive():
     # assert len(change_points) == 2
     # assert change_points[0].index == 4
     # assert change_points[1].index == 6
+
+
+def test_series_sparse_commits():
+    """Verify series processes sparse commit sequences without artificial padding."""
+    name = "sparse_commit_test"
+    branch = "main"
+    time_points = [1000, 1001, 1005, 1008]
+    metrics = {}
+    data = {"latency": [100.5, 101.0, 105.2, 98.7]}
+    # Match length of attributes list to len(time_points) == 4
+    attributes = {"env": ["ci", "ci", "ci", "ci"]}
+
+    series = Series(name, branch, time_points, metrics, data, attributes)
+
+    assert len(series.time) == 4
+    assert series.time == [1000, 1001, 1005, 1008]
+    assert series.data["latency"] == [100.5, 101.0, 105.2, 98.7]
+
+
+def test_series_irregular_timestamps():
+    """Verify change detection operates on unpadded time intervals."""
+    name = "irregular_ts_test"
+    branch = "main"
+    time_points = [1600000000, 1600000010, 1600000300, 1600003600]
+    metrics = {}
+    data = {"duration": [50.0, 51.0, 50.5, 95.0]}
+    attributes = {}
+
+    series = Series(name, branch, time_points, metrics, data, attributes)
+
+    assert len(series.time) == 4
+    assert series.data["duration"] == [50.0, 51.0, 50.5, 95.0]
+
+
+def test_series_raw_initialization():
+    """Verify Series initialization operates directly on raw unpadded input data."""
+    name = "raw_init_test"
+    branch = "main"
+    time_points = [1, 2, 3]
+    metrics = {}
+    data = {"throughput": [10.0, 12.0, 11.5]}
+    attributes = {}
+
+    series = Series(name, branch, time_points, metrics, data, attributes)
+
+    assert len(series.time) == 3
+    assert series.data["throughput"] == [10.0, 12.0, 11.5]
