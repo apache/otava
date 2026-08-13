@@ -114,16 +114,12 @@ class Series:
     def analyze(self, options: Optional[AnalysisOptions] = None) -> "AnalyzedSeries":
         if options is None:
             options = AnalysisOptions()
-        logging.info(f"Computing change points for test {self.test_name}...")
         return AnalyzedSeries(self, options)
 
 
 class AnalyzedSeries:
     """
     Time series data with computed change points.
-
-    Change points are computed lazily, on first access. Constructing an
-    instance is cheap for callers that never read them.
     """
 
     __series: Series
@@ -144,6 +140,7 @@ class AnalyzedSeries:
 
     def __ensure_change_points_computed(self):
         if self.__change_points is None:
+            logging.info(f"Computing change points for test {self.__series.test_name}...")
             cp, weak_cps = self.__compute_change_points(self.__series, self.options)
             self.__change_points = cp
             self.__weak_change_points = weak_cps
@@ -254,8 +251,8 @@ class AnalyzedSeries:
         return self._validate_append(time, new_data, attributes) is None
 
     def _validate_append(self, time, new_data, attributes):
-        if not self.change_points:
-            return RuntimeError("You must use __compute_change_points() once first.")
+        # appending updates the cached results, so they must exist first
+        self.__ensure_change_points_computed()
         if not isinstance(time, list):
             return ValueError("time argument must be an array.")
         if not isinstance(new_data, dict):
@@ -300,13 +297,19 @@ class AnalyzedSeries:
 
         for metric in self.__series.data.keys():
             if metric not in new_data:
-                weak_change_points[metric] = self.weak_change_points.select_metrics(metric)
+                if metric in self.weak_change_points:
+                    weak_change_points[metric] = self.weak_change_points.select_metrics(metric)
                 continue
 
             new_data_len = len(new_data[metric])
+            previous_weak_cp = (
+                self.weak_change_points.get_change_points_for_metric(metric)
+                if metric in self.weak_change_points
+                else []
+            )
             old_weak_cp = [
                 cp
-                for cp in self.weak_change_points.get_change_points_for_metric(metric)
+                for cp in previous_weak_cp
                 if cp.index < len(self.__series.data[metric]) - new_data_len - 1
             ]
             change_points, weak_cps = compute_change_points(
@@ -348,7 +351,9 @@ class AnalyzedSeries:
         for metric, cpglist in r.items():
             self.change_points[metric] = cpglist
         self.__weak_change_points = w
-        self.__change_points_by_time = self.change_points.by_time()
+        # invalidate rather than rebuild: the property recomputes it on first read
+        self.__change_points_by_time = None
+        self.__change_points_timestamp = datetime.now(timezone.utc)
         return r, w
 
     def test_name(self) -> str:
