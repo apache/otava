@@ -121,29 +121,56 @@ class Series:
 class AnalyzedSeries:
     """
     Time series data with computed change points.
+
+    Change points are computed lazily, on first access. Constructing an
+    instance is cheap for callers that never read them.
     """
 
     __series: Series
     options: AnalysisOptions
-    change_points: ChangePointsByMetric
-    change_points_by_time: ChangePointsByTime
-    change_points_timestamp: datetime
 
     def __init__(
         self, series: Series, options: AnalysisOptions, change_points: Dict[str, ChangePoint] = None
     ):
         self.__series = series
         self.options = options
-        # record when these change points were calculated
-        self.change_points_timestamp = datetime.now(timezone.utc)
-        self.change_points = None
-        if change_points is not None:
-            self.change_points = change_points
-        else:
-            cp, weak_cps = self.__compute_change_points(series, options)
-            self.change_points = cp
-            self.weak_change_points = weak_cps
-        self.change_points_by_time = self.__group_change_points_by_time(series, self.change_points)
+        self.__change_points = change_points
+        self.__weak_change_points = ChangePointsByMetric() if change_points is not None else None
+        self.__change_points_by_time = None
+        # records when the change points were calculated
+        self.__change_points_timestamp = (
+            datetime.now(timezone.utc) if change_points is not None else None
+        )
+
+    def __ensure_change_points_computed(self):
+        if self.__change_points is None:
+            cp, weak_cps = self.__compute_change_points(self.__series, self.options)
+            self.__change_points = cp
+            self.__weak_change_points = weak_cps
+            self.__change_points_timestamp = datetime.now(timezone.utc)
+
+    @property
+    def change_points(self) -> ChangePointsByMetric:
+        self.__ensure_change_points_computed()
+        return self.__change_points
+
+    @property
+    def weak_change_points(self) -> ChangePointsByMetric:
+        self.__ensure_change_points_computed()
+        return self.__weak_change_points
+
+    @property
+    def change_points_timestamp(self) -> datetime:
+        self.__ensure_change_points_computed()
+        return self.__change_points_timestamp
+
+    @property
+    def change_points_by_time(self) -> ChangePointsByTime:
+        if self.__change_points_by_time is None:
+            self.__change_points_by_time = self.__group_change_points_by_time(
+                self.__series, self.change_points
+            )
+        return self.__change_points_by_time
 
     @staticmethod
     def __compute_change_points(
@@ -320,8 +347,8 @@ class AnalyzedSeries:
         # r has a subset of all metrics, so can't just set change_points to r
         for metric, cpglist in r.items():
             self.change_points[metric] = cpglist
-        self.weak_change_points = w
-        self.change_points_by_time = self.change_points.by_time()
+        self.__weak_change_points = w
+        self.__change_points_by_time = self.change_points.by_time()
         return r, w
 
     def test_name(self) -> str:
@@ -466,14 +493,11 @@ class AnalyzedSeries:
         )
 
         analyzed_series = cls(new_series, new_options, new_change_points)
-        analyzed_series.weak_change_points = new_weak_change_points
+        analyzed_series.__weak_change_points = new_weak_change_points
 
         if "change_points_timestamp" in analyzed_json.keys():
-            analyzed_series.change_points_timestamp = _datetime_adapter.validate_python(
+            analyzed_series.__change_points_timestamp = _datetime_adapter.validate_python(
                 analyzed_json["change_points_timestamp"]
-            )
-            analyzed_series.change_points_by_time = AnalyzedSeries.__group_change_points_by_time(
-                analyzed_series.__series, analyzed_series.change_points
             )
 
         return analyzed_series
