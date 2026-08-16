@@ -53,6 +53,7 @@ dependencies = [
     "slack-sdk>=3.39.0",
     "google-cloud-bigquery>=3.38.0",
     "pg8000>=1.31.5",
+    "influxdb3-python>=0.20.0",
     "configargparse>=1.7.1",
     "pydantic>=2,<3",
 

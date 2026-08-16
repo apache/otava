@@ -1,0 +1,23 @@
+# InfluxDB 3 connection settings can also be supplied with INFLUXDB_HOST,
+# INFLUXDB_DATABASE, and INFLUXDB_TOKEN.
+influxdb:
+  host: http://localhost:8181
+  database: performance
+  token: ${INFLUXDB_TOKEN}
+
+tests:
+  api_latency:
+    type: influxdb
+    query_language: sql
+    query: |
+      SELECT time, branch, p95_ms, commit
+      FROM api_latency
+      WHERE branch = %{BRANCH}
+      ORDER BY time
+    time_column: time
+    attributes: [branch, commit]
+    metrics:
+      p95:
+        column: p95_ms
+        direction: -1
+        scale: 1

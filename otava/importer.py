@@ -30,6 +30,7 @@ from otava.bigquery import BigQuery
 from otava.config import Config
 from otava.data_selector import DataSelector
 from otava.graphite import DataPoint, Graphite, GraphiteError
+from otava.influxdb import InfluxDB
 from otava.postgres import Postgres
 from otava.series import Metric, Series
 from otava.test_config import (
@@ -39,6 +40,8 @@ from otava.test_config import (
     CsvTestConfig,
     GraphiteTestConfig,
     HistoStatTestConfig,
+    InfluxDBMetric,
+    InfluxDBTestConfig,
     JsonTestConfig,
     PostgresMetric,
     PostgresTestConfig,
@@ -827,6 +830,90 @@ class BigQueryImporter(Importer):
         return [m for m in test_conf.metrics.keys()]
 
 
+class InfluxDBImporter(Importer):
+    def __init__(self, influxdb: InfluxDB):
+        self.__influxdb = influxdb
+
+    @staticmethod
+    def __selected_metrics(
+        defined_metrics: Dict[str, InfluxDBMetric], selected_metrics: Optional[List[str]]
+    ) -> Dict[str, InfluxDBMetric]:
+        if selected_metrics is not None:
+            return {name: defined_metrics[name] for name in selected_metrics}
+        return defined_metrics
+
+    def fetch_data(self, test_conf: TestConfig, selector: DataSelector = DataSelector()) -> Series:
+        if not isinstance(test_conf, InfluxDBTestConfig):
+            raise ValueError("Expected InfluxDBTestConfig")
+
+        since_time = selector.since_time
+        until_time = selector.until_time
+        if since_time.timestamp() > until_time.timestamp():
+            raise DataImportError(
+                f"Invalid time range: [{format_timestamp(int(since_time.timestamp()))}, "
+                f"{format_timestamp(int(until_time.timestamp()))}]"
+            )
+
+        metrics = self.__selected_metrics(test_conf.metrics, selector.metrics)
+        query = test_conf.query
+        if "%{BRANCH}" in query:
+            if not selector.branch:
+                raise DataImportError(
+                    f"Test {test_conf.name} uses %{{BRANCH}} in query but --branch was not specified"
+                )
+            branch_literal = "'" + selector.branch.replace("'", "''") + "'"
+            query = query.replace("%{BRANCH}", branch_literal)
+
+        try:
+            columns, rows = self.__influxdb.fetch_data(query, test_conf.query_language)
+        except Exception as err:
+            raise DataImportError(f"Failed to import test {test_conf.name}: {err}") from err
+
+        try:
+            time_index = columns.index(test_conf.time_column)
+            attr_indexes = [columns.index(column) for column in test_conf.attributes]
+            metric_names = [metric.name for metric in metrics.values()]
+            metric_indexes = [columns.index(metric.column) for metric in metrics.values()]
+        except ValueError as err:
+            raise DataImportError(f"Column not found {err.args[0]}")
+
+        time = []
+        data = {name: [] for name in metric_names}
+        attributes = {columns[index]: [] for index in attr_indexes}
+        for row in rows:
+            timestamp = row[time_index]
+            if timestamp < since_time or timestamp >= until_time:
+                continue
+            time.append(timestamp.timestamp())
+            for name, index in zip(metric_names, metric_indexes):
+                try:
+                    data[name].append(float(row[index]))
+                except (TypeError, ValueError) as err:
+                    raise DataImportError(
+                        f"Could not convert value in column {columns[index]}: {err}"
+                    )
+            for index in attr_indexes:
+                attributes[columns[index]].append(row[index])
+
+        metrics = {metric.name: Metric(metric.direction, metric.scale) for metric in metrics.values()}
+        time = time[-selector.last_n_points :]
+        data = {name: values[-selector.last_n_points :] for name, values in data.items()}
+        attributes = {
+            name: values[-selector.last_n_points :] for name, values in attributes.items()
+        }
+        return Series(
+            test_conf.name,
+            branch=selector.branch,
+            time=time,
+            metrics=metrics,
+            data=data,
+            attributes=attributes,
+        )
+
+    def fetch_all_metric_names(self, test_conf: InfluxDBTestConfig) -> List[str]:
+        return list(test_conf.metrics.keys())
+
+
 class Importers:
     __config: Config
     __csv_importer: Optional[CsvImporter]
@@ -835,6 +922,7 @@ class Importers:
     __postgres_importer: Optional[PostgresImporter]
     __json_importer: Optional[JsonImporter]
     __bigquery_importer: Optional[BigQueryImporter]
+    __influxdb_importer: Optional[InfluxDBImporter]
 
     def __init__(self, config: Config):
         self.__config = config
@@ -844,6 +932,7 @@ class Importers:
         self.__postgres_importer = None
         self.__json_importer = None
         self.__bigquery_importer = None
+        self.__influxdb_importer = None
 
     def csv_importer(self) -> CsvImporter:
         if self.__csv_importer is None:
@@ -875,6 +964,11 @@ class Importers:
             self.__bigquery_importer = BigQueryImporter(BigQuery(self.__config.bigquery))
         return self.__bigquery_importer
 
+    def influxdb_importer(self) -> InfluxDBImporter:
+        if self.__influxdb_importer is None:
+            self.__influxdb_importer = InfluxDBImporter(InfluxDB(self.__config.influxdb))
+        return self.__influxdb_importer
+
     def get(self, test: TestConfig) -> Importer:
         if isinstance(test, CsvTestConfig):
             return self.csv_importer()
@@ -888,5 +982,7 @@ class Importers:
             return self.json_importer()
         elif isinstance(test, BigQueryTestConfig):
             return self.bigquery_importer()
+        elif isinstance(test, InfluxDBTestConfig):
+            return self.influxdb_importer()
         else:
             raise ValueError(f"Unsupported test type {type(test)}")

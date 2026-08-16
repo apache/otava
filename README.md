@@ -7,7 +7,7 @@ Apache Otava – Change Detection for Continuous Performance Engineering
 
 
 Apache Otava (incubating) performs statistical analysis of performance test results stored
-in CSV files, PostgreSQL, BigQuery, or Graphite database. It finds change-points and notifies about
+in CSV files, PostgreSQL, BigQuery, InfluxDB 3, or Graphite database. It finds change-points and notifies about
 possible performance regressions.
 
 A typical use-case of otava is as follows:
