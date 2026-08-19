@@ -401,7 +401,7 @@ class AnalyzedSeries:
             "change_points": change_points_json,
             "weak_change_points": weak_change_points_json,
         }
-        return AnalyzedSeriesModel.model_validate(payload).model_dump(mode="python")
+        return AnalyzedSeriesModel.model_validate(payload).model_dump(mode="json")
 
     @classmethod
     def from_json(cls, analyzed_json):

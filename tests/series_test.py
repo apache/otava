@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import json
 import time
 from random import random
 
@@ -267,6 +268,32 @@ def test_analyzed_series_json_round_trip():
     ] == [4, 11]
     assert restored.to_json()["change_points"] == payload["change_points"]
     assert restored.to_json()["weak_change_points"] == payload["weak_change_points"]
+
+
+def test_analyzed_series_json_round_trip_through_json_module():
+    series_1 = [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55]
+    series_2 = [2.02, 2.03, 2.01, 2.04, 1.82, 1.85, 1.79, 1.81, 1.80, 1.76, 1.78]
+    time = list(range(len(series_1)))
+    series = Series(
+        "test",
+        branch=None,
+        time=time,
+        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
+        data={"series1": series_1, "series2": series_2},
+        attributes={},
+    )
+
+    analyzed_series = series.analyze()
+    analyzed_series.append(
+        time=[len(time)], new_data={"series1": [0.5], "series2": [1.97]}, attributes={}
+    )
+
+    payload = analyzed_series.to_json()
+    decoded = json.loads(json.dumps(payload))
+    restored = AnalyzedSeries.from_json(decoded)
+
+    assert restored.to_json()["change_points"] == decoded["change_points"]
+    assert restored.to_json()["weak_change_points"] == decoded["weak_change_points"]
 
 
 def test_analyzed_series_json_uses_pydantic_model_shape():
