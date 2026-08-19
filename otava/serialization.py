@@ -22,10 +22,12 @@ from pydantic import BaseModel, ConfigDict
 
 
 class AnalysisOptionsModel(BaseModel):
-    window_len: int
-    max_pvalue: float
-    min_magnitude: float
-    orig_edivisive: bool
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
+
+    window_len: int = 50
+    max_pvalue: float = 0.001
+    min_magnitude: float = 0.0
+    orig_edivisive: bool = False
 
 
 class MetricModel(BaseModel):

@@ -32,29 +32,11 @@ from otava.change_point_divisive.base import (
     ChangePointsByMetric,
     ChangePointsByTime,
 )
-from otava.serialization import AnalyzedSeriesModel
+from otava.serialization import AnalysisOptionsModel, AnalyzedSeriesModel
 
 
-@dataclass
-class AnalysisOptions:
-    window_len: int
-    max_pvalue: float
-    min_magnitude: float
-    orig_edivisive: bool
-
-    def __init__(self):
-        self.window_len = 50
-        self.max_pvalue = 0.001
-        self.min_magnitude = 0.0
-        self.orig_edivisive = False
-
-    def to_json(self):
-        return {
-            "window_len": self.window_len,
-            "max_pvalue": self.max_pvalue,
-            "min_magnitude": self.min_magnitude,
-            "orig_edivisive": self.orig_edivisive,
-        }
+class AnalysisOptions(AnalysisOptionsModel):
+    pass
 
 
 @dataclass
@@ -125,7 +107,9 @@ class Series:
                 result.append(i)
         return result
 
-    def analyze(self, options: AnalysisOptions = AnalysisOptions()) -> "AnalyzedSeries":
+    def analyze(self, options: Optional[AnalysisOptions] = None) -> "AnalyzedSeries":
+        if options is None:
+            options = AnalysisOptions()
         logging.info(f"Computing change points for test {self.test_name}...")
         return AnalyzedSeries(self, options)
 
@@ -394,7 +378,7 @@ class AnalyzedSeries:
             "time": self.time(),
             "change_points_timestamp": self.change_points_timestamp,
             "branch_name": self.branch_name(),
-            "options": self.options.to_json(),
+            "options": self.options.model_dump(mode="json"),
             "metrics": metrics_json,
             "attributes": self.__series.attributes,
             "data": data_json,
@@ -470,11 +454,7 @@ class AnalyzedSeries:
             analyzed_json["attributes"],
         )
 
-        new_options = AnalysisOptions()
-        new_options.window_len = analyzed_json["options"]["window_len"]
-        new_options.max_pvalue = analyzed_json["options"]["max_pvalue"]
-        new_options.min_magnitude = analyzed_json["options"]["min_magnitude"]
-        new_options.orig_edivisive = analyzed_json["options"]["orig_edivisive"]
+        new_options = AnalysisOptions.model_validate(analyzed_json["options"])
 
         new_change_points = change_points_from_json(analyzed_json["change_points"])
         new_weak_change_points = change_points_from_json(

@@ -20,9 +20,10 @@ import time
 from random import random
 
 import pytest
+from pydantic import ValidationError
 
 from otava.change_point_divisive.base import ChangePointSerializer
-from otava.serialization import AnalyzedSeriesModel
+from otava.serialization import AnalysisOptionsModel, AnalyzedSeriesModel
 from otava.series import AnalysisOptions, AnalyzedSeries, Metric, Series
 
 
@@ -45,6 +46,28 @@ def test_change_point_detection():
     assert cps._change_points[0].changes["series2"].metric == "series2"
     assert cps._change_points[1].time == 6
     assert cps._change_points[1].changes["series1"].metric == "series1"
+
+
+def test_analysis_options_is_pydantic_model():
+    options = AnalysisOptions(
+        window_len="25",
+        max_pvalue="0.05",
+        min_magnitude=1,
+        orig_edivisive=True,
+    )
+
+    assert isinstance(options, AnalysisOptionsModel)
+    assert options.model_dump(mode="json") == {
+        "window_len": 25,
+        "max_pvalue": 0.05,
+        "min_magnitude": 1.0,
+        "orig_edivisive": True,
+    }
+
+
+def test_analysis_options_rejects_unknown_fields():
+    with pytest.raises(ValidationError):
+        AnalysisOptions(no_such_option=True)
 
 
 def test_change_point_detection_many():
@@ -294,6 +317,26 @@ def test_analyzed_series_json_round_trip_through_json_module():
 
     assert restored.to_json()["change_points"] == decoded["change_points"]
     assert restored.to_json()["weak_change_points"] == decoded["weak_change_points"]
+
+
+def test_analyzed_series_from_json_validates_options_with_pydantic():
+    series_1 = [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55]
+    time = list(range(len(series_1)))
+    series = Series(
+        "test",
+        branch=None,
+        time=time,
+        metrics={"series1": Metric(1, 1.0)},
+        data={"series1": series_1},
+        attributes={},
+    )
+
+    payload = series.analyze().to_json()
+    payload["options"]["window_len"] = "25"
+    restored = AnalyzedSeries.from_json(payload)
+
+    assert isinstance(restored.options, AnalysisOptions)
+    assert restored.options.window_len == 25
 
 
 def test_analyzed_series_json_uses_pydantic_model_shape():
