@@ -103,7 +103,37 @@ class Report:
     def __format_json(self, test_name: str) -> str:
         import json
 
-        return json.dumps({test_name: [cpg.to_json(rounded=True) for cpg in self.__change_points]})
+        return json.dumps(
+            {
+                test_name: [
+                    self.__format_change_point_group_json(cpg) for cpg in self.__change_points
+                ]
+            }
+        )
+
+    @staticmethod
+    def __format_change_point_group_json(cpg):
+        return {
+            "time": cpg.time,
+            "attributes": cpg.attributes,
+            "changes": [Report.__format_change_point_json(cp) for cp in cpg.changes.values()],
+        }
+
+    @staticmethod
+    def __format_change_point_json(cp):
+        cp = ChangePointSerializer(cp)
+        return {
+            "metric": cp.metric,
+            "index": int(cp.index),
+            "forward_change_percent": f"{cp.forward_change_percent():.0f}",
+            "backward_change_percent": f"{cp.backward_change_percent():.0f}",
+            "magnitude": f"{cp.magnitude():-0f}",
+            "mean_before": f"{cp.mean_before():-0f}",
+            "stddev_before": f"{cp.stddev_before():-0f}",
+            "mean_after": f"{cp.mean_after():-0f}",
+            "stddev_after": f"{cp.stddev_after():-0f}",
+            "pvalue": f"{cp.pvalue():-0f}",
+        }
 
     def __format_regressions_only(self, test_name: str) -> str:
         output = []

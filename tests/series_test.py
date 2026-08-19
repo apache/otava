@@ -21,6 +21,7 @@ from random import random
 import pytest
 
 from otava.change_point_divisive.base import ChangePointSerializer
+from otava.serialization import AnalyzedSeriesModel
 from otava.series import AnalysisOptions, AnalyzedSeries, Metric, Series
 
 
@@ -266,6 +267,36 @@ def test_analyzed_series_json_round_trip():
     ] == [4, 11]
     assert restored.to_json()["change_points"] == payload["change_points"]
     assert restored.to_json()["weak_change_points"] == payload["weak_change_points"]
+
+
+def test_analyzed_series_json_uses_pydantic_model_shape():
+    series_1 = [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55]
+    series_2 = [2.02, 2.03, 2.01, 2.04, 1.82, 1.85, 1.79, 1.81, 1.80, 1.76, 1.78]
+    time = list(range(len(series_1)))
+    series = Series(
+        "test",
+        branch=None,
+        time=time,
+        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
+        data={"series1": series_1, "series2": series_2},
+        attributes={},
+    )
+
+    analyzed_series = series.analyze()
+    analyzed_series.append(
+        time=[len(time)], new_data={"series1": [0.5], "series2": [1.97]}, attributes={}
+    )
+
+    payload = analyzed_series.to_json()
+    model = AnalyzedSeriesModel.model_validate(payload)
+    dumped = model.model_dump(mode="python")
+
+    change = dumped["change_points"]["series2"][0]["changes"][0]
+    weak_change = dumped["weak_change_points"]["series2"][1]["changes"][0]
+    assert isinstance(change["mean_before"], float)
+    assert isinstance(change["forward_change_percent"], float)
+    assert isinstance(weak_change["pvalue"], float)
+    assert AnalyzedSeries.from_json(dumped).to_json()["change_points"] == dumped["change_points"]
 
 
 def test_validate():

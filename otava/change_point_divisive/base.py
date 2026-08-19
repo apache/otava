@@ -201,9 +201,8 @@ class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
         data = {f.name: getattr(self, f.name) for f in fields(CandidateChangePoint)}
         return CandidateChangePoint(**data)
 
-    def to_json(self, rounded=True):
-        cps = ChangePointSerializer(self)
-        return cps.to_json(rounded)
+    def to_json(self):
+        return ChangePointSerializer(self).to_json()
 
 
 class ChangePointSerializer(ChangePoint):
@@ -217,6 +216,7 @@ class ChangePointSerializer(ChangePoint):
     def __init__(self, cp: ChangePoint[GenericStats]):
         self.stats = cp.stats
         self.index = cp.index
+        self.qhat = cp.qhat
         self.metric = cp.metric
 
     def forward_change_percent(self) -> float:
@@ -243,33 +243,19 @@ class ChangePointSerializer(ChangePoint):
     def pvalue(self):
         return self.stats.pvalue
 
-    def to_json(self, rounded=True):
-        if rounded:
-            return {
-                "metric": self.metric,
-                "index": int(self.index),
-                "forward_change_percent": f"{self.forward_change_percent():.0f}",
-                "backward_change_percent": f"{self.backward_change_percent():.0f}",
-                "magnitude": f"{self.magnitude():-0f}",
-                "mean_before": f"{self.mean_before():-0f}",
-                "stddev_before": f"{self.stddev_before():-0f}",
-                "mean_after": f"{self.mean_after():-0f}",
-                "stddev_after": f"{self.stddev_after():-0f}",
-                "pvalue": f"{self.pvalue():-0f}",
-            }
-
-        else:
-            return {
-                "metric": self.metric,
-                "index": int(self.index),
-                "forward_change_percent": self.forward_change_percent(),
-                "magnitude": self.magnitude(),
-                "mean_before": self.mean_before(),
-                "stddev_before": self.stddev_before(),
-                "mean_after": self.mean_after(),
-                "stddev_after": self.stddev_after(),
-                "pvalue": self.pvalue(),
-            }
+    def to_json(self):
+        return {
+            "metric": self.metric,
+            "index": int(self.index),
+            "qhat": self.qhat,
+            "forward_change_percent": self.forward_change_percent(),
+            "magnitude": self.magnitude(),
+            "mean_before": self.mean_before(),
+            "stddev_before": self.stddev_before(),
+            "mean_after": self.mean_after(),
+            "stddev_after": self.stddev_after(),
+            "pvalue": self.pvalue(),
+        }
 
 
 @dataclass
@@ -288,15 +274,16 @@ class ChangePointGroup:
     :param attributes: The attributes of the test result at this timestamp. Commit and test metadata.
     :param changes: For each metric that has a change point at this time(stamp), the ChangePoint object.
     """
+
     time: float
     attributes: Dict[str, str]
     # ChangePointGroup.changes.keys() stores the set of metrics that were used at this ChangePointGroup.time.
     changes: Dict[str, ChangePoint]
 
-    def to_json(self, rounded=False):
+    def to_json(self):
         changes = []
         for metric, cp in self.changes.items():
-            changes.append(cp.to_json(rounded=rounded))
+            changes.append(cp.to_json())
 
         return {
             "time": self.time,
@@ -365,9 +352,7 @@ class ChangePoints:
     def from_list(cls, cps: list[ChangePointGroup]):
         """Build from a list of ChangePointGroup objects, ordered by time."""
         if not isinstance(cps, list):
-            raise TypeError(
-                f"from_list() argument must be a list. Got {type(cps)}."
-            )
+            raise TypeError(f"from_list() argument must be a list. Got {type(cps)}.")
         for cpg in cps:
             if not isinstance(cpg, ChangePointGroup):
                 raise TypeError(
@@ -396,12 +381,12 @@ class ChangePoints:
         for metric, cpglist in cps.items():
             for cpg in cpglist:
                 if not isinstance(cpg, ChangePointGroup):
-                    raise TypeError(
-                        "from_dict() takes a dict[str, list[ChangePointGroup]]."
-                    )
+                    raise TypeError("from_dict() takes a dict[str, list[ChangePointGroup]].")
                 for cp in cpg:
                     if cp.metric and cp.metric != metric:
-                        raise ValueError(f"metric field is not internally consistent. {cp.metric} != {metric} at {cpg.time}")
+                        raise ValueError(
+                            f"metric field is not internally consistent. {cp.metric} != {metric} at {cpg.time}"
+                        )
             # store each metric's groups sorted by timestamp
             obj._change_points[metric] = sorted(cpglist, key=lambda cpg: cpg.time)
         return obj
@@ -522,7 +507,9 @@ class ChangePoints:
         for cpg in single_metric._change_points:
             for metric, cp in cpg.changes.items():
                 if cp.metric and cp.metric != metric:
-                    raise ValueError(f"metric field is not internally consistent. {cp.metric} != {metric} at {cpg.time}")
+                    raise ValueError(
+                        f"metric field is not internally consistent. {cp.metric} != {metric} at {cpg.time}"
+                    )
                 metric_change_points.append(cp)
         return metric_change_points
 
@@ -536,7 +523,7 @@ class ChangePoints:
 
     def at_commit(self, sha: str):
         for row in self:
-            if row.attributes['commit'] == sha:
+            if row.attributes["commit"] == sha:
                 return row
         raise LookupError(sha)
 
@@ -555,17 +542,18 @@ class ChangePoints:
 
 class ChangePointsByTime(ChangePoints):
     """
-        Implementation of ChangePoints class where the internal structure is ordered by time/commit.
+    Implementation of ChangePoints class where the internal structure is ordered by time/commit.
 
-        In fact, this is the default way, and therefore all of this class' implementation is already
-        in its parent class ChangePoints. However, you can still create instances from this class
-        to make it explicit that your code at that point explicitly wanted a collection of ChangePoints
-        ordered by time.
+    In fact, this is the default way, and therefore all of this class' implementation is already
+    in its parent class ChangePoints. However, you can still create instances from this class
+    to make it explicit that your code at that point explicitly wanted a collection of ChangePoints
+    ordered by time.
 
-        The pivot() method returns a new view holding the same ChangePoint objects, but ordered by metrics
-        as the primary and optimized axis. The method by_metric() can be used for the same purpose. Use
-        copy().pivot() for an isolated copy. The method by_time() is a no-op and returns self.
+    The pivot() method returns a new view holding the same ChangePoint objects, but ordered by metrics
+    as the primary and optimized axis. The method by_metric() can be used for the same purpose. Use
+    copy().pivot() for an isolated copy. The method by_time() is a no-op and returns self.
     """
+
     @classmethod
     def from_dict(cls, cps: dict):
         """
@@ -579,14 +567,14 @@ class ChangePointsByTime(ChangePoints):
 
 class ChangePointsByMetric(ChangePoints):
     """
-        Provides same interface as ChangePointsByTime, but internally stores with metric first.
+    Provides same interface as ChangePointsByTime, but internally stores with metric first.
 
-        You can create empty instances of this class, or you can also use the factory method
-        `ChangePoints.from_dict()` to get an instance of this type.
+    You can create empty instances of this class, or you can also use the factory method
+    `ChangePoints.from_dict()` to get an instance of this type.
 
-        The pivot() method returns a new view holding the same ChangePoint objects, but ordered by time
-        as the primary and optimized axis. The method by_time() can be used for the same purpose. Use
-        copy().pivot() for an isolated copy. The method by_metric() is a no-op and returns self.
+    The pivot() method returns a new view holding the same ChangePoint objects, but ordered by time
+    as the primary and optimized axis. The method by_time() can be used for the same purpose. Use
+    copy().pivot() for an isolated copy. The method by_metric() is a no-op and returns self.
     """
 
     def __init__(self):
@@ -636,7 +624,9 @@ class ChangePointsByMetric(ChangePoints):
                 self._change_points[metric] = []
             for metric1, cp in cpg.changes.items():
                 if metric1 != cp.metric:
-                    raise ValueError(f"metric field is not internally consistent. {metric1} != {cp.metric} at {cpg.time}")
+                    raise ValueError(
+                        f"metric field is not internally consistent. {metric1} != {cp.metric} at {cpg.time}"
+                    )
             if (not self._change_points[metric]) or cpg.time > self._change_points[metric][-1].time:
                 self._change_points[metric].append(cpg.select_metrics(metric))
             else:
@@ -653,10 +643,14 @@ class ChangePointsByMetric(ChangePoints):
                 raise TypeError(errmsg)
             for metric1, cp in cpg.changes.items():
                 if metric1 != cp.metric:
-                    raise ValueError(f"metric field is not internally consistent. {metric1} != {cp.metric} at {cpg.time}")
+                    raise ValueError(
+                        f"metric field is not internally consistent. {metric1} != {cp.metric} at {cpg.time}"
+                    )
                 if metric1 not in self._change_points:
                     self._change_points[metric1] = []
-                if (not self._change_points[metric1]) or cpg.time > self._change_points[metric1][-1].time:
+                if (not self._change_points[metric1]) or cpg.time > self._change_points[metric1][
+                    -1
+                ].time:
                     self._change_points[metric1].append(cpg.select_metrics(metric1))
                 else:
                     raise ValueError(
@@ -728,7 +722,9 @@ class ChangePointsByMetric(ChangePoints):
             for cpg in cpglist:
                 for metric2, cp in cpg.changes.items():
                     if metric1 != metric2 or cp.metric and metric1 != cp.metric:
-                        raise ValueError(f"metric field is not internally consistent. {metric1} != {cp.metric} at {cpg.time}")
+                        raise ValueError(
+                            f"metric field is not internally consistent. {metric1} != {cp.metric} at {cpg.time}"
+                        )
                     metric_change_points.append(cp)
 
         return metric_change_points
@@ -752,13 +748,18 @@ class SignificanceTester(Generic[GenericStats]):
     def __init__(self, max_pvalue: float):
         self.max_pvalue = max_pvalue
 
-    def compare(self, left: Sequence[SupportsFloat], right: Sequence[SupportsFloat], p: float = None) -> GenericStats:
+    def compare(
+        self, left: Sequence[SupportsFloat], right: Sequence[SupportsFloat], p: float = None
+    ) -> GenericStats:
         if len(left) == 0 or len(right) == 0:
             raise ValueError
         return BaseStats.calculate(left, right, p)
 
     def get_sides(
-        self, candidate: CandidateChangePoint, series: Sequence[SupportsFloat], intervals: List[slice]
+        self,
+        candidate: CandidateChangePoint,
+        series: Sequence[SupportsFloat],
+        intervals: List[slice],
     ) -> (Sequence, Sequence):
         """
         Computes properties of the change point if the Candidate Change Point based on the provided intervals.
@@ -779,7 +780,9 @@ class SignificanceTester(Generic[GenericStats]):
                 left_interval = interval
                 right_interval = intervals[i + 1]
                 break
-            elif (interval.start is None or interval.start < candidate.index) and (interval.stop is None or candidate.index < interval.stop):
+            elif (interval.start is None or interval.start < candidate.index) and (
+                interval.stop is None or candidate.index < interval.stop
+            ):
                 # Split step
                 # Note: handles slices with omitted indexes:
                 #

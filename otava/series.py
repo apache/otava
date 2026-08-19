@@ -32,6 +32,7 @@ from otava.change_point_divisive.base import (
     ChangePointsByMetric,
     ChangePointsByTime,
 )
+from otava.serialization import AnalyzedSeriesModel
 
 
 @dataclass
@@ -371,31 +372,36 @@ class AnalyzedSeries:
         for metric_name in self.change_points.metrics():
             change_points_json[metric_name] = []
             for cp in cpbm.select_metrics(metric_name):
-                change_points_json[metric_name].append(cp.to_json(rounded=False))
+                change_points_json[metric_name].append(cp.to_json())
 
         weak_change_points_json = {}
         wcpbm = self.weak_change_points.by_metric()
         for metric_name in self.weak_change_points.metrics():
             weak_change_points_json[metric_name] = []
             for cp in wcpbm.select_metrics(metric_name):
-                weak_change_points_json[metric_name].append(cp.to_json(rounded=False))
+                weak_change_points_json[metric_name].append(cp.to_json())
 
         data_json = {}
         for metric, datapoints in self.__series.data.items():
             data_json[metric] = [float(d) if d is not None else None for d in datapoints]
 
-        return {
+        metrics_json = {}
+        for metric, unit in self.__series.metrics.items():
+            metrics_json[metric] = unit.to_json()
+
+        payload = {
             "test_name": self.test_name(),
             "time": self.time(),
             "change_points_timestamp": self.change_points_timestamp,
             "branch_name": self.branch_name(),
             "options": self.options.to_json(),
-            "metrics": self.__series.metrics,
+            "metrics": metrics_json,
             "attributes": self.__series.attributes,
-            "data": self.__series.data,
+            "data": data_json,
             "change_points": change_points_json,
             "weak_change_points": weak_change_points_json,
         }
+        return AnalyzedSeriesModel.model_validate(payload).model_dump(mode="python")
 
     @classmethod
     def from_json(cls, analyzed_json):
@@ -445,8 +451,15 @@ class AnalyzedSeries:
 
         new_metrics = {}
 
-        for metric_name, unit in analyzed_json["metrics"].items():
-            new_metrics[metric_name] = Metric(None, None, unit)
+        for metric_name, metric_json in analyzed_json["metrics"].items():
+            if isinstance(metric_json, dict):
+                new_metrics[metric_name] = Metric(
+                    metric_json.get("direction"),
+                    metric_json.get("scale"),
+                    metric_json.get("unit", ""),
+                )
+            else:
+                new_metrics[metric_name] = Metric(None, None, metric_json)
 
         new_series = Series(
             analyzed_json["test_name"],

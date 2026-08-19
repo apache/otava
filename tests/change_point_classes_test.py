@@ -50,9 +50,7 @@ def make_stats(left=(1.0, 1.0), right=(5.0, 5.0), pvalue=0.01):
 
 
 def make_cp(metric="m", index=3, left=(1.0, 1.0), right=(5.0, 5.0), pvalue=0.01):
-    return ChangePoint(
-        index=index, qhat=1.0, stats=make_stats(left, right, pvalue), metric=metric
-    )
+    return ChangePoint(index=index, qhat=1.0, stats=make_stats(left, right, pvalue), metric=metric)
 
 
 def make_group(time, metric="m", index=3, commit="sha"):
@@ -306,20 +304,27 @@ def test_changepoint_copy_is_deep():
     assert cp.stats.mean_1 != -1.0
 
 
-def test_changepoint_serializer_rounded_json():
+def test_changepoint_serializer_json_is_precise():
     cp = make_cp(metric="m", index=3, left=(10.0, 10.0), right=(20.0, 20.0), pvalue=0.02)
-    j = ChangePointSerializer(cp).to_json(rounded=True)
+    j = ChangePointSerializer(cp).to_json()
     assert j["metric"] == "m"
     assert j["index"] == 3
-    assert j["forward_change_percent"] == "100"
-    assert all(isinstance(j[k], str) for k in ("magnitude", "mean_before", "pvalue"))
-
-
-def test_changepoint_serializer_unrounded_json():
-    cp = make_cp(metric="m", index=3, left=(10.0, 10.0), right=(20.0, 20.0), pvalue=0.02)
-    j = ChangePointSerializer(cp).to_json(rounded=False)
-    assert j["index"] == 3
+    assert j["qhat"] == 1.0
     assert j["forward_change_percent"] == 100.0
+    assert j["magnitude"] == 1.0
+    assert j["mean_before"] == 10.0
+    assert j["mean_after"] == 20.0
+    assert j["pvalue"] == 0.02
+
+
+def test_changepoint_json_is_precise():
+    cp = make_cp(metric="m", index=3, left=(10.0, 10.0), right=(20.0, 20.0), pvalue=0.02)
+    j = cp.to_json()
+    assert j["metric"] == "m"
+    assert j["index"] == 3
+    assert j["qhat"] == 1.0
+    assert j["forward_change_percent"] == 100.0
+    assert j["magnitude"] == 1.0
     assert j["mean_before"] == 10.0
     assert j["mean_after"] == 20.0
     assert j["pvalue"] == 0.02
@@ -327,7 +332,7 @@ def test_changepoint_serializer_unrounded_json():
 
 def test_changepoint_to_json_delegates_to_serializer():
     cp = make_cp(metric="m", index=3, left=(10.0, 10.0), right=(20.0, 20.0), pvalue=0.02)
-    assert cp.to_json(rounded=False) == ChangePointSerializer(cp).to_json(rounded=False)
+    assert cp.to_json() == ChangePointSerializer(cp).to_json()
 
 
 # ChangePointGroup
@@ -376,6 +381,9 @@ def test_group_to_json():
     assert j["attributes"] == {"commit": "abc"}
     assert isinstance(j["changes"], list) and len(j["changes"]) == 1
     assert j["changes"][0]["metric"] == "m"
+    assert j["changes"][0]["qhat"] == 1.0
+    assert j["changes"][0]["forward_change_percent"] == 400.0
+    assert isinstance(j["changes"][0]["mean_before"], float)
 
 
 def test_group_copy_is_deep():
@@ -505,7 +513,11 @@ def test_bytime_append_out_of_order():
 def test_bytime_get_change_points_for_metric_sparse():
     # 'a' appears at t=1 and t=3, 'b' only at t=2 -> sparse columns
     c = ChangePointsByTime.from_list(
-        [make_group(1.0, "a", index=1), make_group(2.0, "b", index=2), make_group(3.0, "a", index=3)]
+        [
+            make_group(1.0, "a", index=1),
+            make_group(2.0, "b", index=2),
+            make_group(3.0, "a", index=3),
+        ]
     )
     a_points = c.get_change_points_for_metric("a")
     assert [cp.index for cp in a_points] == [1, 3]
@@ -562,7 +574,9 @@ def test_from_dict_is_metric_keyed_and_returns_by_metric():
 
 
 def test_bymetric_list_constructor():
-    bm = ChangePointsByMetric.from_list([make_group(1.0, "a"), make_group(2.0, "a"), make_group(2.0, "b")])
+    bm = ChangePointsByMetric.from_list(
+        [make_group(1.0, "a"), make_group(2.0, "a"), make_group(2.0, "b")]
+    )
     # from_list() returns the class it is called on (asymmetric with from_dict)
     assert isinstance(bm, ChangePointsByMetric)
     assert bm.metrics() == {"a", "b"}
