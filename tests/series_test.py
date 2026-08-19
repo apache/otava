@@ -17,6 +17,7 @@
 
 import json
 import time
+from datetime import datetime
 from random import random
 
 import pytest
@@ -315,6 +316,7 @@ def test_analyzed_series_json_round_trip_through_json_module():
     decoded = json.loads(json.dumps(payload))
     restored = AnalyzedSeries.from_json(decoded)
 
+    assert isinstance(restored.change_points_timestamp, datetime)
     assert restored.to_json()["change_points"] == decoded["change_points"]
     assert restored.to_json()["weak_change_points"] == decoded["weak_change_points"]
 

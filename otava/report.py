@@ -127,12 +127,12 @@ class Report:
             "index": int(cp.index),
             "forward_change_percent": f"{cp.forward_change_percent():.0f}",
             "backward_change_percent": f"{cp.backward_change_percent():.0f}",
-            "magnitude": f"{cp.magnitude():-0f}",
-            "mean_before": f"{cp.mean_before():-0f}",
-            "stddev_before": f"{cp.stddev_before():-0f}",
-            "mean_after": f"{cp.mean_after():-0f}",
-            "stddev_after": f"{cp.stddev_after():-0f}",
-            "pvalue": f"{cp.pvalue():-0f}",
+            "magnitude": f"{cp.magnitude():.6f}",
+            "mean_before": f"{cp.mean_before():.6f}",
+            "stddev_before": f"{cp.stddev_before():.6f}",
+            "mean_after": f"{cp.mean_after():.6f}",
+            "stddev_after": f"{cp.stddev_after():.6f}",
+            "pvalue": f"{cp.pvalue():.6f}",
         }
 
     def __format_regressions_only(self, test_name: str) -> str:

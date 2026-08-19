@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Optional
 
+from pydantic import TypeAdapter
+
 from otava.analysis import (
     TTestStats,
     compute_change_points,
@@ -33,6 +35,8 @@ from otava.change_point_divisive.base import (
     ChangePointsByTime,
 )
 from otava.serialization import AnalysisOptionsModel, AnalyzedSeriesModel
+
+_datetime_adapter = TypeAdapter(datetime)
 
 
 class AnalysisOptions(AnalysisOptionsModel):
@@ -465,7 +469,9 @@ class AnalyzedSeries:
         analyzed_series.weak_change_points = new_weak_change_points
 
         if "change_points_timestamp" in analyzed_json.keys():
-            analyzed_series.change_points_timestamp = analyzed_json["change_points_timestamp"]
+            analyzed_series.change_points_timestamp = _datetime_adapter.validate_python(
+                analyzed_json["change_points_timestamp"]
+            )
             analyzed_series.change_points_by_time = AnalyzedSeries.__group_change_points_by_time(
                 analyzed_series.__series, analyzed_series.change_points
             )
