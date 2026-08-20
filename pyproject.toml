@@ -64,6 +64,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "hypothesis>=6.0",
     "pytest>=9.0.1",
     "pytest-benchmark>=5.2.3",
     "pytz==2025.2",
