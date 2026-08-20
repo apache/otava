@@ -34,7 +34,7 @@ from otava.change_point_divisive.base import (
     ChangePointsByMetric,
     ChangePointsByTime,
 )
-from otava.serialization import AnalysisOptionsModel, AnalyzedSeriesModel
+from otava.serialization import AnalysisOptionsModel, AnalyzedSeriesModel, JsonScalar
 
 _datetime_adapter = TypeAdapter(datetime)
 
@@ -52,7 +52,7 @@ class Metric:
     def __init__(self, direction: int = 1, scale: float = 1.0, unit: str = ""):
         self.direction = direction
         self.scale = scale
-        self.unit = ""
+        self.unit = unit
 
     def to_json(self):
         return {"direction": self.direction, "scale": self.scale, "unit": self.unit}
@@ -67,19 +67,19 @@ class Series:
 
     test_name: str
     branch: Optional[str]
-    time: List[int]
+    time: List[int | float]
     metrics: Dict[str, Metric]
-    attributes: Dict[str, List[str]]
+    attributes: Dict[str, List[JsonScalar]]
     data: Dict[str, List[float]]
 
     def __init__(
         self,
         test_name: str,
         branch: Optional[str],
-        time: List[int],
+        time: List[int | float],
         metrics: Dict[str, Metric],
         data: Dict[str, List[float]],
-        attributes: Dict[str, List[str]],
+        attributes: Dict[str, List[JsonScalar]],
     ):
         self.test_name = test_name
         self.branch = branch
@@ -90,7 +90,7 @@ class Series:
         assert all(len(x) == len(time) for x in data.values())
         assert all(len(x) == len(time) for x in attributes.values())
 
-    def attributes_at(self, index: int) -> Dict[str, str]:
+    def attributes_at(self, index: int) -> Dict[str, JsonScalar]:
         result = {}
         for k, v in self.attributes.items():
             result[k] = v[index]
@@ -333,8 +333,8 @@ class AnalyzedSeries:
     def len(self) -> int:
         return len(self.__series.time)
 
-    def time(self) -> List[int]:
-        return [int(t) for t in self.__series.time]
+    def time(self) -> List[int | float]:
+        return list(self.__series.time)
 
     def data(self, metric: str) -> List[float]:
         return [float(d) for d in self.__series.data[metric]]
@@ -342,10 +342,10 @@ class AnalyzedSeries:
     def attributes(self) -> Iterable[str]:
         return self.__series.attributes.keys()
 
-    def attributes_at(self, index: int) -> Dict[str, str]:
+    def attributes_at(self, index: int) -> Dict[str, JsonScalar]:
         return self.__series.attributes_at(index)
 
-    def attribute_values(self, attribute: str) -> List[str]:
+    def attribute_values(self, attribute: str) -> List[JsonScalar]:
         return self.__series.attributes[attribute]
 
     def metric_names(self) -> Iterable[str]:

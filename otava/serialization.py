@@ -20,6 +20,8 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict
 
+JsonScalar = str | int | float | bool | None
+
 
 class AnalysisOptionsModel(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
@@ -50,8 +52,8 @@ class ChangePointModel(BaseModel):
 
 
 class ChangePointGroupModel(BaseModel):
-    time: float
-    attributes: Dict[str, str]
+    time: int | float
+    attributes: Dict[str, JsonScalar]
     changes: List[ChangePointModel]
 
 
@@ -59,12 +61,12 @@ class AnalyzedSeriesModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=False)
 
     test_name: str
-    time: List[int]
+    time: List[int | float]
     change_points_timestamp: datetime
     branch_name: Optional[str] = None
     options: AnalysisOptionsModel
     metrics: Dict[str, MetricModel]
-    attributes: Dict[str, List[str]]
+    attributes: Dict[str, List[JsonScalar]]
     data: Dict[str, List[Optional[float]]]
     change_points: Dict[str, List[ChangePointGroupModel]]
     weak_change_points: Dict[str, List[ChangePointGroupModel]]
