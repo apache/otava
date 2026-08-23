@@ -23,6 +23,7 @@ import configargparse
 from ruamel.yaml import YAML
 
 from otava.bigquery import BigQueryConfig
+from otava.csv_options import CsvConfig
 from otava.grafana import GrafanaConfig
 from otava.graphite import GraphiteConfig
 from otava.influxdb import InfluxDBConfig
@@ -34,6 +35,7 @@ from otava.util import merge_dict_list
 
 @dataclass
 class Config:
+    csv: CsvConfig
     graphite: Optional[GraphiteConfig]
     grafana: Optional[GrafanaConfig]
     tests: Dict[str, TestConfig]
@@ -56,7 +58,9 @@ def load_templates(config: Dict) -> Dict[str, Dict]:
     return templates
 
 
-def load_tests(config: Dict, templates: Dict) -> Dict[str, TestConfig]:
+def load_tests(
+    config: Dict, templates: Dict, csv_config: Optional[CsvConfig] = None
+) -> Dict[str, TestConfig]:
     tests = config.get("tests", {})
     if not isinstance(tests, Dict):
         raise ConfigError("Property `tests` is not a dictionary")
@@ -71,7 +75,7 @@ def load_tests(config: Dict, templates: Dict) -> Dict[str, TestConfig]:
         except KeyError as e:
             raise ConfigError(f"Template {e.args[0]} referenced in test {test_name} not found")
         test_config = merge_dict_list(template_list + [test_config])
-        result[test_name] = create_test_config(test_name, test_config)
+        result[test_name] = create_test_config(test_name, test_config, csv_config)
 
     return result
 
@@ -98,13 +102,14 @@ def load_test_groups(config: Dict, tests: Dict[str, TestConfig]) -> Dict[str, Li
 
 
 def load_config_from_parser_args(args: configargparse.Namespace) -> Config:
+    csv_config = CsvConfig.from_parser_args(args)
     config_file = getattr(args, "config_file", None)
     if config_file is not None:
         yaml = YAML(typ="safe")
         config = yaml.load(Path(config_file).read_text())
 
         templates = load_templates(config)
-        tests = load_tests(config, templates)
+        tests = load_tests(config, templates, csv_config)
         groups = load_test_groups(config, tests)
     else:
         logging.warning("Otava configuration file not found or not specified")
@@ -112,6 +117,7 @@ def load_config_from_parser_args(args: configargparse.Namespace) -> Config:
         groups = {}
 
     return Config(
+        csv=csv_config,
         graphite=GraphiteConfig.from_parser_args(args),
         grafana=GrafanaConfig.from_parser_args(args),
         slack=SlackConfig.from_parser_args(args),
@@ -131,6 +137,7 @@ class NestedYAMLConfigFileParser(configargparse.ConfigFileParser):
     """
 
     CLI_CONFIG_SECTIONS = [
+        CsvConfig.NAME,
         GraphiteConfig.NAME,
         GrafanaConfig.NAME,
         SlackConfig.NAME,
@@ -178,7 +185,8 @@ class NestedYAMLConfigFileParser(configargparse.ConfigFileParser):
 
 
 def add_service_option_groups(parser) -> None:
-    """Add Graphite, Grafana, Slack, Postgres, and BigQuery option groups to a parser."""
+    """Add importer and integration option groups to a parser."""
+    CsvConfig.add_parser_args(parser.add_argument_group('CSV Options', 'Options for CSV configuration'))
     GraphiteConfig.add_parser_args(parser.add_argument_group('Graphite Options', 'Options for Graphite configuration'))
     GrafanaConfig.add_parser_args(parser.add_argument_group('Grafana Options', 'Options for Grafana configuration'))
     SlackConfig.add_parser_args(parser.add_argument_group('Slack Options', 'Options for Slack configuration'))

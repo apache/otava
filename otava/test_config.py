@@ -19,7 +19,7 @@ import os.path
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from otava.csv_options import CsvOptions
+from otava.csv_options import CsvConfig, CsvOptions
 
 
 @dataclass
@@ -235,7 +235,9 @@ class InfluxDBTestConfig(TestConfig):
         return list(self.metrics.keys())
 
 
-def create_test_config(name: str, config: Dict) -> TestConfig:
+def create_test_config(
+    name: str, config: Dict, csv_config: Optional[CsvConfig] = None
+) -> TestConfig:
     """
     Loads properties of a test from a dictionary read from otava's config file
     This dictionary must have the `type` property to determine the type of the test.
@@ -244,7 +246,7 @@ def create_test_config(name: str, config: Dict) -> TestConfig:
     """
     test_type = config.get("type")
     if test_type == "csv":
-        return create_csv_test_config(name, config)
+        return create_csv_test_config(name, config, csv_config)
     elif test_type == "graphite":
         return create_graphite_test_config(name, config)
     elif test_type == "histostat":
@@ -263,7 +265,9 @@ def create_test_config(name: str, config: Dict) -> TestConfig:
         raise TestConfigError(f"Unknown test type {test_type} for test {name}")
 
 
-def create_csv_test_config(test_name: str, test_info: Dict) -> CsvTestConfig:
+def create_csv_test_config(
+    test_name: str, test_info: Dict, csv_config: Optional[CsvConfig] = None
+) -> CsvTestConfig:
     csv_options = CsvOptions()
     try:
         file = test_info["file"]
@@ -293,8 +297,14 @@ def create_csv_test_config(test_name: str, test_info: Dict) -> CsvTestConfig:
         raise TestConfigError(f"Attributes of the test {test_name} must be a list")
 
     if test_info.get("csv_options"):
-        csv_options.delimiter = test_info["csv_options"].get("delimiter", ",")
-        csv_options.quote_char = test_info["csv_options"].get("quote_char", '"')
+        per_test_options = test_info["csv_options"]
+        csv_options.delimiter = per_test_options.get("delimiter", ",")
+        csv_options.quote_char = per_test_options.get("quote_char", '"')
+    if csv_config is not None:
+        if csv_config.delimiter is not None:
+            csv_options.delimiter = csv_config.delimiter
+        if csv_config.quote_char is not None:
+            csv_options.quote_char = csv_config.quote_char
     return CsvTestConfig(
         test_name,
         file,

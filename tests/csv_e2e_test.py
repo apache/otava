@@ -63,7 +63,7 @@ def test_analyze_csv():
             metrics: [metric1, metric2]
             csv_options:
               delimiter: ","
-              quotechar: "'"
+              quote_char: "'"
         """
     )
     expected_output = textwrap.dedent(

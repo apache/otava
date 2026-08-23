@@ -34,8 +34,24 @@ tests:
     metrics: [metric1, metric2]
     csv_options:
       delimiter: ','
-      quotechar: "'"
+      quote_char: "'"
 ```
+
+## CSV options
+
+The delimiter and quote character can also be configured globally:
+
+```yaml
+csv:
+  delimiter: ';'
+  quote_char: "'"
+```
+
+The corresponding command-line options are `--csv-delimiter` and
+`--csv-quote-char`. They can also be set through the `CSV_DELIMITER` and
+`CSV_QUOTE_CHAR` environment variables. Explicit global values override the
+`csv_options` values of individual tests; without a global value, existing
+per-test settings and defaults are unchanged.
 
 ## Example
 

@@ -49,7 +49,8 @@ def test_otava_help_output():
     assert (
         result.stdout
         == """\
-usage: otava [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+usage: otava [-h] [--config-file CONFIG_FILE] [--csv-delimiter CSV_DELIMITER]
+             [--csv-quote-char CSV_QUOTE_CHAR] [--graphite-url GRAPHITE_URL]
              [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
              [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
              [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
@@ -74,6 +75,14 @@ options:
   -h, --help            show this help message and exit
   --config-file CONFIG_FILE
                         Otava config file path [env var: OTAVA_CONFIG]
+
+CSV Options:
+  Options for CSV configuration
+
+  --csv-delimiter CSV_DELIMITER
+                        CSV delimiter [env var: CSV_DELIMITER]
+  --csv-quote-char CSV_QUOTE_CHAR
+                        CSV quote character [env var: CSV_QUOTE_CHAR]
 
 Graphite Options:
   Options for Graphite configuration
@@ -159,7 +168,8 @@ def test_otava_analyze_help_output():
         magnitude_option = "  -M MAGNITUDE, --magnitude MAGNITUDE"
 
     usage_and_options = f"""\
-usage: otava analyze [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+usage: otava analyze [-h] [--config-file CONFIG_FILE] [--csv-delimiter CSV_DELIMITER]
+                     [--csv-quote-char CSV_QUOTE_CHAR] [--graphite-url GRAPHITE_URL]
                      [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
                      [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
                      [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
@@ -227,6 +237,14 @@ options:
                         enough to include not more than a few change points (optimally at most 1)
   --orig-edivisive      use the original edivisive algorithm with no windowing and weak change
                         points analysis improvements
+
+CSV Options:
+  Options for CSV configuration
+
+  --csv-delimiter CSV_DELIMITER
+                        CSV delimiter [env var: CSV_DELIMITER]
+  --csv-quote-char CSV_QUOTE_CHAR
+                        CSV quote character [env var: CSV_QUOTE_CHAR]
 
 Graphite Options:
   Options for Graphite configuration
@@ -301,7 +319,8 @@ def test_otava_list_tests_help_output():
     assert (
         result.stdout
         == """\
-usage: otava list-tests [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+usage: otava list-tests [-h] [--config-file CONFIG_FILE] [--csv-delimiter CSV_DELIMITER]
+                        [--csv-quote-char CSV_QUOTE_CHAR] [--graphite-url GRAPHITE_URL]
                         [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
                         [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
                         [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
@@ -322,6 +341,14 @@ options:
   -h, --help            show this help message and exit
   --config-file CONFIG_FILE
                         Otava config file path [env var: OTAVA_CONFIG]
+
+CSV Options:
+  Options for CSV configuration
+
+  --csv-delimiter CSV_DELIMITER
+                        CSV delimiter [env var: CSV_DELIMITER]
+  --csv-quote-char CSV_QUOTE_CHAR
+                        CSV quote character [env var: CSV_QUOTE_CHAR]
 
 Graphite Options:
   Options for Graphite configuration
@@ -393,7 +420,8 @@ def test_otava_list_metrics_help_output():
     assert (
         result.stdout
         == """\
-usage: otava list-metrics [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+usage: otava list-metrics [-h] [--config-file CONFIG_FILE] [--csv-delimiter CSV_DELIMITER]
+                          [--csv-quote-char CSV_QUOTE_CHAR] [--graphite-url GRAPHITE_URL]
                           [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
                           [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
                           [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
@@ -414,6 +442,14 @@ options:
   -h, --help            show this help message and exit
   --config-file CONFIG_FILE
                         Otava config file path [env var: OTAVA_CONFIG]
+
+CSV Options:
+  Options for CSV configuration
+
+  --csv-delimiter CSV_DELIMITER
+                        CSV delimiter [env var: CSV_DELIMITER]
+  --csv-quote-char CSV_QUOTE_CHAR
+                        CSV quote character [env var: CSV_QUOTE_CHAR]
 
 Graphite Options:
   Options for Graphite configuration
@@ -486,7 +522,8 @@ def test_otava_list_groups_help_output():
     assert (
         result.stdout
         == """\
-usage: otava list-groups [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+usage: otava list-groups [-h] [--config-file CONFIG_FILE] [--csv-delimiter CSV_DELIMITER]
+                         [--csv-quote-char CSV_QUOTE_CHAR] [--graphite-url GRAPHITE_URL]
                          [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
                          [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
                          [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
@@ -503,6 +540,14 @@ options:
   -h, --help            show this help message and exit
   --config-file CONFIG_FILE
                         Otava config file path [env var: OTAVA_CONFIG]
+
+CSV Options:
+  Options for CSV configuration
+
+  --csv-delimiter CSV_DELIMITER
+                        CSV delimiter [env var: CSV_DELIMITER]
+  --csv-quote-char CSV_QUOTE_CHAR
+                        CSV quote character [env var: CSV_QUOTE_CHAR]
 
 Graphite Options:
   Options for Graphite configuration
@@ -574,7 +619,8 @@ def test_otava_remove_annotations_help_output():
     assert (
         result.stdout
         == """\
-usage: otava remove-annotations [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+usage: otava remove-annotations [-h] [--config-file CONFIG_FILE] [--csv-delimiter CSV_DELIMITER]
+                                [--csv-quote-char CSV_QUOTE_CHAR] [--graphite-url GRAPHITE_URL]
                                 [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
                                 [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
                                 [--postgres-hostname POSTGRES_HOSTNAME]
@@ -598,6 +644,14 @@ options:
   --config-file CONFIG_FILE
                         Otava config file path [env var: OTAVA_CONFIG]
   --force               don't ask questions, just do it
+
+CSV Options:
+  Options for CSV configuration
+
+  --csv-delimiter CSV_DELIMITER
+                        CSV delimiter [env var: CSV_DELIMITER]
+  --csv-quote-char CSV_QUOTE_CHAR
+                        CSV quote character [env var: CSV_QUOTE_CHAR]
 
 Graphite Options:
   Options for Graphite configuration
@@ -669,7 +723,8 @@ def test_otava_validate_help_output():
     assert (
         result.stdout
         == """\
-usage: otava validate [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
+usage: otava validate [-h] [--config-file CONFIG_FILE] [--csv-delimiter CSV_DELIMITER]
+                      [--csv-quote-char CSV_QUOTE_CHAR] [--graphite-url GRAPHITE_URL]
                       [--grafana-url GRAFANA_URL] [--grafana-user GRAFANA_USER]
                       [--grafana-password GRAFANA_PASSWORD] [--slack-token SLACK_TOKEN]
                       [--postgres-hostname POSTGRES_HOSTNAME] [--postgres-port POSTGRES_PORT]
@@ -686,6 +741,14 @@ options:
   -h, --help            show this help message and exit
   --config-file CONFIG_FILE
                         Otava config file path [env var: OTAVA_CONFIG]
+
+CSV Options:
+  Options for CSV configuration
+
+  --csv-delimiter CSV_DELIMITER
+                        CSV delimiter [env var: CSV_DELIMITER]
+  --csv-quote-char CSV_QUOTE_CHAR
+                        CSV quote character [env var: CSV_QUOTE_CHAR]
 
 Graphite Options:
   Options for Graphite configuration

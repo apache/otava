@@ -37,3 +37,7 @@ postgres:
   username: config_postgres_username
   password: config_postgres_password
   database: config_postgres_database
+
+csv:
+  delimiter: ";"
+  quote_char: "'"

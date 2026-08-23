@@ -115,7 +115,7 @@ def _create_csv_config_file_for_test(td_path: Path):
                 metrics: [metric1, metric2]
                 csv_options:
                     delimiter: ","
-                    quotechar: "'"
+                    quote_char: "'"
         """
     )
     config_path = td_path / "otava.yaml"
