@@ -38,6 +38,25 @@ and `INFLUXDB_TOKEN`, or the `--influxdb-host`, `--influxdb-database`, and
 `--influxdb-token` command-line options. Command-line values take precedence
 over environment variables, which take precedence over YAML.
 
+## Reproducible example
+
+The bundled example starts InfluxDB 3 Core with authenticated, in-memory
+storage, seeds deterministic latency data, and runs Otava against it:
+
+```bash
+docker build -t apache/otava:latest .
+docker compose -f examples/influxdb/docker-compose.yaml run --rm otava \
+  analyze api_latency_sql --branch main --since 2025-01-01
+docker compose -f examples/influxdb/docker-compose.yaml down
+```
+
+Run `api_latency_influxql` instead to query the same data with InfluxQL.
+
+The admin token committed under `examples/influxdb/` is a fixed test
+credential, and the server discards its in-memory data when stopped. Both are
+for this local demonstration only. Use a securely generated token and durable
+object storage for production deployments.
+
 ## Test configuration
 
 ```yaml
@@ -73,7 +92,7 @@ when `--branch` is supplied.
 Run the analysis with:
 
 ```bash
-otava analyze api_latency --branch main --last 100
+otava analyze api_latency_sql --branch main --last 100
 ```
 
 InfluxDB is import-only in this release; Otava does not write change points

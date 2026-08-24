@@ -1,0 +1,59 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+services:
+  influxdb:
+    image: influxdb:3.11.2-core
+    command:
+      - influxdb3
+      - serve
+      - --node-id=otava-example
+      - --object-store=memory
+      - --admin-token-file=/run/secrets/admin-token
+    ports:
+      - "8181:8181"
+    secrets:
+      - admin-token
+
+  seed:
+    image: influxdb:3.11.2-core
+    entrypoint: ["/bin/sh", "/example/seed.sh"]
+    depends_on:
+      - influxdb
+    environment:
+      INFLUXDB3_AUTH_TOKEN: apiv3_otava_example_admin_token_2026
+      INFLUXDB3_DATABASE_NAME: performance
+      INFLUXDB3_HOST_URL: http://influxdb:8181
+    volumes:
+      - .:/example:ro
+
+  otava:
+    image: apache/otava:latest
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    environment:
+      INFLUXDB_HOST: http://influxdb:8181
+      INFLUXDB_DATABASE: performance
+      INFLUXDB_TOKEN: apiv3_otava_example_admin_token_2026
+      OTAVA_CONFIG: /config/otava.yaml
+    volumes:
+      - ./otava.yaml:/config/otava.yaml:ro
+
+secrets:
+  admin-token:
+    file: ./admin-token.json

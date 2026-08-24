@@ -29,6 +29,7 @@ import pytest
 def container(
     image: str,
     *,
+    command: list[str] | None = None,
     env: dict[str, str] | None = None,
     ports: list[int] | None = None,
     volumes: dict[str, str] | None = None,
@@ -39,6 +40,7 @@ def container(
 
     Args:
         image: Docker image to run (e.g., "postgres:latest").
+        command: Optional command and arguments to run instead of the image default.
         env: Optional dict of environment variables to set in the container.
         ports: Optional list of container ports to publish (will be mapped to random host ports).
         volumes: Optional dict mapping host paths to container paths for volume mounts.
@@ -75,6 +77,9 @@ def container(
                 cmd.extend(["--publish", str(port)])
 
         cmd.append(image)
+
+        if command:
+            cmd.extend(command)
 
         # Start the container
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)

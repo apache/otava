@@ -23,11 +23,27 @@ influxdb:
   token: ${INFLUXDB_TOKEN}
 
 tests:
-  api_latency:
+  api_latency_sql:
     type: influxdb
     query_language: sql
     query: |
       SELECT time, branch, p95_ms, commit
+      FROM api_latency
+      WHERE branch = %{BRANCH}
+      ORDER BY time
+    time_column: time
+    attributes: [branch, commit]
+    metrics:
+      p95:
+        column: p95_ms
+        direction: -1
+        scale: 1
+
+  api_latency_influxql:
+    type: influxdb
+    query_language: influxql
+    query: |
+      SELECT time, branch, commit, p95_ms
       FROM api_latency
       WHERE branch = %{BRANCH}
       ORDER BY time
