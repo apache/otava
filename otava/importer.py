@@ -20,7 +20,7 @@ import json
 from collections import OrderedDict
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
@@ -861,7 +861,16 @@ class InfluxDBImporter(Importer):
                 raise DataImportError(
                     f"Test {test_conf.name} uses %{{BRANCH}} in query but --branch was not specified"
                 )
-            branch_literal = "'" + selector.branch.replace("'", "''") + "'"
+            if test_conf.query_language == "influxql":
+                escaped_branch = (
+                    selector.branch.replace("\\", "\\\\")
+                    .replace("'", "\\'")
+                    .replace("\r", "\\r")
+                    .replace("\n", "\\n")
+                )
+            else:
+                escaped_branch = selector.branch.replace("'", "''")
+            branch_literal = f"'{escaped_branch}'"
             query = query.replace("%{BRANCH}", branch_literal)
 
         try:
@@ -882,6 +891,8 @@ class InfluxDBImporter(Importer):
         attributes = {columns[index]: [] for index in attr_indexes}
         for row in rows:
             timestamp = row[time_index]
+            if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
             if timestamp < since_time or timestamp >= until_time:
                 continue
             time.append(timestamp.timestamp())

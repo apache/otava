@@ -7,6 +7,13 @@
 # with the License.  You may obtain a copy of the License at
 #
 #   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 
 import os
 from datetime import datetime, timezone
@@ -94,12 +101,15 @@ def test_influxdb_importer_reads_arrow_table_and_applies_selection():
     client = Mock()
     client.query.return_value = pa.table(
         {
-            "time": [
-                datetime(2023, 12, 31, tzinfo=timezone.utc),
-                datetime(2024, 1, 2, tzinfo=timezone.utc),
-                datetime(2024, 1, 3, tzinfo=timezone.utc),
-                datetime(2024, 1, 5, tzinfo=timezone.utc),
-            ],
+            "time": pa.array(
+                [
+                    datetime(2023, 12, 31),
+                    datetime(2024, 1, 2),
+                    datetime(2024, 1, 3),
+                    datetime(2024, 1, 5),
+                ],
+                type=pa.timestamp("ns"),
+            ),
             "branch": ["main", "main", "main", "main"],
             "commit": ["before", "b", "c", "after"],
             "p95_ms": [10, 20, 30, 40],
@@ -119,12 +129,36 @@ def test_influxdb_importer_reads_arrow_table_and_applies_selection():
     series = InfluxDBImporter(backend).fetch_data(test, chosen)
 
     assert series.branch is None
+    assert series.time == [1704153600.0, 1704240000.0]
     assert series.data == {"p95": [20.0, 30.0]}
     assert series.attributes == {"branch": ["main", "main"], "commit": ["b", "c"]}
     assert client.query.call_args.kwargs == {"query": "SELECT * FROM latency", "language": "sql"}
 
 
-def test_influxdb_importer_executes_influxql_and_escapes_branch():
+def test_influxdb_importer_escapes_branch_for_sql():
+    backend = Mock()
+    backend.fetch_data.return_value = (
+        ["time", "p95_ms"],
+        [(datetime(2024, 1, 2, tzinfo=timezone.utc), 4)],
+    )
+    test = InfluxDBTestConfig(
+        "latency",
+        "SELECT * FROM latency WHERE branch = %{BRANCH}",
+        metrics=[InfluxDBMetric("p95", 1, 1.0, "p95_ms")],
+    )
+    chosen = selector()
+    chosen.branch = "release'candidate"
+
+    series = InfluxDBImporter(backend).fetch_data(test, chosen)
+
+    assert series.data["p95"] == [4.0]
+    assert backend.fetch_data.call_args.args == (
+        "SELECT * FROM latency WHERE branch = 'release''candidate'",
+        "sql",
+    )
+
+
+def test_influxdb_importer_escapes_branch_for_influxql():
     backend = Mock()
     backend.fetch_data.return_value = (
         ["time", "p95_ms"],
@@ -137,11 +171,15 @@ def test_influxdb_importer_executes_influxql_and_escapes_branch():
         metrics=[InfluxDBMetric("p95", 1, 1.0, "p95_ms")],
     )
     chosen = selector()
-    chosen.branch = "release'candidate"
+    chosen.branch = "release'candidate\\path\r\nnext"
+
     series = InfluxDBImporter(backend).fetch_data(test, chosen)
+
     assert series.data["p95"] == [4.0]
-    assert "branch = 'release''candidate'" in backend.fetch_data.call_args.args[0]
-    assert backend.fetch_data.call_args.args[1] == "influxql"
+    assert backend.fetch_data.call_args.args == (
+        "SELECT * FROM latency WHERE branch = 'release\\'candidate\\\\path\\r\\nnext'",
+        "influxql",
+    )
 
 
 def test_influxdb_importer_reports_missing_columns_and_client_errors():
