@@ -15,22 +15,56 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os
 import subprocess
-from datetime import datetime, timezone
+import textwrap
 from pathlib import Path
 
 import pytest
-from e2e_test_utils import container
-
-from otava.config import load_config_from_file
-from otava.data_selector import DataSelector
-from otava.importer import InfluxDBImporter
-from otava.influxdb import InfluxDB
+from e2e_test_utils import _remove_trailing_whitespaces, container
 
 INFLUXDB_IMAGE = "influxdb:3.11.2-core"
 INFLUXDB_PORT = 8181
 INFLUXDB_TOKEN = "apiv3_otava_example_admin_token_2026"
 EXAMPLE_DIR = Path("examples/influxdb").resolve()
+
+
+def _analyze(test_name: str, host: str) -> str:
+    command = [
+        "uv",
+        "run",
+        "otava",
+        "analyze",
+        test_name,
+        "--influxdb-host",
+        host,
+        "--influxdb-database",
+        "performance",
+        "--influxdb-token",
+        INFLUXDB_TOKEN,
+        "--branch",
+        "main",
+        "--since",
+        "2025-01-01T00:00:00Z",
+        "--until",
+        "2025-01-07T00:00:00Z",
+    ]
+    proc = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        timeout=600,
+        env=dict(os.environ, OTAVA_CONFIG=str(EXAMPLE_DIR / "otava.yaml")),
+    )
+    if proc.returncode != 0:
+        pytest.fail(
+            "InfluxDB analysis command returned non-zero exit code.\n\n"
+            f"Command: {proc.args!r}\n"
+            f"Exit code: {proc.returncode}\n\n"
+            f"Stdout:\n{proc.stdout}\n\n"
+            f"Stderr:\n{proc.stderr}\n"
+        )
+    return _remove_trailing_whitespaces(proc.stdout)
 
 
 def test_influxdb_sql_and_influxql_return_identical_seeded_data():
@@ -73,37 +107,25 @@ def test_influxdb_sql_and_influxql_return_identical_seeded_data():
                 f"Stderr:\n{seed.stderr}\n"
             )
 
+        expected_output = textwrap.dedent(
+            """\
+            time                       branch    commit      p95
+            -------------------------  --------  --------  -----
+            2025-01-01 00:00:00 +0000  main      a1b2c3d      87
+            2025-01-02 00:00:00 +0000  main      b2c3d4e      85
+            2025-01-03 00:00:00 +0000  main      c3d4e5f      89
+                                                           ·····
+                                                           +37.2%
+                                                           ·····
+            2025-01-04 00:00:00 +0000  main      d4e5f6a     118
+            2025-01-05 00:00:00 +0000  main      e5f6a7b     121
+            2025-01-06 00:00:00 +0000  main      f6a7b8c     119
+            """
+        ).rstrip("\n")
+
         host = f"http://localhost:{port_map[INFLUXDB_PORT]}"
-        config = load_config_from_file(
-            str(EXAMPLE_DIR / "otava.yaml"),
-            arg_overrides=[
-                "--influxdb-host",
-                host,
-                "--influxdb-token",
-                INFLUXDB_TOKEN,
-            ],
-        )
-        importer = InfluxDBImporter(InfluxDB(config.influxdb))
-        selector = DataSelector()
-        selector.branch = "main"
-        selector.since_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
-        selector.until_time = datetime(2025, 1, 7, tzinfo=timezone.utc)
-
-        sql = importer.fetch_data(config.tests["api_latency_sql"], selector)
-        influxql = importer.fetch_data(config.tests["api_latency_influxql"], selector)
-
-        expected_times = [
-            datetime(2025, 1, day, tzinfo=timezone.utc).timestamp()
-            for day in range(1, 7)
+        outputs = [
+            _analyze(test_name, host)
+            for test_name in ("api_latency_sql", "api_latency_influxql")
         ]
-        expected_attributes = {
-            "branch": ["main"] * 6,
-            "commit": ["a1b2c3d", "b2c3d4e", "c3d4e5f", "d4e5f6a", "e5f6a7b", "f6a7b8c"],
-        }
-        expected_data = {"p95": [87.0, 85.0, 89.0, 118.0, 121.0, 119.0]}
-
-        assert sql.branch == influxql.branch == "main"
-        assert sql.time == influxql.time == expected_times
-        assert sql.attributes == influxql.attributes == expected_attributes
-        assert sql.data == influxql.data == expected_data
-        assert sql.metrics == influxql.metrics
+        assert outputs == [expected_output, expected_output]

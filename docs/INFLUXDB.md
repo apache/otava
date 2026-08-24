@@ -61,7 +61,7 @@ object storage for production deployments.
 
 ```yaml
 tests:
-  api_latency:
+  api_latency_sql:
     type: influxdb
     query_language: sql
     query: |
