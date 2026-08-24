@@ -878,13 +878,19 @@ class InfluxDBImporter(Importer):
         except Exception as err:
             raise DataImportError(f"Failed to import test {test_conf.name}: {err}") from err
 
-        try:
-            time_index = columns.index(test_conf.time_column)
-            attr_indexes = [columns.index(column) for column in test_conf.attributes]
-            metric_names = [metric.name for metric in metrics.values()]
-            metric_indexes = [columns.index(metric.column) for metric in metrics.values()]
-        except ValueError as err:
-            raise DataImportError(f"Column not found {err.args[0]}")
+        required_columns = [
+            test_conf.time_column,
+            *test_conf.attributes,
+            *(metric.column for metric in metrics.values()),
+        ]
+        for column in required_columns:
+            if column not in columns:
+                raise DataImportError(f"Column not found {column!r} is not in list")
+
+        time_index = columns.index(test_conf.time_column)
+        attr_indexes = [columns.index(column) for column in test_conf.attributes]
+        metric_names = [metric.name for metric in metrics.values()]
+        metric_indexes = [columns.index(metric.column) for metric in metrics.values()]
 
         time = []
         data = {name: [] for name in metric_names}
