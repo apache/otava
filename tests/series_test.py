@@ -15,12 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import json
 import time
+from datetime import datetime
 from random import random
 
 import pytest
+from pydantic import ValidationError
 
 from otava.change_point_divisive.base import ChangePointSerializer
+from otava.serialization import AnalysisOptionsModel, AnalyzedSeriesModel
 from otava.series import AnalysisOptions, AnalyzedSeries, Metric, Series
 
 
@@ -43,6 +47,28 @@ def test_change_point_detection():
     assert cps._change_points[0].changes["series2"].metric == "series2"
     assert cps._change_points[1].time == 6
     assert cps._change_points[1].changes["series1"].metric == "series1"
+
+
+def test_analysis_options_is_pydantic_model():
+    options = AnalysisOptions(
+        window_len="25",
+        max_pvalue="0.05",
+        min_magnitude=1,
+        orig_edivisive=True,
+    )
+
+    assert isinstance(options, AnalysisOptionsModel)
+    assert options.model_dump(mode="json") == {
+        "window_len": 25,
+        "max_pvalue": 0.05,
+        "min_magnitude": 1.0,
+        "orig_edivisive": True,
+    }
+
+
+def test_analysis_options_rejects_unknown_fields():
+    with pytest.raises(ValidationError):
+        AnalysisOptions(no_such_option=True)
 
 
 def test_change_point_detection_many():
@@ -266,6 +292,172 @@ def test_analyzed_series_json_round_trip():
     ] == [4, 11]
     assert restored.to_json()["change_points"] == payload["change_points"]
     assert restored.to_json()["weak_change_points"] == payload["weak_change_points"]
+
+
+def test_analyzed_series_json_round_trip_through_json_module():
+    series_1 = [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55]
+    series_2 = [2.02, 2.03, 2.01, 2.04, 1.82, 1.85, 1.79, 1.81, 1.80, 1.76, 1.78]
+    time = list(range(len(series_1)))
+    series = Series(
+        "test",
+        branch=None,
+        time=time,
+        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
+        data={"series1": series_1, "series2": series_2},
+        attributes={},
+    )
+
+    analyzed_series = series.analyze()
+    analyzed_series.append(
+        time=[len(time)], new_data={"series1": [0.5], "series2": [1.97]}, attributes={}
+    )
+
+    payload = analyzed_series.to_json()
+    decoded = json.loads(json.dumps(payload))
+    restored = AnalyzedSeries.from_json(decoded)
+
+    assert isinstance(restored.change_points_timestamp, datetime)
+    assert restored.to_json()["change_points"] == decoded["change_points"]
+    assert restored.to_json()["weak_change_points"] == decoded["weak_change_points"]
+
+
+def test_analyzed_series_json_round_trip_preserves_json_scalar_attributes():
+    values = [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55]
+    attributes = {
+        "commit": [None] * len(values),
+        "build": list(range(len(values))),
+        "passed": [True] * len(values),
+    }
+    series = Series(
+        "test",
+        branch=None,
+        time=list(range(len(values))),
+        metrics={"series": Metric(1, 1.0)},
+        data={"series": values},
+        attributes=attributes,
+    )
+
+    decoded = json.loads(json.dumps(series.analyze().to_json()))
+    restored = AnalyzedSeries.from_json(decoded)
+
+    assert restored.to_json()["attributes"] == attributes
+    assert restored.to_json()["change_points"]["series"][0]["attributes"] == {
+        "commit": None,
+        "build": 6,
+        "passed": True,
+    }
+
+
+def test_analyzed_series_json_round_trip_preserves_fractional_timestamps():
+    values = [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55]
+    timestamps = [1_700_000_000.25 + index for index in range(len(values))]
+    series = Series(
+        "test",
+        branch=None,
+        time=timestamps,
+        metrics={"series": Metric(1, 1.0)},
+        data={"series": values},
+        attributes={},
+    )
+
+    payload = series.analyze().to_json()
+    restored = AnalyzedSeries.from_json(json.loads(json.dumps(payload)))
+
+    assert payload["time"] == timestamps
+    assert restored.time() == timestamps
+    assert restored.to_json()["change_points"]["series"][0]["time"] == timestamps[6]
+
+
+def test_analyzed_series_json_round_trip_preserves_integer_timestamp_types():
+    values = [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55]
+    timestamps = list(range(len(values)))
+    series = Series(
+        "test",
+        branch=None,
+        time=timestamps,
+        metrics={"series": Metric(1, 1.0)},
+        data={"series": values},
+        attributes={},
+    )
+
+    payload = series.analyze().to_json()
+    restored_payload = AnalyzedSeries.from_json(payload).to_json()
+
+    assert all(type(timestamp) is int for timestamp in restored_payload["time"])
+    assert type(restored_payload["change_points"]["series"][0]["time"]) is int
+
+
+def test_analyzed_series_json_round_trip_preserves_current_and_legacy_metric_units():
+    series = Series(
+        "test",
+        branch=None,
+        time=[1, 2],
+        metrics={"latency": Metric(1, 1.0, "ms")},
+        data={"latency": [1.0, 2.0]},
+        attributes={},
+    )
+
+    payload = series.analyze().to_json()
+    current = AnalyzedSeries.from_json(payload)
+    payload["metrics"]["latency"] = "seconds"
+    legacy = AnalyzedSeries.from_json(payload)
+
+    assert (
+        current.metric("latency").unit,
+        current.to_json()["metrics"]["latency"]["unit"],
+        legacy.metric("latency").unit,
+        legacy.to_json()["metrics"]["latency"]["unit"],
+    ) == ("ms", "ms", "seconds", "seconds")
+
+
+def test_analyzed_series_from_json_validates_options_with_pydantic():
+    series_1 = [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55]
+    time = list(range(len(series_1)))
+    series = Series(
+        "test",
+        branch=None,
+        time=time,
+        metrics={"series1": Metric(1, 1.0)},
+        data={"series1": series_1},
+        attributes={},
+    )
+
+    payload = series.analyze().to_json()
+    payload["options"]["window_len"] = "25"
+    restored = AnalyzedSeries.from_json(payload)
+
+    assert isinstance(restored.options, AnalysisOptions)
+    assert restored.options.window_len == 25
+
+
+def test_analyzed_series_json_uses_pydantic_model_shape():
+    series_1 = [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55]
+    series_2 = [2.02, 2.03, 2.01, 2.04, 1.82, 1.85, 1.79, 1.81, 1.80, 1.76, 1.78]
+    time = list(range(len(series_1)))
+    series = Series(
+        "test",
+        branch=None,
+        time=time,
+        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
+        data={"series1": series_1, "series2": series_2},
+        attributes={},
+    )
+
+    analyzed_series = series.analyze()
+    analyzed_series.append(
+        time=[len(time)], new_data={"series1": [0.5], "series2": [1.97]}, attributes={}
+    )
+
+    payload = analyzed_series.to_json()
+    model = AnalyzedSeriesModel.model_validate(payload)
+    dumped = model.model_dump(mode="python")
+
+    change = dumped["change_points"]["series2"][0]["changes"][0]
+    weak_change = dumped["weak_change_points"]["series2"][1]["changes"][0]
+    assert isinstance(change["mean_before"], float)
+    assert isinstance(change["forward_change_percent"], float)
+    assert isinstance(weak_change["pvalue"], float)
+    assert AnalyzedSeries.from_json(dumped).to_json()["change_points"] == dumped["change_points"]
 
 
 def test_validate():

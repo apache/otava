@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Optional
 
+from pydantic import TypeAdapter
+
 from otava.analysis import (
     TTestStats,
     compute_change_points,
@@ -32,28 +34,13 @@ from otava.change_point_divisive.base import (
     ChangePointsByMetric,
     ChangePointsByTime,
 )
+from otava.serialization import AnalysisOptionsModel, AnalyzedSeriesModel, JsonScalar
+
+_datetime_adapter = TypeAdapter(datetime)
 
 
-@dataclass
-class AnalysisOptions:
-    window_len: int
-    max_pvalue: float
-    min_magnitude: float
-    orig_edivisive: bool
-
-    def __init__(self):
-        self.window_len = 50
-        self.max_pvalue = 0.001
-        self.min_magnitude = 0.0
-        self.orig_edivisive = False
-
-    def to_json(self):
-        return {
-            "window_len": self.window_len,
-            "max_pvalue": self.max_pvalue,
-            "min_magnitude": self.min_magnitude,
-            "orig_edivisive": self.orig_edivisive,
-        }
+class AnalysisOptions(AnalysisOptionsModel):
+    pass
 
 
 @dataclass
@@ -65,7 +52,7 @@ class Metric:
     def __init__(self, direction: int = 1, scale: float = 1.0, unit: str = ""):
         self.direction = direction
         self.scale = scale
-        self.unit = ""
+        self.unit = unit
 
     def to_json(self):
         return {"direction": self.direction, "scale": self.scale, "unit": self.unit}
@@ -80,19 +67,19 @@ class Series:
 
     test_name: str
     branch: Optional[str]
-    time: List[int]
+    time: List[int | float]
     metrics: Dict[str, Metric]
-    attributes: Dict[str, List[str]]
+    attributes: Dict[str, List[JsonScalar]]
     data: Dict[str, List[float]]
 
     def __init__(
         self,
         test_name: str,
         branch: Optional[str],
-        time: List[int],
+        time: List[int | float],
         metrics: Dict[str, Metric],
         data: Dict[str, List[float]],
-        attributes: Dict[str, List[str]],
+        attributes: Dict[str, List[JsonScalar]],
     ):
         self.test_name = test_name
         self.branch = branch
@@ -103,7 +90,7 @@ class Series:
         assert all(len(x) == len(time) for x in data.values())
         assert all(len(x) == len(time) for x in attributes.values())
 
-    def attributes_at(self, index: int) -> Dict[str, str]:
+    def attributes_at(self, index: int) -> Dict[str, JsonScalar]:
         result = {}
         for k, v in self.attributes.items():
             result[k] = v[index]
@@ -124,7 +111,9 @@ class Series:
                 result.append(i)
         return result
 
-    def analyze(self, options: AnalysisOptions = AnalysisOptions()) -> "AnalyzedSeries":
+    def analyze(self, options: Optional[AnalysisOptions] = None) -> "AnalyzedSeries":
+        if options is None:
+            options = AnalysisOptions()
         logging.info(f"Computing change points for test {self.test_name}...")
         return AnalyzedSeries(self, options)
 
@@ -344,8 +333,8 @@ class AnalyzedSeries:
     def len(self) -> int:
         return len(self.__series.time)
 
-    def time(self) -> List[int]:
-        return [int(t) for t in self.__series.time]
+    def time(self) -> List[int | float]:
+        return list(self.__series.time)
 
     def data(self, metric: str) -> List[float]:
         return [float(d) for d in self.__series.data[metric]]
@@ -353,10 +342,10 @@ class AnalyzedSeries:
     def attributes(self) -> Iterable[str]:
         return self.__series.attributes.keys()
 
-    def attributes_at(self, index: int) -> Dict[str, str]:
+    def attributes_at(self, index: int) -> Dict[str, JsonScalar]:
         return self.__series.attributes_at(index)
 
-    def attribute_values(self, attribute: str) -> List[str]:
+    def attribute_values(self, attribute: str) -> List[JsonScalar]:
         return self.__series.attributes[attribute]
 
     def metric_names(self) -> Iterable[str]:
@@ -371,31 +360,36 @@ class AnalyzedSeries:
         for metric_name in self.change_points.metrics():
             change_points_json[metric_name] = []
             for cp in cpbm.select_metrics(metric_name):
-                change_points_json[metric_name].append(cp.to_json(rounded=False))
+                change_points_json[metric_name].append(cp.to_json())
 
         weak_change_points_json = {}
         wcpbm = self.weak_change_points.by_metric()
         for metric_name in self.weak_change_points.metrics():
             weak_change_points_json[metric_name] = []
             for cp in wcpbm.select_metrics(metric_name):
-                weak_change_points_json[metric_name].append(cp.to_json(rounded=False))
+                weak_change_points_json[metric_name].append(cp.to_json())
 
         data_json = {}
         for metric, datapoints in self.__series.data.items():
             data_json[metric] = [float(d) if d is not None else None for d in datapoints]
 
-        return {
+        metrics_json = {}
+        for metric, unit in self.__series.metrics.items():
+            metrics_json[metric] = unit.to_json()
+
+        payload = {
             "test_name": self.test_name(),
             "time": self.time(),
             "change_points_timestamp": self.change_points_timestamp,
             "branch_name": self.branch_name(),
-            "options": self.options.to_json(),
-            "metrics": self.__series.metrics,
+            "options": self.options.model_dump(mode="json"),
+            "metrics": metrics_json,
             "attributes": self.__series.attributes,
-            "data": self.__series.data,
+            "data": data_json,
             "change_points": change_points_json,
             "weak_change_points": weak_change_points_json,
         }
+        return AnalyzedSeriesModel.model_validate(payload).model_dump(mode="json")
 
     @classmethod
     def from_json(cls, analyzed_json):
@@ -445,8 +439,15 @@ class AnalyzedSeries:
 
         new_metrics = {}
 
-        for metric_name, unit in analyzed_json["metrics"].items():
-            new_metrics[metric_name] = Metric(None, None, unit)
+        for metric_name, metric_json in analyzed_json["metrics"].items():
+            if isinstance(metric_json, dict):
+                new_metrics[metric_name] = Metric(
+                    metric_json.get("direction"),
+                    metric_json.get("scale"),
+                    metric_json.get("unit", ""),
+                )
+            else:
+                new_metrics[metric_name] = Metric(None, None, metric_json)
 
         new_series = Series(
             analyzed_json["test_name"],
@@ -457,11 +458,7 @@ class AnalyzedSeries:
             analyzed_json["attributes"],
         )
 
-        new_options = AnalysisOptions()
-        new_options.window_len = analyzed_json["options"]["window_len"]
-        new_options.max_pvalue = analyzed_json["options"]["max_pvalue"]
-        new_options.min_magnitude = analyzed_json["options"]["min_magnitude"]
-        new_options.orig_edivisive = analyzed_json["options"]["orig_edivisive"]
+        new_options = AnalysisOptions.model_validate(analyzed_json["options"])
 
         new_change_points = change_points_from_json(analyzed_json["change_points"])
         new_weak_change_points = change_points_from_json(
@@ -472,7 +469,9 @@ class AnalyzedSeries:
         analyzed_series.weak_change_points = new_weak_change_points
 
         if "change_points_timestamp" in analyzed_json.keys():
-            analyzed_series.change_points_timestamp = analyzed_json["change_points_timestamp"]
+            analyzed_series.change_points_timestamp = _datetime_adapter.validate_python(
+                analyzed_json["change_points_timestamp"]
+            )
             analyzed_series.change_points_by_time = AnalyzedSeries.__group_change_points_by_time(
                 analyzed_series.__series, analyzed_series.change_points
             )
