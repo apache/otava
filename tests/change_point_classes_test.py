@@ -28,6 +28,8 @@ otava.change_point_divisive.base:
 
 import numpy as np
 import pytest
+from hypothesis import example, given, settings
+from hypothesis import strategies as st
 
 from otava.change_point_divisive.base import (
     BaseStats,
@@ -57,6 +59,129 @@ def make_group(time, metric="m", index=3, commit="sha"):
     return ChangePointGroup(
         time=time, attributes={"commit": commit}, changes={metric: make_cp(metric, index)}
     )
+
+
+SWARM_METRICS = ("errors", "latency", "throughput")
+GOLDEN_HISTORY = (
+    (10.0, "commit-a", (("errors", 11), ("latency", 12))),
+    (20.0, "commit-b", (("throughput", 21),)),
+    (30.0, "commit-c", (("latency", 31), ("throughput", 32))),
+)
+
+
+@st.composite
+def history_specs(draw):
+    times = draw(
+        st.lists(
+            st.integers(min_value=1, max_value=1_000),
+            min_size=1,
+            max_size=12,
+            unique=True,
+        ).map(sorted)
+    )
+    history = []
+    for row_number, time in enumerate(times):
+        metrics = draw(
+            st.sets(
+                st.sampled_from(SWARM_METRICS),
+                min_size=1,
+                max_size=len(SWARM_METRICS),
+            )
+        )
+        changes = tuple(
+            (metric, row_number * len(SWARM_METRICS) + SWARM_METRICS.index(metric))
+            for metric in sorted(metrics)
+        )
+        history.append((float(time), f"commit-{time}", changes))
+    return tuple(history)
+
+
+def make_history_groups(history):
+    return [
+        ChangePointGroup(
+            time=time,
+            attributes={"commit": commit},
+            changes={metric: make_cp(metric, index) for metric, index in changes},
+        )
+        for time, commit, changes in history
+    ]
+
+
+def group_snapshot(group):
+    return (
+        group.time,
+        group.commit(),
+        tuple(
+            (metric, group[metric].metric, group[metric].index)
+            for metric in sorted(group.metrics())
+        ),
+    )
+
+
+def history_snapshot(change_points):
+    return [group_snapshot(group) for group in change_points]
+
+
+def expected_history_snapshot(history):
+    return [
+        (time, commit, tuple((metric, metric, index) for metric, index in changes))
+        for time, commit, changes in history
+    ]
+
+
+def expected_metric_snapshots(history):
+    metrics = {metric for _, _, changes in history for metric, _ in changes}
+    return {
+        metric: [
+            (time, commit, ((metric, metric, dict(changes)[metric]),))
+            for time, commit, changes in history
+            if metric in dict(changes)
+        ]
+        for metric in metrics
+    }
+
+
+def metric_snapshots(change_points):
+    return {
+        metric: history_snapshot(groups) for metric, groups in change_points.items()
+    }
+
+
+def assert_read_api(change_points, expected, expected_by_metric):
+    assert history_snapshot(change_points) == expected
+    assert group_snapshot(change_points[0]) == expected[0]
+    assert change_points.metrics() == set(expected_by_metric)
+    assert metric_snapshots(change_points) == expected_by_metric
+    assert history_snapshot(change_points.pivot()) == expected
+    assert history_snapshot(change_points.by_time()) == expected
+    assert metric_snapshots(change_points.by_metric()) == expected_by_metric
+
+    for row in expected:
+        time, commit, changes = row
+        assert group_snapshot(change_points.at_timestamp(time)) == row
+        assert group_snapshot(change_points.at_timestamp(time + 0.00005)) == row
+        assert group_snapshot(change_points.at_commit(commit)) == row
+        for metric, _, _ in changes:
+            assert metric in change_points
+
+    for metric, metric_rows in expected_by_metric.items():
+        assert history_snapshot(change_points.select_metrics(metric)) == metric_rows
+        assert [cp.index for cp in change_points.get_change_points_for_metric(metric)] == [
+            row[2][0][2] for row in metric_rows
+        ]
+
+    assert "missing" not in change_points
+    with pytest.raises(KeyError):
+        change_points.select_metrics("missing")
+    with pytest.raises(KeyError):
+        change_points.select_metrics([next(iter(expected_by_metric)), "missing"])
+    for invalid in ({}, ("errors",), 1, [1], ["missing", 1]):
+        with pytest.raises(TypeError):
+            change_points.select_metrics(invalid)
+    with pytest.raises(LookupError):
+        change_points.at_timestamp(expected[-1][0] + 1_000)
+    with pytest.raises(LookupError):
+        change_points.at_commit("missing")
 
 
 # BaseStats
@@ -693,6 +818,102 @@ def test_select_metrics():
 
     with pytest.raises(TypeError):
         metrics = cpbm.select_metrics({})
+
+
+# ChangePointsByTime / ChangePointsByMetric semantic parity
+def test_change_point_views_match_golden_history():
+    expected = [
+        (10.0, "commit-a", (("errors", "errors", 11), ("latency", "latency", 12))),
+        (20.0, "commit-b", (("throughput", "throughput", 21),)),
+        (30.0, "commit-c", (("latency", "latency", 31), ("throughput", "throughput", 32))),
+    ]
+    expected_by_metric = {
+        "errors": [(10.0, "commit-a", (("errors", "errors", 11),))],
+        "latency": [
+            (10.0, "commit-a", (("latency", "latency", 12),)),
+            (30.0, "commit-c", (("latency", "latency", 31),)),
+        ],
+        "throughput": [
+            (20.0, "commit-b", (("throughput", "throughput", 21),)),
+            (30.0, "commit-c", (("throughput", "throughput", 32),)),
+        ],
+    }
+    by_time = ChangePointsByTime.from_list(make_history_groups(GOLDEN_HISTORY))
+    by_metric = ChangePointsByMetric.from_list(make_history_groups(GOLDEN_HISTORY))
+
+    assert_read_api(by_time, expected, expected_by_metric)
+    assert_read_api(by_metric, expected, expected_by_metric)
+    assert history_snapshot(by_time) == history_snapshot(by_metric)
+
+
+@pytest.mark.parametrize(
+    ("view_class", "conversion"),
+    [
+        (ChangePointsByTime, "pivot"),
+        (ChangePointsByTime, "by_metric"),
+        (ChangePointsByMetric, "pivot"),
+        (ChangePointsByMetric, "by_time"),
+    ],
+)
+def test_change_point_view_conversion_mutation_boundaries(view_class, conversion):
+    source = view_class.from_list([make_group(1.0, "latency")])
+    converted = getattr(source, conversion)()
+
+    converted.at_timestamp(1.0)["latency"].stats.mean_1 = -1.0
+    assert source.at_timestamp(1.0)["latency"].stats.mean_1 == -1.0
+
+    isolated = getattr(source.copy(), conversion)()
+    isolated.at_timestamp(1.0)["latency"].stats.mean_1 = -2.0
+    assert source.at_timestamp(1.0)["latency"].stats.mean_1 == -1.0
+
+
+@settings(max_examples=75, deadline=None)
+@given(history=history_specs())
+def test_change_point_view_read_api_swarm(history):
+    expected = expected_history_snapshot(history)
+    expected_by_metric = expected_metric_snapshots(history)
+    by_time = ChangePointsByTime.from_list(make_history_groups(history))
+    by_metric = ChangePointsByMetric.from_list(make_history_groups(history))
+
+    assert_read_api(by_time, expected, expected_by_metric)
+    assert_read_api(by_metric, expected, expected_by_metric)
+    assert history_snapshot(by_time) == history_snapshot(by_metric)
+
+    for change_points in (by_time, by_metric):
+        clone = change_points.copy()
+        assert type(clone) is type(change_points)
+        assert history_snapshot(clone) == expected
+
+        first_metric = expected[0][2][0][0]
+        clone.at_timestamp(expected[0][0])[first_metric].stats.mean_1 = -999.0
+        assert change_points.at_timestamp(expected[0][0])[first_metric].stats.mean_1 != -999.0
+
+
+@settings(max_examples=75, deadline=None)
+@given(history=history_specs(), split_hint=st.integers(min_value=0, max_value=100))
+@example(history=GOLDEN_HISTORY, split_hint=1)
+def test_change_point_view_mutation_swarm(history, split_hint):
+    expected = expected_history_snapshot(history)
+    split = split_hint % (len(history) + 1)
+    views = []
+
+    for view_class in (ChangePointsByTime, ChangePointsByMetric):
+        change_points = view_class()
+        for row in history[:split]:
+            change_points.append(make_history_groups((row,))[0])
+        change_points.extend(make_history_groups(history[split:]))
+        assert history_snapshot(change_points) == expected
+        views.append(change_points)
+
+    assert history_snapshot(views[0]) == history_snapshot(views[1])
+
+    last_time, _, last_changes = history[-1]
+    last_metric = last_changes[0][0]
+    for change_points in views:
+        with pytest.raises(ValueError):
+            change_points.append(
+                make_group(last_time - 0.5, last_metric, commit="out-of-order")
+            )
 
 
 # SignificanceTester helpers

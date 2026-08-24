@@ -495,9 +495,25 @@ class ChangePoints:
         request efficient. This will loop over all ChangePointGroup s.
         Use ChangePointsByMetric if you need this to be fast.
         """
+        if not isinstance(m, list):
+            if not isinstance(m, str):
+                raise TypeError(
+                    "ChangePoints.select_metrics() takes as argument a str or a list of str."
+                )
+            m = [m]
+        if not all(isinstance(metric, str) for metric in m):
+            raise TypeError(
+                "ChangePoints.select_metrics() takes as argument a str or a list of str."
+            )
+        for metric in m:
+            if metric not in self:
+                raise KeyError(metric)
+
         filtered = ChangePoints()
         for cpg in self._change_points:
-            filtered.append(cpg.select_metrics(m))
+            selected = cpg.select_metrics(m)
+            if selected.changes:
+                filtered.append(selected)
         return filtered
 
     def get_change_points_for_metric(self, m: str):
@@ -546,9 +562,9 @@ class ChangePointsByTime(ChangePoints):
         to make it explicit that your code at that point explicitly wanted a collection of ChangePoints
         ordered by time.
 
-        The pivot() method will return a new object (a copy) holding the same data, but ordered by metrics
-        as the primary and optimized axis. The method by_metric() can be used for the same purpose. Note
-        that the method by_time() is a no-op and returns self, it doesn't even do a copy.
+        The pivot() method returns a new view holding the same ChangePoint objects, but ordered by metrics
+        as the primary and optimized axis. The method by_metric() can be used for the same purpose. Use
+        copy().pivot() for an isolated copy. The method by_time() is a no-op and returns self.
     """
     @classmethod
     def from_dict(cls, cps: dict):
@@ -568,9 +584,9 @@ class ChangePointsByMetric(ChangePoints):
         You can create empty instances of this class, or you can also use the factory method
         `ChangePoints.from_dict()` to get an instance of this type.
 
-        The pivot() method will return a new object (a copy) holding the same data, but ordered by time
-        as the primary and optimized axis. The method by_time() can be used for the same purpose. Note
-        that the method by_metric() is a no-op and returns self, it doesn't even do a copy.
+        The pivot() method returns a new view holding the same ChangePoint objects, but ordered by time
+        as the primary and optimized axis. The method by_time() can be used for the same purpose. Use
+        copy().pivot() for an isolated copy. The method by_metric() is a no-op and returns self.
     """
 
     def __init__(self):
@@ -609,7 +625,7 @@ class ChangePointsByMetric(ChangePoints):
                 intermediate.append(cpg)
         cp_by_time = ChangePointsByTime()
         for cpg in sorted(intermediate, key=lambda cpg: cpg.time):
-            cp_by_time.append(cpg)
+            cp_by_time.append(cpg.select_metrics(list(cpg.metrics())))
         return cp_by_time
 
     def append(self, cpg: ChangePointGroup):
@@ -641,7 +657,7 @@ class ChangePointsByMetric(ChangePoints):
                 if metric1 not in self._change_points:
                     self._change_points[metric1] = []
                 if (not self._change_points[metric1]) or cpg.time > self._change_points[metric1][-1].time:
-                    self._change_points[metric1].append(cpg)
+                    self._change_points[metric1].append(cpg.select_metrics(metric1))
                 else:
                     raise ValueError(
                         "ChangePoints.extend() can only be used such that time is monotonically increasing"
@@ -691,8 +707,14 @@ class ChangePointsByMetric(ChangePoints):
         """
         if not isinstance(m, list):
             if not isinstance(m, str):
-                TypeError("ChangePoints.select_metrics() takes as argument a str or a list of str.")
+                raise TypeError(
+                    "ChangePoints.select_metrics() takes as argument a str or a list of str."
+                )
             m = [m]
+        if not all(isinstance(metric, str) for metric in m):
+            raise TypeError(
+                "ChangePoints.select_metrics() takes as argument a str or a list of str."
+            )
 
         filtered = ChangePointsByMetric()
         for metric in m:
