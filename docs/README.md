@@ -32,4 +32,5 @@
 - [PostgreSQL](POSTGRESQL.md)
 - [BigQuery](BIG_QUERY.md)
 - [CSV](CSV.md)
+- [InfluxDB](INFLUXDB.md)
 - [Annotating Change Points in Grafana](GRAFANA.md)

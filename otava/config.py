@@ -25,6 +25,7 @@ from ruamel.yaml import YAML
 from otava.bigquery import BigQueryConfig
 from otava.grafana import GrafanaConfig
 from otava.graphite import GraphiteConfig
+from otava.influxdb import InfluxDBConfig
 from otava.postgres import PostgresConfig
 from otava.slack import SlackConfig
 from otava.test_config import TestConfig, create_test_config
@@ -40,6 +41,7 @@ class Config:
     slack: SlackConfig
     postgres: PostgresConfig
     bigquery: BigQueryConfig
+    influxdb: InfluxDBConfig
 
 
 @dataclass
@@ -115,6 +117,7 @@ def load_config_from_parser_args(args: configargparse.Namespace) -> Config:
         slack=SlackConfig.from_parser_args(args),
         postgres=PostgresConfig.from_parser_args(args),
         bigquery=BigQueryConfig.from_parser_args(args),
+        influxdb=InfluxDBConfig.from_parser_args(args),
         tests=tests,
         test_groups=groups,
     )
@@ -133,6 +136,7 @@ class NestedYAMLConfigFileParser(configargparse.ConfigFileParser):
         SlackConfig.NAME,
         PostgresConfig.NAME,
         BigQueryConfig.NAME,
+        InfluxDBConfig.NAME,
     ]
 
     def parse(self, stream):
@@ -180,6 +184,7 @@ def add_service_option_groups(parser) -> None:
     SlackConfig.add_parser_args(parser.add_argument_group('Slack Options', 'Options for Slack configuration'))
     PostgresConfig.add_parser_args(parser.add_argument_group('PostgreSQL Options', 'Options for PostgreSQL configuration'))
     BigQueryConfig.add_parser_args(parser.add_argument_group('BigQuery Options', 'Options for BigQuery configuration'))
+    InfluxDBConfig.add_parser_args(parser.add_argument_group('InfluxDB Options', 'Options for InfluxDB 3 configuration'))
 
 
 def argument_group(parser, title: str):

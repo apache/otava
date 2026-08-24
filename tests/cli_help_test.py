@@ -56,6 +56,8 @@ usage: otava [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_URL]
              [--postgres-username POSTGRES_USERNAME] [--postgres-password POSTGRES_PASSWORD]
              [--postgres-database POSTGRES_DATABASE] [--bigquery-project-id BIGQUERY_PROJECT_ID]
              [--bigquery-dataset BIGQUERY_DATASET] [--bigquery-credentials BIGQUERY_CREDENTIALS]
+             [--influxdb-host INFLUXDB_HOST] [--influxdb-database INFLUXDB_DATABASE]
+             [--influxdb-token INFLUXDB_TOKEN]
              {list-tests,list-metrics,list-groups,analyze,remove-annotations,validate} ...
 
 Change Detection for Continuous Performance Engineering
@@ -120,6 +122,16 @@ BigQuery Options:
   --bigquery-credentials BIGQUERY_CREDENTIALS
                         BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
 
+InfluxDB Options:
+  Options for InfluxDB 3 configuration
+
+  --influxdb-host INFLUXDB_HOST
+                        InfluxDB 3 server URL [env var: INFLUXDB_HOST]
+  --influxdb-database INFLUXDB_DATABASE
+                        InfluxDB 3 database name [env var: INFLUXDB_DATABASE]
+  --influxdb-token INFLUXDB_TOKEN
+                        InfluxDB 3 database token [env var: INFLUXDB_TOKEN]
+
 Args that start with '--' can also be set in a config file (specified via --config-file).  In
 general, command-line values override environment variables which override config file values
 which override defaults.
@@ -156,8 +168,9 @@ usage: otava analyze [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_U
                      [--postgres-database POSTGRES_DATABASE]
                      [--bigquery-project-id BIGQUERY_PROJECT_ID]
                      [--bigquery-dataset BIGQUERY_DATASET]
-                     [--bigquery-credentials BIGQUERY_CREDENTIALS] [--update-grafana]
-                     [--update-postgres] [--update-bigquery]
+                     [--bigquery-credentials BIGQUERY_CREDENTIALS] [--influxdb-host INFLUXDB_HOST]
+                     [--influxdb-database INFLUXDB_DATABASE] [--influxdb-token INFLUXDB_TOKEN]
+                     [--update-grafana] [--update-postgres] [--update-bigquery]
                      [--notify-slack NOTIFY_SLACK [NOTIFY_SLACK ...]] [--cph-report-since DATE]
                      [--output {{log,json,regressions_only}}] [--branch [STRING]] [--metrics LIST]
 {usage_filter_lines}
@@ -265,6 +278,16 @@ BigQuery Options:
                         BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
   --update-bigquery     Update BigQuery database results with change points
 
+InfluxDB Options:
+  Options for InfluxDB 3 configuration
+
+  --influxdb-host INFLUXDB_HOST
+                        InfluxDB 3 server URL [env var: INFLUXDB_HOST]
+  --influxdb-database INFLUXDB_DATABASE
+                        InfluxDB 3 database name [env var: INFLUXDB_DATABASE]
+  --influxdb-token INFLUXDB_TOKEN
+                        InfluxDB 3 database token [env var: INFLUXDB_TOKEN]
+
  In general, command-line values override environment variables which override defaults.
 """
     )
@@ -288,6 +311,8 @@ usage: otava list-tests [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHIT
                         [--bigquery-project-id BIGQUERY_PROJECT_ID]
                         [--bigquery-dataset BIGQUERY_DATASET]
                         [--bigquery-credentials BIGQUERY_CREDENTIALS]
+                        [--influxdb-host INFLUXDB_HOST] [--influxdb-database INFLUXDB_DATABASE]
+                        [--influxdb-token INFLUXDB_TOKEN]
                         [group ...]
 
 positional arguments:
@@ -345,6 +370,16 @@ BigQuery Options:
   --bigquery-credentials BIGQUERY_CREDENTIALS
                         BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
 
+InfluxDB Options:
+  Options for InfluxDB 3 configuration
+
+  --influxdb-host INFLUXDB_HOST
+                        InfluxDB 3 server URL [env var: INFLUXDB_HOST]
+  --influxdb-database INFLUXDB_DATABASE
+                        InfluxDB 3 database name [env var: INFLUXDB_DATABASE]
+  --influxdb-token INFLUXDB_TOKEN
+                        InfluxDB 3 database token [env var: INFLUXDB_TOKEN]
+
  In general, command-line values override environment variables which override defaults.
 """
     )
@@ -368,6 +403,8 @@ usage: otava list-metrics [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPH
                           [--bigquery-project-id BIGQUERY_PROJECT_ID]
                           [--bigquery-dataset BIGQUERY_DATASET]
                           [--bigquery-credentials BIGQUERY_CREDENTIALS]
+                          [--influxdb-host INFLUXDB_HOST] [--influxdb-database INFLUXDB_DATABASE]
+                          [--influxdb-token INFLUXDB_TOKEN]
                           test
 
 positional arguments:
@@ -425,6 +462,16 @@ BigQuery Options:
   --bigquery-credentials BIGQUERY_CREDENTIALS
                         BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
 
+InfluxDB Options:
+  Options for InfluxDB 3 configuration
+
+  --influxdb-host INFLUXDB_HOST
+                        InfluxDB 3 server URL [env var: INFLUXDB_HOST]
+  --influxdb-database INFLUXDB_DATABASE
+                        InfluxDB 3 database name [env var: INFLUXDB_DATABASE]
+  --influxdb-token INFLUXDB_TOKEN
+                        InfluxDB 3 database token [env var: INFLUXDB_TOKEN]
+
  In general, command-line values override environment variables which override defaults.
 """
     )
@@ -449,6 +496,8 @@ usage: otava list-groups [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHI
                          [--bigquery-project-id BIGQUERY_PROJECT_ID]
                          [--bigquery-dataset BIGQUERY_DATASET]
                          [--bigquery-credentials BIGQUERY_CREDENTIALS]
+                         [--influxdb-host INFLUXDB_HOST] [--influxdb-database INFLUXDB_DATABASE]
+                         [--influxdb-token INFLUXDB_TOKEN]
 
 options:
   -h, --help            show this help message and exit
@@ -502,6 +551,16 @@ BigQuery Options:
   --bigquery-credentials BIGQUERY_CREDENTIALS
                         BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
 
+InfluxDB Options:
+  Options for InfluxDB 3 configuration
+
+  --influxdb-host INFLUXDB_HOST
+                        InfluxDB 3 server URL [env var: INFLUXDB_HOST]
+  --influxdb-database INFLUXDB_DATABASE
+                        InfluxDB 3 database name [env var: INFLUXDB_DATABASE]
+  --influxdb-token INFLUXDB_TOKEN
+                        InfluxDB 3 database token [env var: INFLUXDB_TOKEN]
+
  In general, command-line values override environment variables which override defaults.
 """
     )
@@ -525,7 +584,10 @@ usage: otava remove-annotations [-h] [--config-file CONFIG_FILE] [--graphite-url
                                 [--postgres-database POSTGRES_DATABASE]
                                 [--bigquery-project-id BIGQUERY_PROJECT_ID]
                                 [--bigquery-dataset BIGQUERY_DATASET]
-                                [--bigquery-credentials BIGQUERY_CREDENTIALS] [--force]
+                                [--bigquery-credentials BIGQUERY_CREDENTIALS]
+                                [--influxdb-host INFLUXDB_HOST]
+                                [--influxdb-database INFLUXDB_DATABASE]
+                                [--influxdb-token INFLUXDB_TOKEN] [--force]
                                 [tests ...]
 
 positional arguments:
@@ -584,6 +646,16 @@ BigQuery Options:
   --bigquery-credentials BIGQUERY_CREDENTIALS
                         BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
 
+InfluxDB Options:
+  Options for InfluxDB 3 configuration
+
+  --influxdb-host INFLUXDB_HOST
+                        InfluxDB 3 server URL [env var: INFLUXDB_HOST]
+  --influxdb-database INFLUXDB_DATABASE
+                        InfluxDB 3 database name [env var: INFLUXDB_DATABASE]
+  --influxdb-token INFLUXDB_TOKEN
+                        InfluxDB 3 database token [env var: INFLUXDB_TOKEN]
+
  In general, command-line values override environment variables which override defaults.
 """
     )
@@ -607,6 +679,8 @@ usage: otava validate [-h] [--config-file CONFIG_FILE] [--graphite-url GRAPHITE_
                       [--bigquery-project-id BIGQUERY_PROJECT_ID]
                       [--bigquery-dataset BIGQUERY_DATASET]
                       [--bigquery-credentials BIGQUERY_CREDENTIALS]
+                      [--influxdb-host INFLUXDB_HOST] [--influxdb-database INFLUXDB_DATABASE]
+                      [--influxdb-token INFLUXDB_TOKEN]
 
 options:
   -h, --help            show this help message and exit
@@ -659,6 +733,16 @@ BigQuery Options:
                         BigQuery dataset [env var: BIGQUERY_DATASET]
   --bigquery-credentials BIGQUERY_CREDENTIALS
                         BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
+
+InfluxDB Options:
+  Options for InfluxDB 3 configuration
+
+  --influxdb-host INFLUXDB_HOST
+                        InfluxDB 3 server URL [env var: INFLUXDB_HOST]
+  --influxdb-database INFLUXDB_DATABASE
+                        InfluxDB 3 database name [env var: INFLUXDB_DATABASE]
+  --influxdb-token INFLUXDB_TOKEN
+                        InfluxDB 3 database token [env var: INFLUXDB_TOKEN]
 
  In general, command-line values override environment variables which override defaults.
 """
