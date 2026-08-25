@@ -17,6 +17,48 @@
 
 import enum
 from dataclasses import dataclass
+from typing import Optional
+
+import configargparse
+
+
+def single_character(value: str) -> str:
+    """The csv module only accepts single-character delimiters and quote characters."""
+    if len(value) != 1:
+        raise configargparse.ArgumentTypeError(f"must be a single character, got {value!r}")
+    return value
+
+
+@dataclass
+class CsvConfig:
+    NAME = "csv"
+
+    delimiter: Optional[str] = None
+    quote_char: Optional[str] = None
+
+    @staticmethod
+    def add_parser_args(arg_group):
+        arg_group.add_argument(
+            "--csv-delimiter",
+            help="CSV delimiter",
+            env_var="CSV_DELIMITER",
+            type=single_character,
+            default=configargparse.SUPPRESS,
+        )
+        arg_group.add_argument(
+            "--csv-quote-char",
+            help="CSV quote character",
+            env_var="CSV_QUOTE_CHAR",
+            type=single_character,
+            default=configargparse.SUPPRESS,
+        )
+
+    @staticmethod
+    def from_parser_args(args):
+        return CsvConfig(
+            delimiter=getattr(args, "csv_delimiter", None),
+            quote_char=getattr(args, "csv_quote_char", None),
+        )
 
 
 @dataclass

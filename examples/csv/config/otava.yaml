@@ -24,4 +24,4 @@ tests:
     metrics: [metric1, metric2]
     csv_options:
       delimiter: ","
-      quotechar: "'"
+      quote_char: "'"
