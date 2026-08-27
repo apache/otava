@@ -126,7 +126,10 @@ class AnalyzedSeries:
     options: AnalysisOptions
 
     def __init__(
-        self, series: Series, options: AnalysisOptions, change_points: Dict[str, ChangePoint] = None
+        self,
+        series: Series,
+        options: AnalysisOptions,
+        change_points: Optional[ChangePointsByMetric] = None,
     ):
         self.__series = series
         self.options = options
