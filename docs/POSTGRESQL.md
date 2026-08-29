@@ -22,6 +22,12 @@
 > [!TIP]
 > See [otava.yaml](../examples/postgresql/config/otava.yaml) for the full example configuration.
 
+## Installation
+
+```bash
+pip install 'apache-otava[postgres]'
+```
+
 ## PostgreSQL Connection
 The following block contains PostgreSQL connection details:
 

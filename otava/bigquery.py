@@ -15,15 +15,29 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from google.cloud import bigquery
-from google.oauth2 import service_account
+if TYPE_CHECKING:
+    from google.cloud.bigquery import Client, ScalarQueryParameter
+else:
+    Client = Any
+    ScalarQueryParameter = Any
 
+from otava._optional import import_optional_dependency
 from otava.change_point_divisive.base import ChangePointGroup, ChangePointSerializer
 from otava.test_config import BigQueryTestConfig
+
+
+def _bigquery_module():
+    return import_optional_dependency("google.cloud.bigquery", "bigquery")
+
+
+def _service_account_module():
+    return import_optional_dependency("google.oauth2.service_account", "bigquery")
 
 
 @dataclass
@@ -62,8 +76,10 @@ class BigQuery:
         self.__config = config
 
     @property
-    def client(self) -> bigquery.Client:
+    def client(self) -> Client:
         if self.__client is None:
+            bigquery = _bigquery_module()
+            service_account = _service_account_module()
             credentials = service_account.Credentials.from_service_account_file(
                 self.__config.credentials,
                 scopes=["https://www.googleapis.com/auth/cloud-platform"],
@@ -72,8 +88,9 @@ class BigQuery:
         return self.__client
 
     def fetch_data(
-        self, query: str, params: Optional[List[bigquery.ScalarQueryParameter]] = None
+        self, query: str, params: Optional[List[ScalarQueryParameter]] = None
     ):
+        bigquery = _bigquery_module()
         job_config = None
         if params:
             job_config = bigquery.QueryJobConfig(query_parameters=params)

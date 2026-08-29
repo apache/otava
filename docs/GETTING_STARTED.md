@@ -27,11 +27,23 @@ Otava requires Python 3.10 or later.
 pip install apache-otava
 ```
 
+This installs the Otava library and CLI with CSV, JSON, and Graphite
+support. Install the extra for any additional service you use, for example:
+
+```bash
+pip install 'apache-otava[postgres]'
+pip install 'apache-otava[bigquery,slack]'
+```
+
+See [Installation](INSTALL.md) for the complete list of extras.
+
 or
 
 ```bash
 docker pull apache/otava
 ```
+
+The Docker image includes all optional integrations.
 
 
 ## Setup

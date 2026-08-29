@@ -15,14 +15,24 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict
+from typing import TYPE_CHECKING, Any, Dict
 
-import pg8000
+if TYPE_CHECKING:
+    from pg8000.dbapi import Connection
+else:
+    Connection = Any
 
+from otava._optional import import_optional_dependency
 from otava.change_point_divisive.base import ChangePointGroup, ChangePointSerializer
 from otava.test_config import PostgresTestConfig
+
+
+def _pg8000_module():
+    return import_optional_dependency("pg8000", "postgres")
 
 
 @dataclass
@@ -66,8 +76,9 @@ class Postgres:
     def __init__(self, config: PostgresConfig):
         self.__config = config
 
-    def __get_conn(self) -> pg8000.dbapi.Connection:
+    def __get_conn(self) -> Connection:
         if self.__conn is None:
+            pg8000 = _pg8000_module()
             self.__conn = pg8000.dbapi.Connection(
                 host=self.__config.hostname,
                 port=self.__config.port,

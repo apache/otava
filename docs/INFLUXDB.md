@@ -24,6 +24,12 @@ Otava imports query results from InfluxDB 3 Core or Enterprise through the
 client. SQL is the default query language; set `query_language: influxql` for
 InfluxQL queries.
 
+## Installation
+
+```bash
+pip install 'apache-otava[influxdb]'
+```
+
 ## Connection
 
 ```yaml

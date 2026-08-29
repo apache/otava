@@ -22,6 +22,14 @@
 Change points found by `analyze` can be exported
 as Grafana annotations using the `--update-grafana` flag:
 
+## Installation
+
+```bash
+pip install 'apache-otava[grafana]'
+```
+
+## Usage
+
 ```
 $ otava analyze <test or group> --update-grafana
 ```

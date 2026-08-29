@@ -19,6 +19,12 @@
 
 # BigQuery
 
+## Installation
+
+```bash
+pip install 'apache-otava[bigquery]'
+```
+
 ## Schema
 
 See [schema.sql](../examples/bigquery/schema.sql) for the example schema.

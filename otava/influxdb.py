@@ -15,9 +15,22 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from dataclasses import dataclass
+from __future__ import annotations
 
-from influxdb_client_3 import InfluxDBClient3
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from influxdb_client_3 import InfluxDBClient3
+else:
+    InfluxDBClient3 = Any
+
+from otava._optional import import_optional_dependency
+
+
+def _influxdb_client_class():
+    influxdb = import_optional_dependency("influxdb_client_3", "influxdb")
+    return influxdb.InfluxDBClient3
 
 
 @dataclass
@@ -51,7 +64,7 @@ class InfluxDB:
     @property
     def client(self) -> InfluxDBClient3:
         if self._client is None:
-            self._client = InfluxDBClient3(
+            self._client = _influxdb_client_class()(
                 host=self.config.host,
                 database=self.config.database,
                 token=self.config.token,

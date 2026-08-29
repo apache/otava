@@ -34,6 +34,26 @@ integrated with a pull request.
 
 See the documentation in https://otava.apache.org/docs/overview/.
 
+## Installation
+
+The default package includes the Otava library and CLI, with support for CSV,
+JSON, and Graphite data:
+
+```bash
+pip install apache-otava
+```
+
+Install extras for additional integrations. Extras can be combined, or install
+`all` to enable every integration:
+
+```bash
+pip install 'apache-otava[bigquery]'
+pip install 'apache-otava[postgres,slack]'
+pip install 'apache-otava[all]'
+```
+
+See the [installation guide](docs/INSTALL.md) for the complete list of extras.
+
 ## Supported Python Versions
 
 Apache Otava is tested against Python 3.10, 3.11, 3.12, 3.13, and 3.14.

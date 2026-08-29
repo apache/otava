@@ -24,9 +24,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-from google.cloud import bigquery
-
-from otava.bigquery import BigQuery
+from otava._optional import MissingOptionalDependencyError
+from otava.bigquery import BigQuery, _bigquery_module
 from otava.config import Config
 from otava.data_selector import DataSelector
 from otava.graphite import DataPoint, Graphite, GraphiteError
@@ -758,7 +757,9 @@ class BigQueryImporter(Importer):
                 )
             # Replace placeholder with @branch for BigQuery parameterized query
             query = query.replace("%{BRANCH}", "@branch")
-            params = [bigquery.ScalarQueryParameter("branch", "STRING", selector.branch)]
+            params = [
+                _bigquery_module().ScalarQueryParameter("branch", "STRING", selector.branch)
+            ]
 
         columns, rows = self.__bigquery.fetch_data(query, params)
 
@@ -875,6 +876,8 @@ class InfluxDBImporter(Importer):
 
         try:
             columns, rows = self.__influxdb.fetch_data(query, test_conf.query_language)
+        except MissingOptionalDependencyError:
+            raise
         except Exception as err:
             raise DataImportError(f"Failed to import test {test_conf.name}: {err}") from err
 
