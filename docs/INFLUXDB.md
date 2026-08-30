@@ -52,7 +52,7 @@ storage, seeds deterministic latency data, and runs Otava against it:
 ```bash
 docker build -t apache/otava:latest .
 docker compose -f examples/influxdb/docker-compose.yaml run --rm otava \
-  analyze api_latency_sql --branch main --since 2025-01-01
+  analyze api_latency_sql --branch main --since 2025-01-01T00:00:00Z
 docker compose -f examples/influxdb/docker-compose.yaml down
 ```
 
@@ -98,7 +98,7 @@ when `--branch` is supplied.
 Run the analysis with:
 
 ```bash
-otava analyze api_latency_sql --branch main --last 100
+otava analyze api_latency_sql --branch main --since 2025-01-01T00:00:00Z --last 100
 ```
 
 InfluxDB is import-only in this release; Otava does not write change points
