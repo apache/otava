@@ -59,6 +59,25 @@ jobs:
       - name: Run tox
         run: tox -e py
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          python-version: "3.12"
+          prune-cache: true
+
+      - name: Build documentation
+        run: uv run --with-requirements docs/requirements.txt sphinx-build -W --keep-going -b html docs docs/_build/html
+
   docker-build:
     runs-on: ubuntu-latest
     needs: build
