@@ -24,7 +24,7 @@ from logging import info
 from typing import Dict, Iterable, List, Optional
 
 from otava.data_selector import DataSelector
-from otava.util import parse_datetime
+from otava.util import clean_str, parse_datetime
 
 
 @dataclass
@@ -57,7 +57,6 @@ class TimeSeries:
 
 
 def decode_graphite_datapoints(series: Dict[str, List[List[float]]]) -> List[DataPoint]:
-
     points = series["datapoints"]
     return [DataPoint(int(p[1]), p[0]) for p in points if p[0] is not None]
 
@@ -80,49 +79,32 @@ class GraphiteError(IOError):
 
 @dataclass
 class GraphiteEvent:
-    test_owner: str
-    test_name: str
-    run_id: str
-    status: str
-    start_time: datetime
     pub_time: datetime
-    end_time: datetime
-    version: Optional[str]
-    branch: Optional[str]
-    commit: Optional[str]
+    test_owner: Optional[str] = None
+    test_name: Optional[str] = None
+    run_id: Optional[str] = None
+    status: Optional[str] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    version: Optional[str] = None
+    branch: Optional[str] = None
+    commit: Optional[str] = None
 
-    def __init__(
-        self,
-        pub_time: int,
-        test_owner: str,
-        test_name: str,
-        run_id: str,
-        status: str,
-        start_time: int,
-        end_time: int,
-        version: Optional[str],
-        branch: Optional[str],
-        commit: Optional[str],
-    ):
-        self.test_owner = test_owner
-        self.test_name = test_name
-        self.run_id = run_id
-        self.status = status
-        self.start_time = parse_datetime(str(start_time))
-        self.pub_time = parse_datetime(str(pub_time))
-        self.end_time = parse_datetime(str(end_time))
-        if len(version) == 0 or version == "null":
-            self.version = None
-        else:
-            self.version = version
-        if len(branch) == 0 or branch == "null":
-            self.branch = None
-        else:
-            self.branch = branch
-        if len(commit) == 0 or commit == "null":
-            self.commit = None
-        else:
-            self.commit = commit
+
+    def __post_init__(self):
+        if self.pub_time is None:
+            raise ValueError("pub_time is required and cannot be None")
+        # Ensure pub_time is always a datetime
+        self.pub_time = parse_datetime(str(self.pub_time))
+
+
+        self.version = clean_str(self.version)
+        self.branch = clean_str(self.branch)
+        self.commit = clean_str(self.commit)
+        self.test_owner = clean_str(self.test_owner)
+        self.test_name = clean_str(self.test_name)
+        self.run_id = clean_str(self.run_id)
+        self.status = clean_str(self.status)
 
 
 def compress_target_paths(paths: List[str]) -> List[str]:
@@ -190,7 +172,7 @@ class Graphite:
             data_str = urllib.request.urlopen(url).read()
             data_as_json = json.loads(data_str)
             return [
-                GraphiteEvent(event.get("when"), **ast.literal_eval(event.get("data")))
+                GraphiteEvent(pub_time=event.get("when"), **ast.literal_eval(event.get("data")))
                 for event in data_as_json
                 if event.get("what") == "Performance Test"
             ]

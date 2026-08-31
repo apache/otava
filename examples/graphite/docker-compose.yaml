@@ -43,13 +43,14 @@ services:
       - otava-graphite
 
   data-sender:
-    image: bash
+    image: alpine:latest
     container_name: data-sender
     depends_on:
       - graphite
     volumes:
       - ./datagen:/datagen
-    entrypoint: ["bash", "/datagen/datagen.sh"]
+    # Install bash and curl before running the script
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache bash curl && bash /datagen/datagen.sh"]
     networks:
       - otava-graphite
 
@@ -68,7 +69,6 @@ services:
       - otava-graphite
     volumes:
       - ./config:/config
-
 networks:
   otava-graphite:
     driver: bridge
