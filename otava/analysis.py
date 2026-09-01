@@ -16,7 +16,6 @@
 # under the License.
 
 import copy
-from dataclasses import dataclass, replace
 from typing import List, Optional, Sequence, SupportsFloat, Tuple
 
 from scipy.stats import ttest_ind_from_stats
@@ -36,7 +35,6 @@ from otava.change_point_divisive.significance_test import (
 )
 
 
-@dataclass
 class TTestStats(BaseStats):
     """
     Statistics related to the calculation of a two-sided Student's T-test.
@@ -47,8 +45,7 @@ class TTestStats(BaseStats):
     degrees_of_freedom: int = 0
 
     def copy(self):
-        # replace() preserves the subclass
-        return replace(self)
+        return self.model_copy(deep=True)
 
     def to_json(self):
         obj = super().to_json()

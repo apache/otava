@@ -23,7 +23,7 @@ from typing import Dict, List
 from pytz import UTC
 from slack_sdk import WebClient
 
-from otava.change_point_divisive.base import ChangePointGroup, ChangePointSerializer
+from otava.change_point_divisive.base import ChangePointGroup
 from otava.data_selector import DataSelector
 from otava.series import AnalyzedSeries
 
@@ -204,8 +204,7 @@ class SlackNotification:
             fields.append(f"*{test_name}*")
             summary = ""
             for metric, change in group.changes.items():
-                c = ChangePointSerializer(change)
-                change_percent = c.forward_change_percent()
+                change_percent = change.forward_change_percent()
                 change_emoji = self.__get_change_emoji(test_name, change)
                 if isinf(change_percent):
                     report_percent = change_percent
@@ -230,8 +229,7 @@ class SlackNotification:
 
     def __get_change_emoji(self, test_name, change):
         metric_direction = self.test_analyzed_series[test_name].metric(change.metric).direction
-        c = ChangePointSerializer(change)
-        regression = metric_direction * c.forward_change_percent()
+        regression = metric_direction * change.forward_change_percent()
         if regression >= 0:
             return ":large_blue_circle:"
         else:

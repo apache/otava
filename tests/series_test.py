@@ -16,6 +16,7 @@
 # under the License.
 
 import json
+import warnings
 import time
 from datetime import datetime
 from random import random
@@ -168,7 +169,7 @@ def test_div_by_zero():
 
     analyzed_series = test.analyze()
     change_points = analyzed_series.change_points_by_time
-    cpjson = analyzed_series.to_json()
+    cpjson = analyzed_series.model_dump(mode="json")
     assert cpjson
     assert len(change_points) == 2
     assert change_points[0].time == 3
@@ -292,6 +293,27 @@ def test_analyzed_series_json_round_trip():
     ] == [4, 11]
     assert restored.to_json()["change_points"] == payload["change_points"]
     assert restored.to_json()["weak_change_points"] == payload["weak_change_points"]
+
+
+def test_pydantic_persistence_api_and_deprecation_wrappers():
+    series = Series(
+        "test",
+        None,
+        [1, 2],
+        {"latency": Metric(1, 1.0, "ms")},
+        {"latency": [1.0, 2.0]},
+        {"commit": [None, "abc"]},
+    )
+    analysis = series.analyze()
+    payload = analysis.model_dump(mode="json")
+
+    assert json.loads(json.dumps(payload)) == payload
+    assert AnalyzedSeries.model_validate(payload).model_dump(mode="json") == payload
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        assert analysis.to_json() == payload
+        assert AnalyzedSeries.from_json(payload).model_dump(mode="json") == payload
+    assert [warning.category for warning in caught] == [DeprecationWarning, DeprecationWarning]
 
 
 def test_analyzed_series_json_round_trip_through_json_module():

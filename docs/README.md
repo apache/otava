@@ -26,6 +26,7 @@
 
 ## Basics
 - [Basics](BASICS.md)
+- [Python persistence API](BASICS.md#python-persistence-api)
 
 ## Data Sources
 - [Graphite](GRAPHITE.md)

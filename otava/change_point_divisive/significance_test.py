@@ -15,11 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from dataclasses import dataclass, replace
 from typing import List, Optional, Type
 
 import numpy as np
 from numpy.typing import NDArray
+from pydantic import field_validator
 
 from otava.change_point_divisive.base import (
     BaseStats,
@@ -30,17 +30,23 @@ from otava.change_point_divisive.base import (
 )
 
 
-@dataclass
 class PermutationStats(BaseStats):
     '''Statistics for permutation significance test'''
     permuted_qhats: NDArray
     extreme_qhat_perm: int
     n_perm: int
 
+    @field_validator("permuted_qhats", mode="before")
+    @classmethod
+    def unwrap_single_array_tuple(cls, value):
+        # Older callers occasionally passed ``np.array(...),`` by accident;
+        # dataclasses accepted it, so retain that input shape during migration.
+        if isinstance(value, tuple) and len(value) == 1 and isinstance(value[0], np.ndarray):
+            return value[0]
+        return value
+
     def copy(self):
-        c = replace(self)
-        c.permuted_qhats = self.permuted_qhats.copy()
-        return c
+        return self.model_copy(deep=True)
 
     def to_json(self):
         obj = super().to_json()
