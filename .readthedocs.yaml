@@ -15,20 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# IntelliJ IDEA files
-.idea/
-*.iml
+version: 2
 
-# pyenv version info
-.python-version
+build:
+  os: ubuntu-24.04
+  tools:
+    python: "3.12"
 
-# Python 3 cache
-__pycache__/
+sphinx:
+  configuration: docs/conf.py
 
-# Other Python dev dirs
-build/
-dist/
-venv/
-.tox/
-.docker/
-docs/_build/
+python:
+  install:
+    - requirements: docs/requirements.txt

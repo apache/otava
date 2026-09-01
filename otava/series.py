@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Optional
 from warnings import warn
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, PrivateAttr, TypeAdapter, field_validator, model_validator
 
 from otava.analysis import (
     compute_change_points,
@@ -139,7 +139,6 @@ class Series(DomainModel):
     def analyze(self, options: Optional[AnalysisOptions] = None) -> "AnalyzedSeries":
         if options is None:
             options = AnalysisOptions()
-        logging.info(f"Computing change points for test {self.test_name}...")
         return AnalyzedSeries(self, options)
 
 
@@ -150,52 +149,77 @@ class AnalyzedSeries(DomainModel):
 
     series: Series
     options: AnalysisOptions
-    change_points: Optional[ChangePointsByMetric]
-    weak_change_points: ChangePointsByMetric
-    change_points_by_time: ChangePointsByTime = Field(
-        default_factory=ChangePointsByTime, exclude=True
-    )
-    change_points_timestamp: datetime
+    _change_points: Optional[ChangePointsByMetric] = PrivateAttr(default=None)
+    _weak_change_points: Optional[ChangePointsByMetric] = PrivateAttr(default=None)
+    _change_points_by_time: Optional[ChangePointsByTime] = PrivateAttr(default=None)
+    _change_points_timestamp: Optional[datetime] = PrivateAttr(default=None)
 
     def __init__(
         self,
-        series: Optional[Series] = None,
+        series: Series,
         options: Optional[AnalysisOptions] = None,
         change_points: Optional[ChangePointsByMetric] = None,
         weak_change_points: Optional[ChangePointsByMetric] = None,
         change_points_timestamp: Optional[datetime] = None,
-        **data,
     ):
-        if series is None:
-            super().__init__(**data)
-            return
-        options = options or AnalysisOptions()
-        if change_points is None:
-            change_points, computed_weak_change_points = self.__compute_change_points(series, options)
-            weak_change_points = computed_weak_change_points
-        super().__init__(
-            series=series,
-            options=options,
-            change_points=change_points,
-            weak_change_points=weak_change_points or ChangePointsByMetric(),
-            change_points_by_time=self.__group_change_points_by_time(series, change_points),
-            change_points_timestamp=change_points_timestamp or datetime.now(timezone.utc),
+        super().__init__(series=series, options=options or AnalysisOptions())
+        self._change_points = change_points
+        self._weak_change_points = weak_change_points if change_points is not None else None
+        self._change_points_timestamp = (
+            change_points_timestamp or datetime.now(timezone.utc)
+            if change_points is not None
+            else None
         )
 
-    @model_validator(mode="before")
-    @classmethod
-    def load_persistence_document(cls, value):
-        if not isinstance(value, dict) or "test_name" not in value:
-            return value
+    def __ensure_change_points_computed(self):
+        if self._change_points is None:
+            logging.info(f"Computing change points for test {self.series.test_name}...")
+            self._change_points, self._weak_change_points = self.__compute_change_points(
+                self.series, self.options
+            )
+            self._change_points_timestamp = datetime.now(timezone.utc)
 
+    @property
+    def change_points(self) -> ChangePointsByMetric:
+        self.__ensure_change_points_computed()
+        return self._change_points
+
+    @change_points.setter
+    def change_points(self, value: Optional[ChangePointsByMetric]):
+        self._change_points = value
+        self._change_points_by_time = None
+
+    @property
+    def weak_change_points(self) -> ChangePointsByMetric:
+        self.__ensure_change_points_computed()
+        return self._weak_change_points
+
+    @weak_change_points.setter
+    def weak_change_points(self, value: ChangePointsByMetric):
+        self._weak_change_points = value
+
+    @property
+    def change_points_timestamp(self) -> datetime:
+        self.__ensure_change_points_computed()
+        return self._change_points_timestamp
+
+    @property
+    def change_points_by_time(self) -> ChangePointsByTime:
+        if self._change_points_by_time is None:
+            self._change_points_by_time = self.__group_change_points_by_time(
+                self.series, self.change_points
+            )
+        return self._change_points_by_time
+
+    @classmethod
+    def _parse_persistence_document(cls, value):
         def parse_changes(by_metric):
             result = {}
             for metric, groups in by_metric.items():
                 parsed_groups = []
                 for group in groups:
-                    raw_changes = group.get("changes", [group])
                     changes = {}
-                    for raw_change in raw_changes:
+                    for raw_change in group.get("changes", [group]):
                         change_metric = raw_change.get("metric") or metric
                         stats = raw_change.get("stats") or {
                             "mean_1": raw_change["mean_before"],
@@ -224,30 +248,26 @@ class AnalyzedSeries(DomainModel):
         }
         return {
             "series": Series(
-                value["test_name"], value.get("branch_name"), value["time"], metrics,
-                value["data"], value.get("attributes", {}),
+                value["test_name"],
+                value.get("branch_name"),
+                value["time"],
+                metrics,
+                value["data"],
+                value.get("attributes", {}),
             ),
             "options": value.get("options", {}),
             "change_points": parse_changes(value.get("change_points", {})),
             "weak_change_points": parse_changes(value.get("weak_change_points", {})),
-            "change_points_timestamp": value.get("change_points_timestamp", datetime.now(timezone.utc)),
+            "change_points_timestamp": _datetime_adapter.validate_python(
+                value.get("change_points_timestamp", datetime.now(timezone.utc))
+            ),
         }
-
-    @model_validator(mode="after")
-    def rebuild_by_time(self):
-        if self.change_points is not None:
-            object.__setattr__(
-                self,
-                "change_points_by_time",
-                self.__group_change_points_by_time(self.series, self.change_points),
-            )
-        return self
 
     @classmethod
     def model_validate(cls, obj, *args, **kwargs):
         """Validate both the domain representation and the historical flat document."""
         if isinstance(obj, dict) and "test_name" in obj:
-            parsed = cls.load_persistence_document(obj)
+            parsed = cls._parse_persistence_document(obj)
             return cls(
                 parsed["series"],
                 AnalysisOptions.model_validate(parsed["options"]),
@@ -339,8 +359,8 @@ class AnalyzedSeries(DomainModel):
         return self._validate_append(time, new_data, attributes) is None
 
     def _validate_append(self, time, new_data, attributes):
-        if not self.change_points:
-            return RuntimeError("You must use __compute_change_points() once first.")
+        # appending updates the cached results, so they must exist first
+        self.__ensure_change_points_computed()
         if not isinstance(time, list):
             return ValueError("time argument must be an array.")
         if not isinstance(new_data, dict):
@@ -385,13 +405,19 @@ class AnalyzedSeries(DomainModel):
 
         for metric in self.series.data.keys():
             if metric not in new_data:
-                weak_change_points[metric] = self.weak_change_points.select_metrics(metric)
+                if metric in self.weak_change_points:
+                    weak_change_points[metric] = self.weak_change_points.select_metrics(metric)
                 continue
 
             new_data_len = len(new_data[metric])
+            previous_weak_cp = (
+                self.weak_change_points.get_change_points_for_metric(metric)
+                if metric in self.weak_change_points
+                else []
+            )
             old_weak_cp = [
                 cp
-                for cp in self.weak_change_points.get_change_points_for_metric(metric)
+                for cp in previous_weak_cp
                 if cp.index < len(self.series.data[metric]) - new_data_len - 1
             ]
             change_points, weak_cps = compute_change_points(
@@ -432,8 +458,10 @@ class AnalyzedSeries(DomainModel):
         # r has a subset of all metrics, so can't just set change_points to r
         for metric, cpglist in r.items():
             self.change_points[metric] = cpglist
-        self.weak_change_points = w
-        self.change_points_by_time = self.change_points.by_time()
+        self._weak_change_points = w
+        # invalidate rather than rebuild: the property recomputes it on first read
+        self._change_points_by_time = None
+        self._change_points_timestamp = datetime.now(timezone.utc)
         return r, w
 
     def test_name(self) -> str:

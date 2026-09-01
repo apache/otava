@@ -90,7 +90,7 @@ The results are simply concatenated.
 
 > [!TIP]
 > See [otava.yaml](../examples/csv/config/otava.yaml) for the full
-> example configuration and [local_samples.csv](../examples/csv/data/local_samples.csv)
+> example configuration and [local_sample.csv](../examples/csv/data/local_sample.csv)
 > for the data.
 
 ```

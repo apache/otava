@@ -15,20 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# IntelliJ IDEA files
-.idea/
-*.iml
+project = "Apache Otava (Incubating)"
+copyright = "2026, The Apache Software Foundation"
+author = "The Apache Software Foundation"
 
-# pyenv version info
-.python-version
+extensions = ["myst_parser"]
+root_doc = "README"
+source_suffix = {".md": "markdown"}
+exclude_patterns = ["_build"]
 
-# Python 3 cache
-__pycache__/
+myst_enable_extensions = ["colon_fence", "deflist", "dollarmath"]
+myst_heading_anchors = 3
 
-# Other Python dev dirs
-build/
-dist/
-venv/
-.tox/
-.docker/
-docs/_build/
+html_theme = "sphinx_rtd_theme"

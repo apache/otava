@@ -89,6 +89,9 @@ tests:
     time_column: time
     metrics: [metric1, metric2]
     attributes: [commit]
+    csv_options:
+      delimiter: ","
+      quote_char: "'"
 
   local2:
     type: csv

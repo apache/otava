@@ -17,21 +17,34 @@
  under the License.
  -->
 
-# Table of Contents
+# Apache Otava Documentation
 
-## Getting Started
-- [Installation](INSTALL.md)
-- [Getting Started](GETTING_STARTED.md)
-- [Contributing](CONTRIBUTING.md)
+```{toctree}
+:maxdepth: 2
+:caption: Getting Started
 
-## Basics
-- [Basics](BASICS.md)
-- [Python persistence API](BASICS.md#python-persistence-api)
+INSTALL
+GETTING_STARTED
+CONTRIBUTING
+```
 
-## Data Sources
-- [Graphite](GRAPHITE.md)
-- [PostgreSQL](POSTGRESQL.md)
-- [BigQuery](BIG_QUERY.md)
-- [CSV](CSV.md)
-- [InfluxDB](INFLUXDB.md)
-- [Annotating Change Points in Grafana](GRAFANA.md)
+```{toctree}
+:maxdepth: 2
+:caption: Using Otava
+
+BASICS
+CSV
+GRAPHITE
+POSTGRESQL
+BIG_QUERY
+INFLUXDB
+GRAFANA
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: Reference
+
+MATH
+RELEASE
+```

@@ -25,7 +25,12 @@ from otava.config import (
     load_config_from_file,
 )
 from otava.main import create_otava_cli_parser
-from otava.test_config import CsvTestConfig, GraphiteTestConfig, HistoStatTestConfig
+from otava.test_config import (
+    CsvTestConfig,
+    GraphiteTestConfig,
+    HistoStatTestConfig,
+    create_csv_test_config,
+)
 
 
 def test_load_graphite_tests():
@@ -54,6 +59,8 @@ def test_load_csv_tests():
     assert len(test.metrics) == 2
     assert len(test.attributes) == 1
     assert test.file == "tests/resources/sample.csv"
+    assert test.csv_options.delimiter == ","
+    assert test.csv_options.quote_char == "'"
 
     test = tests["local2"]
     assert isinstance(test, CsvTestConfig)
@@ -64,6 +71,40 @@ def test_load_csv_tests():
     assert test.metrics["m2"].direction == -1
     assert len(test.attributes) == 1
     assert test.file == "tests/resources/sample.csv"
+
+
+def test_per_test_csv_quote_character_config_name():
+    test = create_csv_test_config(
+        "local",
+        {"file": "sample.csv", "metrics": [], "csv_options": {"quote_char": "|"}},
+    )
+
+    assert test.csv_options.quote_char == "|"
+
+
+def test_global_csv_quote_character_config_name():
+    parser = NestedYAMLConfigFileParser()
+    result = parser.parse(StringIO("csv:\n  quote_char: '|'\n"))
+
+    assert result == {"csv-quote-char": "|"}
+
+
+@pytest.mark.parametrize("option", ["--csv-delimiter", "--csv-quote-char"])
+def test_csv_options_reject_multiple_characters(option, tmp_path):
+    config_file = tmp_path / "otava.yaml"
+    config_file.write_text("tests: {}\n")
+
+    with pytest.raises(SystemExit):
+        load_config_from_file(str(config_file), arg_overrides=[option, "::"])
+
+
+@pytest.mark.parametrize("key", ["delimiter", "quote_char"])
+def test_csv_config_file_options_reject_multiple_characters(key, tmp_path):
+    config_file = tmp_path / "otava.yaml"
+    config_file.write_text(f'csv:\n  {key}: "::"\ntests: {{}}\n')
+
+    with pytest.raises(SystemExit):
+        load_config_from_file(str(config_file))
 
 
 def test_load_test_groups():
@@ -100,6 +141,8 @@ def test_load_histostat_config():
         ("postgres_username", lambda c: c.postgres.username, "POSTGRES_USERNAME", "--postgres-username"),
         ("postgres_password", lambda c: c.postgres.password, "POSTGRES_PASSWORD", "--postgres-password"),
         ("postgres_database", lambda c: c.postgres.database, "POSTGRES_DATABASE", "--postgres-database"),
+        ("csv_delimiter", lambda c: c.csv.delimiter, "CSV_DELIMITER", "--csv-delimiter", ";", "|", "\t"),
+        ("csv_quote_char", lambda c: c.csv.quote_char, "CSV_QUOTE_CHAR", "--csv-quote-char", "'", "|", "`"),
     ],
     ids=lambda v: v[0],  # use the property name for the parameterized test name
 )
@@ -214,6 +257,31 @@ templates:
     for key in result.keys():
         section = key.split('-')[0]
         assert section not in ignored_sections, f"Found key '{key}' from ignored section '{section}'"
+
+
+def test_csv_configargparse_options_apply_to_csv_tests():
+    config = load_config_from_file(
+        "tests/resources/sample_config.yaml",
+        arg_overrides=["--csv-delimiter", ";", "--csv-quote-char", "'"],
+    )
+
+    assert config.tests["local1"].csv_options.delimiter == ";"
+    assert config.tests["local1"].csv_options.quote_char == "'"
+    assert config.tests["local2"].csv_options.delimiter == ";"
+    assert config.tests["local2"].csv_options.quote_char == "'"
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--csv-delimiter", ";", "analyze", "local1"],
+        ["analyze", "local1", "--csv-delimiter", ";"],
+    ],
+)
+def test_csv_cli_options_can_appear_before_or_after_subcommand(args):
+    parsed = create_otava_cli_parser().parse_args(args)
+
+    assert parsed.csv_delimiter == ";"
 
 
 def test_cli_precedence_over_env_vars():
