@@ -15,14 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Compatibility imports for the pre-#78 serialization model names.
+"""Deprecated compatibility models for the pre-#78 persistence API."""
 
-The domain models are now the persistence API. These aliases remain for one
-release so callers can migrate imports independently.
-"""
+from datetime import datetime
+from typing import Dict, List, Optional
 
-from otava.change_point_divisive.base import ChangePoint, ChangePointGroup, JsonScalar
-from otava.series import AnalysisOptions, AnalyzedSeries, Metric
+from pydantic import BaseModel, ConfigDict
+
+JsonScalar = str | int | float | bool | None
 
 __all__ = [
     "AnalysisOptionsModel",
@@ -33,8 +33,50 @@ __all__ = [
     "MetricModel",
 ]
 
-AnalysisOptionsModel = AnalysisOptions
-MetricModel = Metric
-ChangePointModel = ChangePoint
-ChangePointGroupModel = ChangePointGroup
-AnalyzedSeriesModel = AnalyzedSeries
+class AnalysisOptionsModel(BaseModel):
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
+
+    window_len: int = 50
+    max_pvalue: float = 0.001
+    min_magnitude: float = 0.0
+    orig_edivisive: bool = False
+
+
+class MetricModel(BaseModel):
+    direction: Optional[int] = None
+    scale: Optional[float] = None
+    unit: str = ""
+
+
+class ChangePointModel(BaseModel):
+    metric: Optional[str] = None
+    index: int
+    qhat: float
+    forward_change_percent: float
+    magnitude: float
+    mean_before: float
+    stddev_before: float
+    mean_after: float
+    stddev_after: float
+    pvalue: float
+
+
+class ChangePointGroupModel(BaseModel):
+    time: int | float
+    attributes: Dict[str, JsonScalar]
+    changes: List[ChangePointModel]
+
+
+class AnalyzedSeriesModel(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=False)
+
+    test_name: str
+    time: List[int | float]
+    change_points_timestamp: datetime
+    branch_name: Optional[str] = None
+    options: AnalysisOptionsModel
+    metrics: Dict[str, MetricModel]
+    attributes: Dict[str, List[JsonScalar]]
+    data: Dict[str, List[Optional[float]]]
+    change_points: Dict[str, List[ChangePointGroupModel]]
+    weak_change_points: Dict[str, List[ChangePointGroupModel]]

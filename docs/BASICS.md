@@ -30,6 +30,10 @@ previous releases, including legacy string metric units and older flat change-po
 emit `DeprecationWarning`. Migrate callers before the next breaking release, when those
 wrappers and the `ChangePointSerializer` compatibility shim will be removed.
 
+The old `otava.serialization.*Model` imports also remain available for this release as
+flat-persistence compatibility models. New code should use the domain models and
+`AnalyzedSeries.model_validate()` instead.
+
 ## Listing Available Tests
 
 ```

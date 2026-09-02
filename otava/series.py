@@ -20,7 +20,15 @@ from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Optional
 from warnings import warn
 
-from pydantic import BaseModel, ConfigDict, PrivateAttr, TypeAdapter, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    PrivateAttr,
+    TypeAdapter,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from otava.analysis import (
     compute_change_points,
@@ -73,7 +81,7 @@ class Series(DomainModel):
     time: List[int | float]
     metrics: Dict[str, Metric]
     attributes: Dict[str, List[JsonScalar]]
-    data: Dict[str, List[float]]
+    data: Dict[str, List[Optional[float]]]
 
     def __init__(
         self,
@@ -81,7 +89,7 @@ class Series(DomainModel):
         branch: Optional[str] = None,
         time: Optional[List[int | float]] = None,
         metrics: Optional[Dict[str, Metric]] = None,
-        data: Optional[Dict[str, List[float]]] = None,
+        data: Optional[Dict[str, List[Optional[float]]]] = None,
         attributes: Optional[Dict[str, List[JsonScalar]]] = None,
     ):
         super().__init__(
@@ -95,6 +103,7 @@ class Series(DomainModel):
         # append() historically extends the caller-provided timeline in place.
         # Keep that mutation behaviour while validation continues to happen at construction/assignment.
         if time is not None:
+            time[:] = self.time
             object.__setattr__(self, "time", time)
 
     @field_validator("time")
@@ -164,7 +173,9 @@ class AnalyzedSeries(DomainModel):
     ):
         super().__init__(series=series, options=options or AnalysisOptions())
         self._change_points = change_points
-        self._weak_change_points = weak_change_points if change_points is not None else None
+        self._weak_change_points = (
+            weak_change_points if weak_change_points is not None else ChangePointsByMetric()
+        ) if change_points is not None else None
         self._change_points_timestamp = (
             change_points_timestamp or datetime.now(timezone.utc)
             if change_points is not None
@@ -263,11 +274,12 @@ class AnalyzedSeries(DomainModel):
             ),
         }
 
+    @model_validator(mode="wrap")
     @classmethod
-    def model_validate(cls, obj, *args, **kwargs):
-        """Validate both the domain representation and the historical flat document."""
-        if isinstance(obj, dict) and "test_name" in obj:
-            parsed = cls._parse_persistence_document(obj)
+    def validate_persistence_document(cls, value, handler):
+        """Accept both the domain representation and the historical flat document."""
+        if isinstance(value, dict) and "test_name" in value:
+            parsed = cls._parse_persistence_document(value)
             return cls(
                 parsed["series"],
                 AnalysisOptions.model_validate(parsed["options"]),
@@ -275,7 +287,7 @@ class AnalyzedSeries(DomainModel):
                 parsed["weak_change_points"],
                 parsed["change_points_timestamp"],
             )
-        return super().model_validate(obj, *args, **kwargs)
+        return handler(value)
 
     @staticmethod
     def __compute_change_points(
@@ -476,8 +488,8 @@ class AnalyzedSeries(DomainModel):
     def time(self) -> List[int | float]:
         return list(self.series.time)
 
-    def data(self, metric: str) -> List[float]:
-        return [float(d) for d in self.series.data[metric]]
+    def data(self, metric: str) -> List[Optional[float]]:
+        return [float(d) if d is not None else None for d in self.series.data[metric]]
 
     def attributes(self) -> Iterable[str]:
         return self.series.attributes.keys()
@@ -494,7 +506,8 @@ class AnalyzedSeries(DomainModel):
     def metric(self, name: str) -> Metric:
         return self.series.metrics[name]
 
-    def model_dump(self, *args, **kwargs):
+    @model_serializer(mode="plain")
+    def serialize_persistence_document(self, info):
         change_points_json = {}
         cpbm = self.change_points.by_metric() if self.change_points else ChangePointsByMetric()
         for metric_name in cpbm.metrics():
@@ -532,9 +545,7 @@ class AnalyzedSeries(DomainModel):
         payload = {
             "test_name": self.test_name(),
             "time": self.time(),
-            "change_points_timestamp": _datetime_adapter.dump_python(
-                self.change_points_timestamp, mode="json"
-            ),
+            "change_points_timestamp": _datetime_adapter.dump_python(self.change_points_timestamp, mode=info.mode),
             "branch_name": self.branch_name(),
             "options": self.options.model_dump(mode="json"),
             "metrics": metrics_json,
@@ -543,6 +554,10 @@ class AnalyzedSeries(DomainModel):
             "change_points": change_points_json,
             "weak_change_points": weak_change_points_json,
         }
+        if info.include is not None:
+            payload = {key: value for key, value in payload.items() if key in info.include}
+        if info.exclude is not None:
+            payload = {key: value for key, value in payload.items() if key not in info.exclude}
         return payload
 
     def to_json(self):
