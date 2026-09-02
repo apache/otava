@@ -16,8 +16,8 @@
 # under the License.
 
 import json
-import warnings
 import time
+import warnings
 from datetime import datetime
 from random import random
 

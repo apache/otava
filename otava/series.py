@@ -41,6 +41,7 @@ from otava.change_point_divisive.base import (
     ChangePointsByMetric,
     ChangePointsByTime,
 )
+
 JsonScalar = str | int | float | bool | None
 _datetime_adapter = TypeAdapter(datetime)
 

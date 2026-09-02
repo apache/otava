@@ -33,6 +33,7 @@ __all__ = [
     "MetricModel",
 ]
 
+
 class AnalysisOptionsModel(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
