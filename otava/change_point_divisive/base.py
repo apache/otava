@@ -45,24 +45,31 @@ Hierarchy of ChangePoint classes:
           .pivot()                         < - - >  .pivot()
 """
 
-from dataclasses import dataclass, fields, replace
 from datetime import datetime, timezone
 from typing import Dict, Generic, List, Optional, Sequence, SupportsFloat, TypeVar
+from warnings import warn
 
 import numpy as np
 from numpy.typing import NDArray
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+
+JsonScalar = str | int | float | bool | None
 
 
-@dataclass
-class CandidateChangePoint:
+class DomainModel(BaseModel):
+    """Shared validation and assignment semantics for domain value objects."""
+
+    model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
+
+
+class CandidateChangePoint(DomainModel):
     """Candidate for a change point. The point that maximizes Q-hat function on [start:end+1] slice"""
 
     index: int
     qhat: float
 
 
-@dataclass
-class BaseStats:
+class BaseStats(DomainModel):
     """Abstract statistics class for change point. Implementation depends on the statistical test."""
 
     # The pvalue for this change point. Exact value depends on the algorithm that was used.
@@ -99,7 +106,7 @@ class BaseStats:
 
     def copy(self):
         """Return a copy of these statistics, preserving the concrete (sub)class."""
-        return replace(self)
+        return self.model_copy(deep=True)
 
     def forward_rel_change(self, value_if_nan=0):
         """Relative change from left to right"""
@@ -138,6 +145,7 @@ class BaseStats:
         return self.std_2
 
     def to_json(self):
+        warn("BaseStats.to_json() is deprecated; use model_dump(mode='json')", DeprecationWarning, stacklevel=2)
         return {
             "forward_change_percent": f"{self.forward_change_percent():-0f}",
             "magnitude": f"{self.change_magnitude():-0f}",
@@ -153,7 +161,6 @@ class BaseStats:
 GenericStats = TypeVar("GenericStats", bound=BaseStats)
 
 
-@dataclass
 class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
     """
     ChangePoint class.
@@ -182,7 +189,7 @@ class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
 
         :return: A deep copy of self, recursively calls also stats.copy().
         """
-        return ChangePoint(
+        return self.__class__(
             index=self.index, qhat=self.qhat, stats=self.stats.copy(), metric=self.metric
         )
 
@@ -198,11 +205,35 @@ class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
 
     def to_candidate(self) -> CandidateChangePoint:
         """Downgrades Change Point to a Candidate Change Point. Used to recompute stats for Weak Change Points."""
-        data = {f.name: getattr(self, f.name) for f in fields(CandidateChangePoint)}
-        return CandidateChangePoint(**data)
+        return CandidateChangePoint(index=self.index, qhat=self.qhat)
 
     def to_json(self):
-        return ChangePointSerializer(self).to_json()
+        warn("ChangePoint.to_json() is deprecated; use model_dump(mode='json')", DeprecationWarning, stacklevel=2)
+        return self.persistence_dict()
+
+    def forward_change_percent(self) -> float:
+        return self.stats.forward_change_percent()
+
+    def backward_change_percent(self) -> float:
+        return self.stats.backward_change_percent()
+
+    def magnitude(self) -> float:
+        return self.stats.change_magnitude()
+
+    def persistence_dict(self) -> dict:
+        """The historical flat change-point document used inside persisted analyses."""
+        return {
+            "metric": self.metric,
+            "index": int(self.index),
+            "qhat": self.qhat,
+            "forward_change_percent": self.forward_change_percent(),
+            "magnitude": self.magnitude(),
+            "mean_before": self.stats.mean_before(),
+            "stddev_before": self.stats.stddev_before(),
+            "mean_after": self.stats.mean_after(),
+            "stddev_after": self.stats.stddev_after(),
+            "pvalue": self.stats.pvalue,
+        }
 
 
 class ChangePointSerializer(ChangePoint):
@@ -214,10 +245,12 @@ class ChangePointSerializer(ChangePoint):
     """
 
     def __init__(self, cp: ChangePoint[GenericStats]):
-        self.stats = cp.stats
-        self.index = cp.index
-        self.qhat = cp.qhat
-        self.metric = cp.metric
+        warn(
+            "ChangePointSerializer is deprecated; use ChangePoint's model-derived values instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(stats=cp.stats, index=cp.index, qhat=cp.qhat, metric=cp.metric)
 
     def forward_change_percent(self) -> float:
         return self.stats.forward_rel_change() * 100.0
@@ -244,22 +277,10 @@ class ChangePointSerializer(ChangePoint):
         return self.stats.pvalue
 
     def to_json(self):
-        return {
-            "metric": self.metric,
-            "index": int(self.index),
-            "qhat": self.qhat,
-            "forward_change_percent": self.forward_change_percent(),
-            "magnitude": self.magnitude(),
-            "mean_before": self.mean_before(),
-            "stddev_before": self.stddev_before(),
-            "mean_after": self.mean_after(),
-            "stddev_after": self.stddev_after(),
-            "pvalue": self.pvalue(),
-        }
+        return self.persistence_dict()
 
 
-@dataclass
-class ChangePointGroup:
+class ChangePointGroup(DomainModel):
     """
     A group of change points on multiple metrics, at the same point in time.
 
@@ -275,15 +296,30 @@ class ChangePointGroup:
     :param changes: For each metric that has a change point at this time(stamp), the ChangePoint object.
     """
 
-    time: float
-    attributes: Dict[str, str]
+    time: int | float
+    attributes: Dict[str, JsonScalar]
     # ChangePointGroup.changes.keys() stores the set of metrics that were used at this ChangePointGroup.time.
     changes: Dict[str, ChangePoint]
 
+    @field_validator("time")
+    @classmethod
+    def validate_time(cls, value):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError("time must be numeric")
+        return value
+
+    @model_validator(mode="after")
+    def validate_metric_mapping(self):
+        for metric, change in self.changes.items():
+            if change.metric is None:
+                change.metric = metric
+            elif change.metric != metric:
+                raise ValueError(f"metric field is not internally consistent. {metric} != {change.metric}")
+        return self
+
     def to_json(self):
-        changes = []
-        for metric, cp in self.changes.items():
-            changes.append(cp.to_json())
+        warn("ChangePointGroup.to_json() is deprecated; use model_dump(mode='json')", DeprecationWarning, stacklevel=2)
+        changes = [cp.persistence_dict() for cp in self.changes.values()]
 
         return {
             "time": self.time,
@@ -294,8 +330,7 @@ class ChangePointGroup:
     def copy(self):
         new_attributes = {k: v for k, v in self.attributes.items()}
         new_changes = {metric: cp.copy() for metric, cp in self.changes.items()}
-        new_obj = ChangePointGroup(time=self.time, attributes=new_attributes, changes=new_changes)
-        return new_obj
+        return ChangePointGroup(time=self.time, attributes=new_attributes, changes=new_changes)
 
     def __getitem__(self, metric):
         return self.changes[metric]

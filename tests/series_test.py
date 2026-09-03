@@ -17,14 +17,19 @@
 
 import json
 import time
+import warnings
 from datetime import datetime
 from random import random
 
 import pytest
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from otava.change_point_divisive.base import ChangePointSerializer
-from otava.serialization import AnalysisOptionsModel, AnalyzedSeriesModel
+from otava.serialization import (
+    AnalyzedSeriesModel,
+    ChangePointGroupModel,
+    ChangePointModel,
+)
 from otava.series import AnalysisOptions, AnalyzedSeries, Metric, Series
 
 
@@ -57,7 +62,6 @@ def test_analysis_options_is_pydantic_model():
         orig_edivisive=True,
     )
 
-    assert isinstance(options, AnalysisOptionsModel)
     assert options.model_dump(mode="json") == {
         "window_len": 25,
         "max_pvalue": 0.05,
@@ -168,7 +172,7 @@ def test_div_by_zero():
 
     analyzed_series = test.analyze()
     change_points = analyzed_series.change_points_by_time
-    cpjson = analyzed_series.to_json()
+    cpjson = analyzed_series.model_dump(mode="json")
     assert cpjson
     assert len(change_points) == 2
     assert change_points[0].time == 3
@@ -293,6 +297,87 @@ def test_analyzed_series_json_round_trip():
     ] == [4, 11]
     assert restored.to_json()["change_points"] == payload["change_points"]
     assert restored.to_json()["weak_change_points"] == payload["weak_change_points"]
+
+
+def test_pydantic_persistence_api_and_deprecation_wrappers():
+    series = Series(
+        "test",
+        None,
+        [1, 2],
+        {"latency": Metric(1, 1.0, "ms")},
+        {"latency": [1.0, 2.0]},
+        {"commit": [None, "abc"]},
+    )
+    analysis = series.analyze()
+    payload = analysis.model_dump(mode="json")
+
+    assert json.loads(json.dumps(payload)) == payload
+    assert AnalyzedSeries.model_validate(payload).model_dump(mode="json") == payload
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        assert analysis.to_json() == payload
+        assert AnalyzedSeries.from_json(payload).model_dump(mode="json") == payload
+    assert [warning.category for warning in caught] == [DeprecationWarning, DeprecationWarning]
+
+
+def test_persistence_validation_uses_every_pydantic_entry_point():
+    analysis = Series(
+        "test",
+        time=[1, 2],
+        metrics={"latency": Metric(unit="ms")},
+        data={"latency": [1.0, None]},
+    ).analyze()
+    payload = analysis.model_dump(mode="json")
+
+    restored = [
+        AnalyzedSeries.model_validate(payload),
+        AnalyzedSeries.model_validate_json(json.dumps(payload)),
+        TypeAdapter(AnalyzedSeries).validate_python(payload),
+    ]
+
+    assert [item.model_dump(mode="json") for item in restored] == [payload, payload, payload]
+
+
+def test_persistence_serializer_is_used_by_json_and_honors_top_level_filters():
+    analysis = Series(
+        "test",
+        time=[1, 2],
+        metrics={"latency": Metric(unit="ms")},
+        data={"latency": [1.0, 2.0]},
+    ).analyze()
+
+    assert "data" not in analysis.model_dump(exclude={"data"})
+    assert set(analysis.model_dump(include={"test_name", "data"})) == {"test_name", "data"}
+    assert "test_name" in json.loads(analysis.model_dump_json())
+
+
+def test_series_preserves_validated_timeline_list_and_empty_weak_change_points():
+    timeline = ["1", 2]
+    series = Series("test", time=timeline)
+
+    assert series.time is timeline
+    assert timeline == [1, 2]
+    assert AnalyzedSeries(series, change_points={}).model_dump()["weak_change_points"] == {}
+
+
+def test_legacy_serialization_models_accept_their_original_flat_shape():
+    point = ChangePointModel.model_validate(
+        {
+            "metric": "latency",
+            "index": 1,
+            "qhat": 0.1,
+            "forward_change_percent": 2.0,
+            "magnitude": 0.02,
+            "mean_before": 10.0,
+            "stddev_before": 1.0,
+            "mean_after": 10.2,
+            "stddev_after": 1.1,
+            "pvalue": 0.01,
+        }
+    )
+    group = ChangePointGroupModel(time=1, attributes={}, changes=[point])
+
+    assert group.model_dump()["changes"][0]["mean_before"] == 10.0
 
 
 def test_analyzed_series_json_round_trip_through_json_module():

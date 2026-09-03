@@ -19,6 +19,21 @@
 
 # Basics
 
+## Python persistence API
+
+`Series`, `AnalyzedSeries`, metrics, statistics, and change-point groups are Pydantic v2
+domain models. Persist an analysis with `analysis.model_dump(mode="json")`, and restore it
+with `AnalyzedSeries.model_validate(payload)`. The JSON document remains compatible with
+previous releases, including legacy string metric units and older flat change-point entries.
+
+`to_json()` and `from_json()` remain as deprecated wrappers for the current release and
+emit `DeprecationWarning`. Migrate callers before the next breaking release, when those
+wrappers and the `ChangePointSerializer` compatibility shim will be removed.
+
+The old `otava.serialization.*Model` imports also remain available for this release as
+flat-persistence compatibility models. New code should use the domain models and
+`AnalyzedSeries.model_validate()` instead.
+
 ## Listing Available Tests
 
 ```

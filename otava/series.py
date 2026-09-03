@@ -16,14 +16,21 @@
 # under the License.
 
 import logging
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Optional
+from warnings import warn
 
-from pydantic import TypeAdapter
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    PrivateAttr,
+    TypeAdapter,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from otava.analysis import (
-    TTestStats,
     compute_change_points,
     compute_change_points_orig,
 )
@@ -34,31 +41,36 @@ from otava.change_point_divisive.base import (
     ChangePointsByMetric,
     ChangePointsByTime,
 )
-from otava.serialization import AnalysisOptionsModel, AnalyzedSeriesModel, JsonScalar
 
+JsonScalar = str | int | float | bool | None
 _datetime_adapter = TypeAdapter(datetime)
 
 
-class AnalysisOptions(AnalysisOptionsModel):
-    pass
+class DomainModel(BaseModel):
+    model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True, extra="forbid")
 
 
-@dataclass
-class Metric:
-    direction: int
-    scale: float
+class AnalysisOptions(DomainModel):
+    window_len: int = 50
+    max_pvalue: float = 0.001
+    min_magnitude: float = 0.0
+    orig_edivisive: bool = False
+
+
+class Metric(DomainModel):
+    direction: Optional[int] = 1
+    scale: Optional[float] = 1.0
     unit: str
 
     def __init__(self, direction: int = 1, scale: float = 1.0, unit: str = ""):
-        self.direction = direction
-        self.scale = scale
-        self.unit = unit
+        super().__init__(direction=direction, scale=scale, unit=unit)
 
     def to_json(self):
-        return {"direction": self.direction, "scale": self.scale, "unit": self.unit}
+        warn("Metric.to_json() is deprecated; use model_dump(mode='json')", DeprecationWarning, stacklevel=2)
+        return self.model_dump(mode="json")
 
 
-class Series:
+class Series(DomainModel):
     """
     Stores values of interesting metrics of all runs of
     a fallout test indexed by a single time variable.
@@ -70,25 +82,48 @@ class Series:
     time: List[int | float]
     metrics: Dict[str, Metric]
     attributes: Dict[str, List[JsonScalar]]
-    data: Dict[str, List[float]]
+    data: Dict[str, List[Optional[float]]]
 
     def __init__(
         self,
         test_name: str,
-        branch: Optional[str],
-        time: List[int | float],
-        metrics: Dict[str, Metric],
-        data: Dict[str, List[float]],
-        attributes: Dict[str, List[JsonScalar]],
+        branch: Optional[str] = None,
+        time: Optional[List[int | float]] = None,
+        metrics: Optional[Dict[str, Metric]] = None,
+        data: Optional[Dict[str, List[Optional[float]]]] = None,
+        attributes: Optional[Dict[str, List[JsonScalar]]] = None,
     ):
-        self.test_name = test_name
-        self.branch = branch
-        self.time = time
-        self.metrics = metrics
-        self.attributes = attributes if attributes else {}
-        self.data = data
-        assert all(len(x) == len(time) for x in data.values())
-        assert all(len(x) == len(time) for x in attributes.values())
+        super().__init__(
+            test_name=test_name,
+            branch=branch,
+            time=[] if time is None else time,
+            metrics={} if metrics is None else metrics,
+            data={} if data is None else data,
+            attributes={} if attributes is None else attributes,
+        )
+        # append() historically extends the caller-provided timeline in place.
+        # Keep that mutation behaviour while validation continues to happen at construction/assignment.
+        if time is not None:
+            time[:] = self.time
+            object.__setattr__(self, "time", time)
+
+    @field_validator("time")
+    @classmethod
+    def validate_timestamps(cls, value):
+        if any(isinstance(timestamp, bool) or not isinstance(timestamp, (int, float)) for timestamp in value):
+            raise ValueError("time values must be numeric")
+        return value
+
+    @model_validator(mode="after")
+    def validate_structure(self):
+        expected_length = len(self.time)
+        if self.metrics and set(self.data) != set(self.metrics):
+            raise ValueError("data and metrics must have the same metric names")
+        if any(len(values) != expected_length for values in self.data.values()):
+            raise ValueError("all data series must align with time")
+        if any(len(values) != expected_length for values in self.attributes.values()):
+            raise ValueError("all attribute series must align with time")
+        return self
 
     def attributes_at(self, index: int) -> Dict[str, JsonScalar]:
         result = {}
@@ -117,60 +152,143 @@ class Series:
         return AnalyzedSeries(self, options)
 
 
-class AnalyzedSeries:
+class AnalyzedSeries(DomainModel):
     """
     Time series data with computed change points.
     """
 
-    __series: Series
+    series: Series
     options: AnalysisOptions
+    _change_points: Optional[ChangePointsByMetric] = PrivateAttr(default=None)
+    _weak_change_points: Optional[ChangePointsByMetric] = PrivateAttr(default=None)
+    _change_points_by_time: Optional[ChangePointsByTime] = PrivateAttr(default=None)
+    _change_points_timestamp: Optional[datetime] = PrivateAttr(default=None)
 
     def __init__(
         self,
         series: Series,
-        options: AnalysisOptions,
+        options: Optional[AnalysisOptions] = None,
         change_points: Optional[ChangePointsByMetric] = None,
+        weak_change_points: Optional[ChangePointsByMetric] = None,
+        change_points_timestamp: Optional[datetime] = None,
     ):
-        self.__series = series
-        self.options = options
-        self.__change_points = change_points
-        self.__weak_change_points = ChangePointsByMetric() if change_points is not None else None
-        self.__change_points_by_time = None
-        # records when the change points were calculated
-        self.__change_points_timestamp = (
-            datetime.now(timezone.utc) if change_points is not None else None
+        super().__init__(series=series, options=options or AnalysisOptions())
+        self._change_points = change_points
+        self._weak_change_points = (
+            weak_change_points if weak_change_points is not None else ChangePointsByMetric()
+        ) if change_points is not None else None
+        self._change_points_timestamp = (
+            change_points_timestamp or datetime.now(timezone.utc)
+            if change_points is not None
+            else None
         )
 
     def __ensure_change_points_computed(self):
-        if self.__change_points is None:
-            logging.info(f"Computing change points for test {self.__series.test_name}...")
-            cp, weak_cps = self.__compute_change_points(self.__series, self.options)
-            self.__change_points = cp
-            self.__weak_change_points = weak_cps
-            self.__change_points_timestamp = datetime.now(timezone.utc)
+        if self._change_points is None:
+            logging.info(f"Computing change points for test {self.series.test_name}...")
+            self._change_points, self._weak_change_points = self.__compute_change_points(
+                self.series, self.options
+            )
+            self._change_points_timestamp = datetime.now(timezone.utc)
 
     @property
     def change_points(self) -> ChangePointsByMetric:
         self.__ensure_change_points_computed()
-        return self.__change_points
+        return self._change_points
+
+    @change_points.setter
+    def change_points(self, value: Optional[ChangePointsByMetric]):
+        self._change_points = value
+        self._change_points_by_time = None
 
     @property
     def weak_change_points(self) -> ChangePointsByMetric:
         self.__ensure_change_points_computed()
-        return self.__weak_change_points
+        return self._weak_change_points
+
+    @weak_change_points.setter
+    def weak_change_points(self, value: ChangePointsByMetric):
+        self._weak_change_points = value
 
     @property
     def change_points_timestamp(self) -> datetime:
         self.__ensure_change_points_computed()
-        return self.__change_points_timestamp
+        return self._change_points_timestamp
 
     @property
     def change_points_by_time(self) -> ChangePointsByTime:
-        if self.__change_points_by_time is None:
-            self.__change_points_by_time = self.__group_change_points_by_time(
-                self.__series, self.change_points
+        if self._change_points_by_time is None:
+            self._change_points_by_time = self.__group_change_points_by_time(
+                self.series, self.change_points
             )
-        return self.__change_points_by_time
+        return self._change_points_by_time
+
+    @classmethod
+    def _parse_persistence_document(cls, value):
+        def parse_changes(by_metric):
+            result = {}
+            for metric, groups in by_metric.items():
+                parsed_groups = []
+                for group in groups:
+                    changes = {}
+                    for raw_change in group.get("changes", [group]):
+                        change_metric = raw_change.get("metric") or metric
+                        stats = raw_change.get("stats") or {
+                            "mean_1": raw_change["mean_before"],
+                            "mean_2": raw_change["mean_after"],
+                            "std_1": raw_change["stddev_before"],
+                            "std_2": raw_change["stddev_after"],
+                            "pvalue": raw_change["pvalue"],
+                        }
+                        changes[change_metric] = ChangePoint(
+                            index=raw_change["index"],
+                            qhat=raw_change.get("qhat", 0.0),
+                            metric=change_metric,
+                            stats=stats,
+                        )
+                    parsed_groups.append(
+                        ChangePointGroup(
+                            time=group["time"], attributes=group.get("attributes", {}), changes=changes
+                        )
+                    )
+                result[metric] = parsed_groups
+            return ChangePointsByMetric.from_dict(result)
+
+        metrics = {
+            name: Metric(unit=metric) if isinstance(metric, str) else Metric.model_validate(metric)
+            for name, metric in value["metrics"].items()
+        }
+        return {
+            "series": Series(
+                value["test_name"],
+                value.get("branch_name"),
+                value["time"],
+                metrics,
+                value["data"],
+                value.get("attributes", {}),
+            ),
+            "options": value.get("options", {}),
+            "change_points": parse_changes(value.get("change_points", {})),
+            "weak_change_points": parse_changes(value.get("weak_change_points", {})),
+            "change_points_timestamp": _datetime_adapter.validate_python(
+                value.get("change_points_timestamp", datetime.now(timezone.utc))
+            ),
+        }
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def validate_persistence_document(cls, value, handler):
+        """Accept both the domain representation and the historical flat document."""
+        if isinstance(value, dict) and "test_name" in value:
+            parsed = cls._parse_persistence_document(value)
+            return cls(
+                parsed["series"],
+                AnalysisOptions.model_validate(parsed["options"]),
+                parsed["change_points"],
+                parsed["weak_change_points"],
+                parsed["change_points_timestamp"],
+            )
+        return handler(value)
 
     @staticmethod
     def __compute_change_points(
@@ -265,7 +383,7 @@ class AnalyzedSeries:
         if not isinstance(attributes, dict):
             return ValueError("attributes must be a dict.")
 
-        max_time = max(self.__series.time)
+        max_time = max(self.series.time)
         for t in time:
             if t <= max_time:
                 return ValueError(
@@ -288,17 +406,17 @@ class AnalyzedSeries:
             raise err
 
         for t in time:
-            self.__series.time.append(t)
-        for m in self.__series.metrics.keys():
+            self.series.time.append(t)
+        for m in self.series.metrics.keys():
             if m in new_data.keys():
-                self.__series.data[m] += new_data[m]
+                self.series.data[m] += new_data[m]
         for k, v in attributes.items():
-            self.__series.attributes[k].append(v)
+            self.series.attributes[k].append(v)
 
         result = {}
         weak_change_points = {}
 
-        for metric in self.__series.data.keys():
+        for metric in self.series.data.keys():
             if metric not in new_data:
                 if metric in self.weak_change_points:
                     weak_change_points[metric] = self.weak_change_points.select_metrics(metric)
@@ -313,10 +431,10 @@ class AnalyzedSeries:
             old_weak_cp = [
                 cp
                 for cp in previous_weak_cp
-                if cp.index < len(self.__series.data[metric]) - new_data_len - 1
+                if cp.index < len(self.series.data[metric]) - new_data_len - 1
             ]
             change_points, weak_cps = compute_change_points(
-                self.__series.data[metric],
+                self.series.data[metric],
                 window_len=self.options.window_len,
                 max_pvalue=self.options.max_pvalue,
                 min_magnitude=self.options.min_magnitude,
@@ -330,9 +448,9 @@ class AnalyzedSeries:
                 cp.metric = metric
                 result[metric].append(
                     ChangePointGroup(
-                        time=self.__series.time[cp.index],
+                        time=self.series.time[cp.index],
                         changes={metric: cp},
-                        attributes=self.__series.attributes_at(cp.index),
+                        attributes=self.series.attributes_at(cp.index),
                     )
                 )
             if metric not in weak_change_points:
@@ -342,9 +460,9 @@ class AnalyzedSeries:
                 cp.metric = metric
                 weak_change_points[metric].append(
                     ChangePointGroup(
-                        time=self.__series.time[cp.index],
+                        time=self.series.time[cp.index],
                         changes={metric: cp},
-                        attributes=self.__series.attributes_at(cp.index),
+                        attributes=self.series.attributes_at(cp.index),
                     )
                 )
 
@@ -353,159 +471,101 @@ class AnalyzedSeries:
         # r has a subset of all metrics, so can't just set change_points to r
         for metric, cpglist in r.items():
             self.change_points[metric] = cpglist
-        self.__weak_change_points = w
+        self._weak_change_points = w
         # invalidate rather than rebuild: the property recomputes it on first read
-        self.__change_points_by_time = None
-        self.__change_points_timestamp = datetime.now(timezone.utc)
+        self._change_points_by_time = None
+        self._change_points_timestamp = datetime.now(timezone.utc)
         return r, w
 
     def test_name(self) -> str:
-        return self.__series.test_name
+        return self.series.test_name
 
     def branch_name(self) -> Optional[str]:
-        return self.__series.branch
+        return self.series.branch
 
     def len(self) -> int:
-        return len(self.__series.time)
+        return len(self.series.time)
 
     def time(self) -> List[int | float]:
-        return list(self.__series.time)
+        return list(self.series.time)
 
-    def data(self, metric: str) -> List[float]:
-        return [float(d) for d in self.__series.data[metric]]
+    def data(self, metric: str) -> List[Optional[float]]:
+        return [float(d) if d is not None else None for d in self.series.data[metric]]
 
     def attributes(self) -> Iterable[str]:
-        return self.__series.attributes.keys()
+        return self.series.attributes.keys()
 
     def attributes_at(self, index: int) -> Dict[str, JsonScalar]:
-        return self.__series.attributes_at(index)
+        return self.series.attributes_at(index)
 
     def attribute_values(self, attribute: str) -> List[JsonScalar]:
-        return self.__series.attributes[attribute]
+        return self.series.attributes[attribute]
 
     def metric_names(self) -> Iterable[str]:
-        return self.__series.metrics.keys()
+        return self.series.metrics.keys()
 
     def metric(self, name: str) -> Metric:
-        return self.__series.metrics[name]
+        return self.series.metrics[name]
 
-    def to_json(self):
+    @model_serializer(mode="plain")
+    def serialize_persistence_document(self, info):
         change_points_json = {}
-        cpbm = self.change_points.by_metric()
-        for metric_name in self.change_points.metrics():
+        cpbm = self.change_points.by_metric() if self.change_points else ChangePointsByMetric()
+        for metric_name in cpbm.metrics():
             change_points_json[metric_name] = []
             for cp in cpbm.select_metrics(metric_name):
-                change_points_json[metric_name].append(cp.to_json())
+                change_points_json[metric_name].append(
+                    {
+                        "time": cp.time,
+                        "attributes": cp.attributes,
+                        "changes": [change.persistence_dict() for change in cp.changes.values()],
+                    }
+                )
 
         weak_change_points_json = {}
         wcpbm = self.weak_change_points.by_metric()
         for metric_name in self.weak_change_points.metrics():
             weak_change_points_json[metric_name] = []
             for cp in wcpbm.select_metrics(metric_name):
-                weak_change_points_json[metric_name].append(cp.to_json())
+                weak_change_points_json[metric_name].append(
+                    {
+                        "time": cp.time,
+                        "attributes": cp.attributes,
+                        "changes": [change.persistence_dict() for change in cp.changes.values()],
+                    }
+                )
 
         data_json = {}
-        for metric, datapoints in self.__series.data.items():
+        for metric, datapoints in self.series.data.items():
             data_json[metric] = [float(d) if d is not None else None for d in datapoints]
 
         metrics_json = {}
-        for metric, unit in self.__series.metrics.items():
-            metrics_json[metric] = unit.to_json()
+        for metric, unit in self.series.metrics.items():
+            metrics_json[metric] = unit.model_dump(mode="json")
 
         payload = {
             "test_name": self.test_name(),
             "time": self.time(),
-            "change_points_timestamp": self.change_points_timestamp,
+            "change_points_timestamp": _datetime_adapter.dump_python(self.change_points_timestamp, mode=info.mode),
             "branch_name": self.branch_name(),
             "options": self.options.model_dump(mode="json"),
             "metrics": metrics_json,
-            "attributes": self.__series.attributes,
+            "attributes": self.series.attributes,
             "data": data_json,
             "change_points": change_points_json,
             "weak_change_points": weak_change_points_json,
         }
-        return AnalyzedSeriesModel.model_validate(payload).model_dump(mode="json")
+        if info.include is not None:
+            payload = {key: value for key, value in payload.items() if key in info.include}
+        if info.exclude is not None:
+            payload = {key: value for key, value in payload.items() if key not in info.exclude}
+        return payload
+
+    def to_json(self):
+        warn("AnalyzedSeries.to_json() is deprecated; use model_dump(mode='json')", DeprecationWarning, stacklevel=2)
+        return self.model_dump(mode="json")
 
     @classmethod
     def from_json(cls, analyzed_json):
-        def stats_from_json(cp_json):
-            return TTestStats(
-                mean_1=cp_json["mean_before"],
-                mean_2=cp_json["mean_after"],
-                std_1=cp_json["stddev_before"],
-                std_2=cp_json["stddev_after"],
-                pvalue=cp_json["pvalue"],
-            )
-
-        def change_point_from_json(metric, cp_json):
-            return ChangePoint(
-                index=cp_json["index"],
-                qhat=cp_json.get("qhat", 0.0),
-                metric=cp_json.get("metric") or metric,
-                stats=stats_from_json(cp_json),
-            )
-
-        def change_points_from_json(change_points_json):
-            new_change_points = {}
-            for metric, groups in change_points_json.items():
-                new_change_points[metric] = []
-                for group in groups:
-                    if "changes" in group:
-                        changes = {
-                            cp_json.get("metric") or metric: change_point_from_json(metric, cp_json)
-                            for cp_json in group["changes"]
-                        }
-                        new_change_points[metric].append(
-                            ChangePointGroup(
-                                time=group["time"],
-                                attributes=group["attributes"],
-                                changes=changes,
-                            )
-                        )
-                    else:
-                        new_change_points[metric].append(
-                            ChangePointGroup(
-                                time=group["time"],
-                                attributes=group.get("attributes", {}),
-                                changes={metric: change_point_from_json(metric, group)},
-                            )
-                        )
-            return ChangePointsByMetric.from_dict(new_change_points)
-
-        new_metrics = {}
-
-        for metric_name, metric_json in analyzed_json["metrics"].items():
-            if isinstance(metric_json, dict):
-                new_metrics[metric_name] = Metric(
-                    metric_json.get("direction"),
-                    metric_json.get("scale"),
-                    metric_json.get("unit", ""),
-                )
-            else:
-                new_metrics[metric_name] = Metric(None, None, metric_json)
-
-        new_series = Series(
-            analyzed_json["test_name"],
-            analyzed_json["branch_name"],
-            analyzed_json["time"],
-            new_metrics,
-            analyzed_json["data"],
-            analyzed_json["attributes"],
-        )
-
-        new_options = AnalysisOptions.model_validate(analyzed_json["options"])
-
-        new_change_points = change_points_from_json(analyzed_json["change_points"])
-        new_weak_change_points = change_points_from_json(
-            analyzed_json.get("weak_change_points", {})
-        )
-
-        analyzed_series = cls(new_series, new_options, new_change_points)
-        analyzed_series.__weak_change_points = new_weak_change_points
-
-        if "change_points_timestamp" in analyzed_json.keys():
-            analyzed_series.__change_points_timestamp = _datetime_adapter.validate_python(
-                analyzed_json["change_points_timestamp"]
-            )
-
-        return analyzed_series
+        warn("AnalyzedSeries.from_json() is deprecated; use model_validate()", DeprecationWarning, stacklevel=2)
+        return cls.model_validate(analyzed_json)

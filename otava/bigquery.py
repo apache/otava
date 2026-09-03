@@ -28,7 +28,7 @@ else:
     ScalarQueryParameter = Any
 
 from otava._optional import import_optional_dependency
-from otava.change_point_divisive.base import ChangePointGroup, ChangePointSerializer
+from otava.change_point_divisive.base import ChangePointGroup
 from otava.test_config import BigQueryTestConfig
 
 
@@ -106,7 +106,7 @@ class BigQuery:
         attributes: Dict,
         change_point_group: ChangePointGroup,
     ):
-        change_point = ChangePointSerializer(change_point_group[metric_name])
+        change_point = change_point_group[metric_name]
         kwargs = {**attributes, **{test.time_column: datetime.utcfromtimestamp(change_point_group.time)}}
         update_stmt = test.update_stmt.format(
             metric=metric_name,
