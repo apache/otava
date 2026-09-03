@@ -22,6 +22,12 @@
 > [!TIP]
 > See [otava.yaml](../examples/postgresql/config/otava.yaml) for the full example configuration.
 
+## Installation
+
+```bash
+pip install 'apache-otava[postgres]'
+```
+
 ## PostgreSQL Connection
 The following block contains PostgreSQL connection details:
 
@@ -94,28 +100,29 @@ Start docker-compose with PostgreSQL in one tab:
 
 ```bash
 docker-compose -f examples/postgresql/docker-compose.yaml up --force-recreate --always-recreate-deps --renew-anon-volumes
-````
+```
 
 Run Otava in the other tab to show results for a single test `aggregate_mem` and update the database with newly found change points:
 
 ```bash
-docker-compose -f examples/postgresql/docker-compose.yaml run --rm otava analyze aggregate_mem --update-postgres
+docker-compose -f examples/postgresql/docker-compose.yaml run --rm otava \
+  analyze aggregate_mem --since=2025-01-01 --update-postgres
 ```
 
 Expected output:
 
-```bash                                                                                                                                                                                                       0.0s
-time                       experiment_id       commit      process_cumulative_rate_mean    process_cumulative_rate_stderr    process_cumulative_rate_diff
--------------------------  ------------------  --------  ------------------------------  --------------------------------  ------------------------------
-2024-03-13 10:03:02 +0000  aggregate-36e5ccd2  36e5ccd2                           61160                              2052                           13558
-2024-03-25 10:03:02 +0000  aggregate-d5460f38  d5460f38                           60160                              2142                           13454
-2024-04-02 10:03:02 +0000  aggregate-bc9425cb  bc9425cb                           60960                              2052                           13053
-                                                         ······························
-                                                                                  -5.6%
-                                                         ······························
-2024-04-06 10:03:02 +0000  aggregate-14df1b11  14df1b11                           57123                              2052                           14052
-2024-04-13 10:03:02 +0000  aggregate-ac40c0d8  ac40c0d8                           57980                              2052                           13521
-2024-04-27 10:03:02 +0000  aggregate-0af4ccbc  0af4ccbc                           56950                              2052                           13532
+```text
+time                       experiment_id       commit      config_id    process_cumulative_rate_mean    process_cumulative_rate_stderr    process_cumulative_rate_diff
+-------------------------  ------------------  --------  -----------  ------------------------------  --------------------------------  ------------------------------
+2025-03-13 10:03:02 +0000  aggregate-36e5ccd2  36e5ccd2            1                           61160                              2052                           13558
+2025-03-25 10:03:02 +0000  aggregate-d5460f38  d5460f38            1                           60160                              2142                           13454
+2025-04-02 10:03:02 +0000  aggregate-bc9425cb  bc9425cb            1                           60960                              2052                           13053
+                                                                      ······························
+                                                                                               -5.6%
+                                                                      ······························
+2025-04-06 10:03:02 +0000  aggregate-14df1b11  14df1b11            1                           57123                              2052                           14052
+2025-04-13 10:03:02 +0000  aggregate-ac40c0d8  ac40c0d8            1                           57980                              2052                           13521
+2025-04-27 10:03:02 +0000  aggregate-0af4ccbc  0af4ccbc            1                           56950                              2052                           13532
 ```
 
 ### Configuration

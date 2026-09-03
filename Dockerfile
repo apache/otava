@@ -59,8 +59,9 @@ COPY --from=builder /build/dist/*.whl /tmp/
 # Install the wheel and remove temporary artifacts.
 # With the slim runtime image this should resolve binary dependencies from
 # prebuilt wheels instead of compiling NumPy/SciPy from source.
-RUN uv pip install --system --no-cache /tmp/apache_otava-*.whl \
-    && rm /tmp/apache_otava-*.whl \
+RUN set -- /tmp/apache_otava-*.whl \
+    && uv pip install --system --no-cache "${1}[all]" \
+    && rm "${1}" \
     && rm /usr/local/bin/uv
 
 # Switch to otava user

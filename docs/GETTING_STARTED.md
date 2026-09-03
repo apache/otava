@@ -27,16 +27,36 @@ Otava requires Python 3.10 or later.
 pip install apache-otava
 ```
 
+This installs the Otava library and CLI with CSV, JSON, and Graphite
+support. Install the extra for any additional service you use, for example:
+
+```bash
+pip install 'apache-otava[postgres]'
+pip install 'apache-otava[bigquery,slack]'
+```
+
+See [Installation](INSTALL.md) for the complete list of extras.
+
 or
 
 ```bash
 docker pull apache/otava
 ```
 
+The Docker image includes all optional integrations.
+
 
 ## Setup
 
-Copy the main configuration file `resources/otava.yaml` to `~/.otava/otava.yaml` and adjust data source configuration.
+By default, Otava reads configuration from `~/.otava/otava.yaml`. Create that
+file and add the data sources and tests you want to analyze.
+
+To run the bundled CSV example from a source checkout, use its local
+configuration while running the commands in this guide:
+
+```bash
+export OTAVA_CONFIG=examples/csv/config/otava-local.yaml
+```
 
 > [!TIP]
 > See docs on specific data sources to learn more about their configuration - [CSV](CSV.md), [Graphite](GRAPHITE.md),
@@ -132,23 +152,22 @@ The results are simply concatenated.
 
 ## Example
 
-```
-$ otava analyze local.sample
-INFO: Computing change points for test sample.csv...
-sample:
-time                         metric1    metric2
--------------------------  ---------  ---------
-2021-01-01 02:00:00 +0000     154023      10.43
-2021-01-02 02:00:00 +0000     138455      10.23
-2021-01-03 02:00:00 +0000     143112      10.29
-2021-01-04 02:00:00 +0000     149190      10.91
-2021-01-05 02:00:00 +0000     132098      10.34
-2021-01-06 02:00:00 +0000     151344      10.69
-                                      ·········
-                                         -12.9%
-                                      ·········
-2021-01-07 02:00:00 +0000     155145       9.23
-2021-01-08 02:00:00 +0000     148889       9.11
-2021-01-09 02:00:00 +0000     149466       9.13
-2021-01-10 02:00:00 +0000     148209       9.03
+```console
+$ otava analyze local.sample --since=2026-01-01T00:00:00Z
+INFO: Computing change points for test local.sample...
+time                       commit      metric1    metric2
+-------------------------  --------  ---------  ---------
+2026-01-01 02:00:00 +0000  aaa0         154023      10.43
+2026-01-02 02:00:00 +0000  aaa1         138455      10.23
+2026-01-03 02:00:00 +0000  aaa2         143112      10.29
+2026-01-04 02:00:00 +0000  aaa3         149190      10.91
+2026-01-05 02:00:00 +0000  aaa4         132098      10.34
+2026-01-06 02:00:00 +0000  aaa5         151344      10.69
+                                                ·········
+                                                   -12.9%
+                                                ·········
+2026-01-07 02:00:00 +0000  aaa6         155145       9.23
+2026-01-08 02:00:00 +0000  aaa7         148889       9.11
+2026-01-09 02:00:00 +0000  aaa8         149466       9.13
+2026-01-10 02:00:00 +0000  aaa9         148209       9.03
 ```

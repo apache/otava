@@ -19,9 +19,13 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import List, Optional
 
-import requests
 from pytz import UTC
-from requests.exceptions import HTTPError
+
+from otava._optional import import_optional_dependency
+
+
+def _requests_module():
+    return import_optional_dependency("requests", "grafana")
 
 
 @dataclass
@@ -77,6 +81,7 @@ class Grafana:
         Reference:
         - https://grafana.com/docs/grafana/latest/http_api/annotations/#find-annotations
         """
+        requests = _requests_module()
         url = f"{self.url}api/annotations"
         query_parameters = {}
         if start is not None:
@@ -105,7 +110,7 @@ class Grafana:
 
         except KeyError as err:
             raise GrafanaError(f"Missing field {err.args[0]}")
-        except HTTPError as err:
+        except requests.exceptions.HTTPError as err:
             raise GrafanaError(str(err))
 
     def delete_annotations(self, *ids: int):
@@ -113,13 +118,14 @@ class Grafana:
         Reference:
         - https://grafana.com/docs/grafana/latest/http_api/annotations/#delete-annotation-by-id
         """
+        requests = _requests_module()
         url = f"{self.url}api/annotations"
         for annotation_id in ids:
             annotation_url = f"{url}/{annotation_id}"
             try:
                 response = requests.delete(url=annotation_url, auth=(self.__user, self.__password))
                 response.raise_for_status()
-            except HTTPError as err:
+            except requests.exceptions.HTTPError as err:
                 raise GrafanaError(str(err))
 
     def create_annotations(self, *annotations: Annotation):
@@ -127,6 +133,7 @@ class Grafana:
         Reference:
         - https://grafana.com/docs/grafana/latest/http_api/annotations/#create-annotation
         """
+        requests = _requests_module()
         try:
             url = f"{self.url}api/annotations"
             for annotation in annotations:
@@ -135,5 +142,5 @@ class Grafana:
                 del data["id"]
                 response = requests.post(url=url, json=data, auth=(self.__user, self.__password))
                 response.raise_for_status()
-        except HTTPError as err:
+        except requests.exceptions.HTTPError as err:
             raise GrafanaError(str(err))

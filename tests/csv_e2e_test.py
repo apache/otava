@@ -18,6 +18,7 @@
 import csv
 import os
 import subprocess
+import sys
 import tempfile
 import textwrap
 from datetime import datetime, timedelta, timezone
@@ -25,6 +26,50 @@ from pathlib import Path
 
 import pytest
 from e2e_test_utils import _remove_trailing_whitespaces
+
+
+def test_bundled_csv_example():
+    expected_output = textwrap.dedent(
+        """\
+        time                       commit      metric1    metric2
+        -------------------------  --------  ---------  ---------
+        2026-01-01 02:00:00 +0000  aaa0         154023      10.43
+        2026-01-02 02:00:00 +0000  aaa1         138455      10.23
+        2026-01-03 02:00:00 +0000  aaa2         143112      10.29
+        2026-01-04 02:00:00 +0000  aaa3         149190      10.91
+        2026-01-05 02:00:00 +0000  aaa4         132098      10.34
+        2026-01-06 02:00:00 +0000  aaa5         151344      10.69
+                                                        ·········
+                                                           -12.9%
+                                                        ·········
+        2026-01-07 02:00:00 +0000  aaa6         155145       9.23
+        2026-01-08 02:00:00 +0000  aaa7         148889       9.11
+        2026-01-09 02:00:00 +0000  aaa8         149466       9.13
+        2026-01-10 02:00:00 +0000  aaa9         148209       9.03
+        """
+    )
+    repo_root = Path(__file__).parents[1]
+    config = repo_root / "examples/csv/config/otava-local.yaml"
+    cmd = [
+        sys.executable,
+        "-m",
+        "otava.main",
+        "analyze",
+        "local.sample",
+        "--since=2026-01-01T00:00:00Z",
+    ]
+
+    proc = subprocess.run(
+        cmd,
+        cwd=repo_root,
+        env=dict(os.environ, OTAVA_CONFIG=str(config)),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert _remove_trailing_whitespaces(proc.stdout) == expected_output.rstrip("\n")
 
 
 def test_analyze_csv():

@@ -15,14 +15,21 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
 from math import isinf
-from typing import Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from pytz import UTC
-from slack_sdk import WebClient
 
+if TYPE_CHECKING:
+    from slack_sdk import WebClient
+else:
+    WebClient = Any
+
+from otava._optional import import_optional_dependency
 from otava.change_point_divisive.base import ChangePointGroup, ChangePointSerializer
 from otava.data_selector import DataSelector
 from otava.series import AnalyzedSeries
@@ -263,3 +270,8 @@ class SlackNotifier:
         for channel in channels:
             for blocks in dispatches:
                 self.__client.chat_postMessage(channel=channel, blocks=blocks)
+
+
+def _create_slack_notifier(token: str) -> SlackNotifier:
+    slack_sdk = import_optional_dependency("slack_sdk", "slack")
+    return SlackNotifier(slack_sdk.WebClient(token=token))

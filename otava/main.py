@@ -22,9 +22,9 @@ from typing import Dict, List, Optional
 
 import configargparse as argparse
 import pytz
-from slack_sdk import WebClient
 
 from otava import config
+from otava._optional import MissingOptionalDependencyError
 from otava.attributes import get_back_links
 from otava.bigquery import BigQuery, BigQueryError
 from otava.config import Config
@@ -35,7 +35,7 @@ from otava.importer import DataImportError, Importers
 from otava.postgres import Postgres, PostgresError
 from otava.report import Report, ReportType
 from otava.series import AnalysisOptions, AnalyzedSeries
-from otava.slack import NotificationError, SlackNotifier
+from otava.slack import NotificationError, SlackNotifier, _create_slack_notifier
 from otava.test_config import (
     BigQueryTestConfig,
     GraphiteTestConfig,
@@ -63,7 +63,7 @@ class Otava:
         self.__conf = conf
         self.__importers = Importers(conf)
         self.__grafana = None
-        self.__slack = self.__maybe_create_slack_notifier()
+        self.__slack = None
         self.__postgres = None
         self.__bigquery = None
 
@@ -251,10 +251,12 @@ class Otava:
             for cpg in cpg_list:
                 bigquery.insert_change_point(test, metric_name, cpg.attributes, cpg)
 
-    def __maybe_create_slack_notifier(self):
-        if not self.__conf.slack:
+    def __get_slack_notifier(self):
+        if not self.__conf.slack or not self.__conf.slack.bot_token:
             return None
-        return SlackNotifier(WebClient(token=self.__conf.slack.bot_token))
+        if self.__slack is None:
+            self.__slack = _create_slack_notifier(self.__conf.slack.bot_token)
+        return self.__slack
 
     def notify_slack(
         self,
@@ -263,12 +265,13 @@ class Otava:
         channels: List[str],
         since: datetime,
     ):
-        if not self.__slack:
+        slack = self.__get_slack_notifier()
+        if not slack:
             logging.error(
                 "Slack definition is missing from the configuration, cannot send notification"
             )
             return
-        self.__slack.notify(test_change_points, selector=selector, channels=channels, since=since)
+        slack.notify(test_change_points, selector=selector, channels=channels, since=since)
 
     def validate(self):
         valid = True
@@ -643,6 +646,9 @@ def script_main(conf: Config = None, args: List[str] = None):
         exit(1)
     except NotificationError as err:
         logging.error(err.message)
+        exit(1)
+    except MissingOptionalDependencyError as err:
+        logging.error(str(err))
         exit(1)
 
 
