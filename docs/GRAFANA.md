@@ -19,6 +19,14 @@
 
 # Annotating Change Points in Grafana
 
+## Installation
+
+```bash
+pip install 'apache-otava[grafana]'
+```
+
+## Usage
+
 Change points found by `analyze` can be exported
 as Grafana annotations using the `--update-grafana` flag:
 
@@ -55,8 +63,7 @@ Start docker-compose with Graphite in one tab:
 
 ```bash
 docker-compose -f examples/graphite/docker-compose.yaml up --force-recreate --always-recreate-deps --renew-anon-volumes
-````
-
+```
 
 Run otava in another tab:
 
@@ -64,9 +71,9 @@ Run otava in another tab:
 docker-compose -f examples/graphite/docker-compose.yaml run --rm  otava analyze my-product.test --since=-10m --update-grafana
 ```
 
-Expected output:
+Example output (timestamps reflect when the example is run):
 
-```bash
+```text
 time                       run    branch    version    commit      throughput    response_time    cpu_usage
 -------------------------  -----  --------  ---------  --------  ------------  ---------------  -----------
 2024-12-14 22:45:10 +0000                                               61160               87          0.2

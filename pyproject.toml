@@ -38,6 +38,7 @@ classifiers = [
 ]
 dependencies = [
     "dateparser>=1.0.0",
+    "pytz==2025.2",
 
     # NumPy 2.2.x supports Python 3.10–3.13, while Python 3.14 requires a
     # newer NumPy release to get prebuilt wheels on all supported platforms.
@@ -46,14 +47,9 @@ dependencies = [
 
     "python-dateutil>=2.9.0",
     "ruamel.yaml==0.18.16",
-    "requests>=2.32.5",
     "pystache>=0.6.8",
     "tabulate>=0.9.0",
     "validators>=0.35.0",
-    "slack-sdk>=3.39.0",
-    "google-cloud-bigquery>=3.38.0",
-    "pg8000>=1.31.5",
-    "influxdb3-python>=0.20.0",
     "configargparse>=1.7.1",
     "pydantic>=2,<3",
 
@@ -65,17 +61,27 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "hypothesis>=6.0",
-    "pytest>=9.0.1",
-    "pytest-benchmark>=5.2.3",
-    "pytz==2025.2",
-    "tox==4.32.0",
-    "flake8>=7.3.0",
-    "autoflake>=2.3.1",
-    "isort>=7.0.0",
-    "ruff>=0.14.8",
-    "pre-commit==4.5.0",
+bigquery = [
+    "google-cloud-bigquery>=3.38.0",
+]
+postgres = [
+    "pg8000>=1.31.5",
+]
+influxdb = [
+    "influxdb3-python>=0.20.0",
+]
+grafana = [
+    "requests>=2.32.5",
+]
+slack = [
+    "slack-sdk>=3.39.0",
+]
+all = [
+    "google-cloud-bigquery>=3.38.0",
+    "pg8000>=1.31.5",
+    "influxdb3-python>=0.20.0",
+    "requests>=2.32.5",
+    "slack-sdk>=3.39.0",
 ]
 
 [project.scripts]
@@ -118,5 +124,14 @@ profile = "black"
 
 [dependency-groups]
 dev = [
+    "hypothesis>=6.0",
+    "pytest>=9.0.1",
+    "pytest-benchmark>=5.2.3",
     "pytest-cov>=7.1.0",
+    "tox==4.32.0",
+    "flake8>=7.3.0",
+    "autoflake>=2.3.1",
+    "isort>=7.0.0",
+    "ruff>=0.14.8",
+    "pre-commit==4.5.0",
 ]

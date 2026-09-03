@@ -27,6 +27,26 @@ Otava requires Python 3.10 or later.
 pip install apache-otava
 ```
 
+The default installation includes the Otava library and CLI, with support for CSV,
+JSON, and Graphite data. Install an extra when you need another service:
+
+| Extra | Adds support for |
+| --- | --- |
+| `bigquery` | Google BigQuery |
+| `postgres` | PostgreSQL |
+| `influxdb` | InfluxDB 3 |
+| `grafana` | Grafana annotations |
+| `slack` | Slack notifications |
+| `all` | All optional integrations |
+
+Extras are additive. For example:
+
+```bash
+pip install 'apache-otava[bigquery]'
+pip install 'apache-otava[bigquery,postgres]'
+pip install 'apache-otava[all]'
+```
+
 ## Install using Docker
 
 Pull the official Docker image:
@@ -34,3 +54,5 @@ Pull the official Docker image:
 ```bash
 docker pull apache/otava
 ```
+
+The Docker image includes all optional integrations.

@@ -30,6 +30,33 @@ permissions:
   contents: read
 
 jobs:
+  core-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          python-version: "3.14"
+          prune-cache: true
+
+      - name: Build the wheel
+        run: uv build --wheel
+
+      - name: Install without extras
+        run: |
+          uv venv --python 3.14 .core-venv
+          uv pip install --python .core-venv/bin/python dist/*.whl
+
+      - name: Test the default installation
+        run: .core-venv/bin/python tests/core_install_smoke.py
+
   build:
     runs-on: ubuntu-latest
     strategy:
