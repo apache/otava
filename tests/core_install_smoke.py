@@ -20,7 +20,7 @@ import os
 import subprocess
 import sys
 import tempfile
-from importlib import metadata
+from importlib import metadata, resources
 from pathlib import Path
 
 from otava.bigquery import BigQuery, BigQueryConfig
@@ -45,6 +45,11 @@ def assert_optional_distributions_are_absent():
         except metadata.PackageNotFoundError:
             continue
         raise AssertionError(f"{distribution} was installed by the default package")
+
+
+def assert_type_information_is_installed():
+    if not resources.files("otava").joinpath("py.typed").is_file():
+        raise AssertionError("py.typed was not installed with the default package")
 
 
 def assert_cli_help_works():
@@ -121,6 +126,7 @@ def assert_optional_operations_name_their_extras():
 
 def main():
     assert_optional_distributions_are_absent()
+    assert_type_information_is_installed()
     assert_cli_help_works()
     assert_csv_analysis_works()
     assert_optional_operations_name_their_extras()
