@@ -34,9 +34,9 @@ read the change points back.
     >>> [group.time for group in analyzed.change_points_by_time]
     [20]
 
-Anything reached through a submodule path, such as ``otava.importer`` or
-``otava.main``, is internal to the command-line tool and may change without
-notice.
+The supported import surface is the names re-exported from ``otava``. Submodule
+paths such as ``otava.importer`` and ``otava.main`` are not part of the public
+API and may change without notice.
 """
 
 from otava.analysis import compute_change_points

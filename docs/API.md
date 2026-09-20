@@ -53,9 +53,9 @@ for group in analyzed.change_points_by_time:
 `analyze()` does not interpret `time`, so a plain index works for data that is
 not a time series, but keep it increasing: change points are collected in time
 order, and a second group that is not later than the first raises `ValueError`.
-Otava's own reports do interpret it, formatting it with
-`datetime.fromtimestamp`, so anything printed by Otava reads it as seconds since
-the epoch.
+Otava's human-readable log and regression reports do interpret it, formatting
+it with `datetime.fromtimestamp`, so those report formats read it as seconds
+since the epoch. JSON reports preserve the numeric value.
 
 `attributes` carries one value per data point, and the values at a change point
 are returned on its group. That is how you get from a detected change back to
@@ -81,10 +81,10 @@ The names in `otava.__all__`, re-exported from the package root:
 | `ChangePointsByTime` | Change point groups in time order |
 | `compute_change_points` | The detection algorithm on a bare sequence of floats; returns `(strong, weak)` |
 
-Everything else is internal, including every submodule path such as
-`otava.importer`, `otava.config` and `otava.main`. Otava does not offer a stable
-public API yet, so even the names above can still change in a minor or patch
-release.
+The supported import surface is the names above when imported from `otava`.
+Submodule paths such as `otava.importer`, `otava.config` and `otava.main` are
+not part of the public API. Otava does not offer a stable public API yet, so
+even the names above can still change in a minor or patch release.
 
 ## Options
 

@@ -46,10 +46,10 @@ DEFINING_MODULES = {
 
 
 def optional_client_modules():
-    """Top-level modules the optional service clients import.
+    """Literal optional dependencies imported by top-level Otava modules.
 
-    Read off the import_optional_dependency() call sites rather than repeated
-    here, so that a new optional client is covered the day it is added.
+    Read the import_optional_dependency() call sites instead of repeating the
+    currently known module names here.
     """
     call_site = re.compile(r"""import_optional_dependency\(\s*["']([^"']+)["']""")
     names = {
