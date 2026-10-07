@@ -56,7 +56,7 @@ class GrafanaError(Exception):
 class Annotation:
     id: Optional[int]
     time: datetime
-    text: str
+    text: str  # Grafana API "text" field; the annotation body may contain HTML
     tags: List[str]
 
 

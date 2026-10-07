@@ -173,12 +173,12 @@ class Otava:
             target_annotations = []
             for cp in change_points:
                 attributes = series.attributes_at(cp.index)
-                annotation_text = get_back_links(attributes)
+                annotation_html = get_back_links(attributes)
                 target_annotations.append(
                     Annotation(
                         id=None,
                         time=datetime.fromtimestamp(cp.time, tz=pytz.UTC),
-                        text=annotation_text,
+                        text=annotation_html,
                         tags=tags_to_create,
                     )
                 )
