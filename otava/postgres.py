@@ -22,6 +22,7 @@ from typing import Dict
 import pg8000
 
 from otava.analysis import ChangePoint
+from otava.sql import parameterize_update_statement
 from otava.test_config import PostgresTestConfig
 
 
@@ -92,13 +93,13 @@ class Postgres:
     ):
         cursor = self.__get_conn().cursor()
         kwargs = {**attributes, **{test.time_column: datetime.utcfromtimestamp(change_point.time)}}
-        update_stmt = test.update_stmt.format(metric=metric_name, **kwargs)
-        cursor.execute(
-            update_stmt,
-            (
-                change_point.forward_change_percent(),
-                change_point.backward_change_percent(),
-                change_point.stats.pvalue,
-            ),
+        changes = (
+            change_point.forward_change_percent(),
+            change_point.backward_change_percent(),
+            change_point.stats.pvalue,
         )
+        update_stmt, parameters = parameterize_update_statement(
+            test.update_stmt, metric_name, kwargs, changes
+        )
+        cursor.execute(update_stmt, parameters)
         self.__get_conn().commit()

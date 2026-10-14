@@ -20,9 +20,11 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 from google.cloud import bigquery
+from google.cloud.bigquery import dbapi
 from google.oauth2 import service_account
 
 from otava.analysis import ChangePoint
+from otava.sql import parameterize_update_statement
 from otava.test_config import BigQueryTestConfig
 
 
@@ -90,17 +92,22 @@ class BigQuery:
         change_point: ChangePoint,
     ):
         kwargs = {**attributes, **{test.time_column: datetime.utcfromtimestamp(change_point.time)}}
-        update_stmt = test.update_stmt.format(
-            metric=metric_name,
-            forward_change_percent=change_point.forward_change_percent(),
-            backward_change_percent=change_point.backward_change_percent(),
-            p_value=change_point.stats.pvalue,
-            **kwargs
+        changes = (
+            change_point.forward_change_percent(),
+            change_point.backward_change_percent(),
+            change_point.stats.pvalue,
         )
-        query_job = self.client.query(update_stmt)
-
-        # Wait for the query to finish
-        query_job.result()
+        update_stmt, parameters = parameterize_update_statement(
+            test.update_stmt, metric_name, kwargs, changes
+        )
+        # Reject NULL parameters, e.g. experiment_id=None.
+        if any(value is None for value in parameters):
+            raise BigQueryError(
+                "BigQuery DB-API cannot infer a type for NULL update parameters"
+            )
+        connection = dbapi.Connection(client=self.client, prefer_bqstorage_client=False)
+        cursor = connection.cursor()
+        cursor.execute(update_stmt, parameters)
 
         # Output the number of rows affected
-        print("Affected rows: {}".format(query_job.num_dml_affected_rows))
+        print("Affected rows: {}".format(cursor.rowcount))
