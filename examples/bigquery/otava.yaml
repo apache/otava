@@ -30,10 +30,10 @@ templates:
     # required for --update-bigquery to work
     update_statement: |
       UPDATE ${BIGQUERY_PROJECT_ID}.${BIGQUERY_DATASET}.results 
-        SET {metric}_rel_forward_change=%s, 
-            {metric}_rel_backward_change=%s, 
-            {metric}_p_value=%s
-      WHERE experiment_id = '{experiment_id}' AND config_id = {config_id}
+        SET {metric}_rel_forward_change=%(forward_change_percent)s,
+            {metric}_rel_backward_change=%(backward_change_percent)s,
+            {metric}_p_value=%(p_value)s
+      WHERE experiment_id = %(experiment_id)s AND config_id = %(config_id)s
     metrics:
       process_cumulative_rate_mean:
         direction: 1

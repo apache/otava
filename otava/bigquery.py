@@ -36,6 +36,10 @@ def _bigquery_module():
     return import_optional_dependency("google.cloud.bigquery", "bigquery")
 
 
+def _bigquery_dbapi_module():
+    return import_optional_dependency("google.cloud.bigquery.dbapi", "bigquery")
+
+
 def _service_account_module():
     return import_optional_dependency("google.oauth2.service_account", "bigquery")
 
@@ -107,18 +111,20 @@ class BigQuery:
         change_point_group: ChangePointGroup,
     ):
         change_point = ChangePointSerializer(change_point_group[metric_name])
-        kwargs = {**attributes, **{test.time_column: datetime.utcfromtimestamp(change_point_group.time)}}
-        update_stmt = test.update_stmt.format(
-            metric=metric_name,
-            forward_change_percent=change_point.forward_change_percent(),
-            backward_change_percent=change_point.backward_change_percent(),
-            p_value=change_point.stats.pvalue,
-            **kwargs
+        parameters = {
+            **attributes,
+            test.time_column: datetime.utcfromtimestamp(change_point_group.time),
+            "forward_change_percent": change_point.forward_change_percent(),
+            "backward_change_percent": change_point.backward_change_percent(),
+            "p_value": change_point.stats.pvalue,
+        }
+        update_stmt = test.update_stmt.format(metric=metric_name)
+        dbapi = _bigquery_dbapi_module()
+        connection = dbapi.Connection(
+            client=self.client, prefer_bqstorage_client=False
         )
-        query_job = self.client.query(update_stmt)
-
-        # Wait for the query to finish
-        query_job.result()
+        cursor = connection.cursor()
+        cursor.execute(update_stmt, parameters)
 
         # Output the number of rows affected
-        print("Affected rows: {}".format(query_job.num_dml_affected_rows))
+        print("Affected rows: {}".format(cursor.rowcount))
