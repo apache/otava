@@ -366,6 +366,110 @@ def test_bigquery_branch_placeholder_without_branch_raises_error():
     assert "--branch" in exc_info.value.message
 
 
+class RecordingPostgres(MockPostgres):
+    """MockPostgres that records (query, params) passed by the importer."""
+
+    def __init__(self):
+        self.calls = []
+
+    def fetch_data(self, query: str, params: tuple = None):
+        self.calls.append((query, params))
+        return super().fetch_data(query, params)
+
+
+def test_import_postgres_with_branch_substitution():
+    """Test that %{BRANCH} is replaced with a parameterized query placeholder."""
+    postgres = RecordingPostgres()
+    test = PostgresTestConfig(
+        name="test",
+        query="SELECT * FROM results WHERE branch = '%{BRANCH}' ORDER BY time;",
+        time_column="time",
+        metrics=[PostgresMetric("m1", 1, 1.0, "metric1"), PostgresMetric("m2", 1, 5.0, "metric2")],
+        attributes=["commit"],
+    )
+    selector = data_selector()
+    selector.branch = "3.5"
+    series = PostgresImporter(postgres).fetch_data(test_conf=test, selector=selector)
+
+    query, params = postgres.calls[0]
+    assert "%{BRANCH}" not in query
+    assert query == "SELECT * FROM results WHERE branch = '%s' ORDER BY time;"
+    assert params == ("3.5",)
+    assert series.branch == "3.5"
+    assert len(series.time) == 10
+
+
+def test_import_postgres_with_multiple_branch_placeholders():
+    """Test that each %{BRANCH} occurrence contributes one query parameter."""
+    postgres = RecordingPostgres()
+    test = PostgresTestConfig(
+        name="test",
+        query="SELECT * FROM results WHERE branch = '%{BRANCH}' OR parent_branch = '%{BRANCH}';",
+        time_column="time",
+        metrics=[PostgresMetric("m1", 1, 1.0, "metric1")],
+        attributes=["commit"],
+    )
+    selector = data_selector()
+    selector.branch = "3.5"
+    PostgresImporter(postgres).fetch_data(test_conf=test, selector=selector)
+
+    query, params = postgres.calls[0]
+    assert query.count("%s") == 2
+    assert params == ("3.5", "3.5")
+
+
+def test_import_postgres_without_branch_passes_no_params():
+    """Test that a query without %{BRANCH} is executed with no parameters."""
+    postgres = RecordingPostgres()
+    test = PostgresTestConfig(
+        name="test",
+        query="SELECT * FROM results;",
+        time_column="time",
+        metrics=[PostgresMetric("m1", 1, 1.0, "metric1")],
+        attributes=["commit"],
+    )
+    PostgresImporter(postgres).fetch_data(test_conf=test, selector=data_selector())
+
+    query, params = postgres.calls[0]
+    assert query == "SELECT * FROM results;"
+    assert params is None
+
+
+def test_import_bigquery_with_branch_substitution():
+    """Test that %{BRANCH} is replaced with a named BigQuery query parameter."""
+    pytest.importorskip("google.cloud.bigquery")
+
+    class RecordingBigQuery(MockBigQuery):
+        def __init__(self):
+            self.calls = []
+
+        def fetch_data(self, query: str, params=None):
+            self.calls.append((query, params))
+            return super().fetch_data(query, params)
+
+    bigquery = RecordingBigQuery()
+    test = BigQueryTestConfig(
+        name="test",
+        query="SELECT * FROM results WHERE branch = '%{BRANCH}' ORDER BY time;",
+        time_column="time",
+        metrics=[BigQueryMetric("m1", 1, 1.0, "metric1")],
+        attributes=["commit"],
+    )
+    selector = data_selector()
+    selector.branch = "3.5"
+    series = BigQueryImporter(bigquery).fetch_data(test_conf=test, selector=selector)
+
+    query, params = bigquery.calls[0]
+    assert "%{BRANCH}" not in query
+    assert query == "SELECT * FROM results WHERE branch = '@branch' ORDER BY time;"
+    assert len(params) == 1
+    assert params[0].name == "branch"
+    assert params[0].type_ == "STRING"
+    assert params[0].value == "3.5"
+    assert series.branch == "3.5"
+    assert len(series.time) == 10
+
+
 # CSV branch handling tests
 
 SAMPLE_SINGLE_BRANCH_CSV = "tests/resources/sample_single_branch.csv"
