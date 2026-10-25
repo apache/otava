@@ -23,10 +23,10 @@ from scipy.stats import ttest_ind_from_stats
 
 from otava.change_point_divisive.base import (
     BaseStats,
-    CandidateChangePoint,
     ChangePoint,
     GenericStats,
     SignificanceTester,
+    SplitCandidate,
 )
 from otava.change_point_divisive.calculator import PairDistanceCalculator
 from otava.change_point_divisive.detector import ChangePointDetector
@@ -66,7 +66,7 @@ TtestCPList = List[ChangePoint[TTestStats]]
 
 
 # TODO: Move to change_point_divisive.significance_test
-class TTestSignificanceTester(SignificanceTester):
+class TTestSignificanceTester(SignificanceTester[TTestStats]):
     """
     Uses two-sided Student's T-test to decide if a candidate change point
     splits the series into pieces that are significantly different from each other.
@@ -93,15 +93,50 @@ class TTestSignificanceTester(SignificanceTester):
 
         return TTestStats(pvalue=p, mean_1=base_stats.mean_1, mean_2=base_stats.mean_2, std_1=base_stats.std_1, std_2=base_stats.std_2, tstatistic=t, degrees_of_freedom=df)
 
-    def change_point(
+    def evaluate_candidate(
         self,
-        candidate: CandidateChangePoint,
+        candidate: SplitCandidate,
         series: Sequence[SupportsFloat],
         intervals: List[slice],
     ) -> ChangePoint[TTestStats]:
-        left, right = self.get_sides(candidate, series, intervals)
+        left, right = self.get_sides(candidate.index, series, intervals)
         stats = self.compare(left, right)
         return ChangePoint.from_candidate(candidate, stats)
+
+    def recompute_change_point(
+        self,
+        point: ChangePoint[TTestStats],
+        series: Sequence[SupportsFloat],
+        intervals: List[slice],
+    ) -> ChangePoint[TTestStats]:
+        left, right = self.get_sides(point.index, series, intervals)
+        return ChangePoint(
+            index=point.index, qhat=point.qhat, stats=self.compare(left, right), metric=point.metric
+        )
+
+
+class DeterministicTTestSignificanceTester(TTestSignificanceTester):
+    """Test the samples selected by Q-hat, ending the right sample at kappa.
+
+    Recomputing an existing point still uses its current neighboring segments.
+    """
+
+    def evaluate_candidate(
+        self,
+        candidate: SplitCandidate,
+        series: Sequence[SupportsFloat],
+        intervals: List[slice],
+    ) -> ChangePoint[TTestStats]:
+        for interval in intervals:
+            start = 0 if interval.start is None else interval.start
+            end = len(series) if interval.stop is None else interval.stop
+            if start < candidate.index < end:
+                if not candidate.index < candidate.kappa <= min(end, len(series)):
+                    raise ValueError("Candidate kappa must lie within the containing interval")
+                left = series[start : candidate.index]
+                right = series[candidate.index : candidate.kappa]
+                return ChangePoint.from_candidate(candidate, self.compare(left, right))
+        raise ValueError(f"Split candidate at index={candidate.index} is not inside an interval")
 
 
 def merge(
@@ -144,7 +179,7 @@ def merge(
             if index < 0 or index >= len(change_points):
                 return
             cp = change_points[index]
-            change_points[index] = tester.change_point(cp.to_candidate(), series, intervals)
+            change_points[index] = tester.recompute_change_point(cp, series, intervals)
 
         recompute(weakest_cp_index)
         recompute(weakest_cp_index + 1)
@@ -196,7 +231,7 @@ def split(series: Sequence[SupportsFloat], window_len: int = 30, max_pvalue: flo
     # Sort change points by index; required by get_intervals() and maintained by merge()
     change_points.sort(key=lambda cp: cp.index)
     intervals = tester.get_intervals(change_points)
-    return [tester.change_point(cp.to_candidate(), series, intervals) for cp in change_points]
+    return [tester.recompute_change_point(cp, series, intervals) for cp in change_points]
 
 
 def compute_change_points_orig(series: Sequence[SupportsFloat], max_pvalue: float = 0.001, seed: Optional[int] = None) -> Tuple[PermCPList, Optional[PermCPList]]:
@@ -231,7 +266,7 @@ def compute_change_points_deterministic(series: Sequence[SupportsFloat], max_pva
     An easy solution is to rerun from the last change-point, but the problem is the last change point could itself be influenced by the new data
     appended.
     """
-    tester = TTestSignificanceTester(max_pvalue=max_pvalue)
+    tester = DeterministicTTestSignificanceTester(max_pvalue=max_pvalue)
     detector = ChangePointDetector(significance_tester=tester, calculator=PairDistanceCalculator)
     all_change_points = detector.get_change_points(series=series)
     if min_magnitude > 0.0:

@@ -781,7 +781,7 @@ def test_from_json_does_not_recompute(monkeypatch):
     assert len(restored.change_points_by_time) == len(analyzed.change_points_by_time)
 
 
-# Edivisive is more sensitive close to the ends of a series
+# The selected kappa lets deterministic E-divisive isolate a short spike.
 def test_tail_spike_change_point():
     series = np.random.default_rng(2).normal(loc=100.0, scale=5.0, size=303)
     series[-4] = 150.0
@@ -794,7 +794,7 @@ def test_tail_spike_change_point():
     assert len(series) - 4 in [cp.index for cp in cps]
 
 
-def test_middle_spike_change_point():
+def test_middle_spike_and_recovery_change_points():
     series = np.random.default_rng(2).normal(loc=100.0, scale=5.0, size=303)
     series[150] = 150.0
 
@@ -803,4 +803,4 @@ def test_middle_spike_change_point():
         max_pvalue=0.001,
     )
 
-    assert len(cps) == 0
+    assert [cp.index for cp in cps] == [150, 151]
