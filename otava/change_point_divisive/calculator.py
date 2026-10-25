@@ -19,7 +19,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from otava.change_point_divisive.base import Calculator, CandidateChangePoint
+from otava.change_point_divisive.base import Calculator, SplitCandidate
 
 
 class PairDistanceCalculator(Calculator):
@@ -149,7 +149,7 @@ class PairDistanceCalculator(Calculator):
         # So, critical point is `τ = i + 1`.
         return A - B - C
 
-    def get_candidate_change_point(self, interval: slice) -> CandidateChangePoint:
+    def get_candidate_change_point(self, interval: slice) -> SplitCandidate:
         '''For a given `slice(start, end)` finds potential critical point in subsequence series[slice],
         i.e., from index `start` to `end - 1` inclusive.
 
@@ -178,8 +178,8 @@ class PairDistanceCalculator(Calculator):
             Note: QQ(X, Y) = QQ(Z[start : a], Z[a : b]) = Q(a, b).
 
 
-        This method computes all values of `Q` for given `start` and `end`, and returns index
-        of the potential critical point and the maximized value of `Q`.'''
+        This method computes all values of `Q` for given `start` and `end`, and returns
+        both maximizing coordinates and the maximized value of `Q`.'''
 
         start = 0 if interval.start is None else interval.start
         end = len(self.series) if interval.stop is None else interval.stop
@@ -187,4 +187,4 @@ class PairDistanceCalculator(Calculator):
 
         Q = self._get_Q_vals(start, end)
         i, j = np.unravel_index(np.argmax(Q), Q.shape)
-        return CandidateChangePoint(index=i + 1 + start, qhat=Q[i][j])
+        return SplitCandidate(index=i + 1 + start, kappa=j + 2 + start, qhat=Q[i][j])

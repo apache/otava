@@ -49,7 +49,7 @@ class ChangePointDetector:
             candidate = calc.get_next_candidate(intervals)
             if candidate is None:
                 break
-            change_point = self.tester.change_point(candidate, series, intervals)
+            change_point = self.tester.evaluate_candidate(candidate, series, intervals)
             if self.tester.is_significant(change_point):
                 # TODO: Consider BST vs sorted array
                 change_points.append(change_point)

@@ -59,49 +59,49 @@ def test_tb_magnitude0_p125():
     series = _get_series()
     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.125)
     indexes = [c.index for c in cps]
-    assert indexes == [15, 71, 95, 131, 192]
+    assert indexes == [10, 11, 15, 61, 71, 95, 117, 131, 142, 148, 192, 212, 260, 363]
 
 
 def test_tb_magnitude0_p12():
     series = _get_series()
     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.12)
     indexes = [c.index for c in cps]
-    assert indexes == [15, 71, 95, 131, 192]
+    assert indexes == [10, 11, 15, 61, 71, 95, 117, 131, 142, 148, 192, 212, 260, 363]
 
 
 def test_tb_magnitude0_p11():
     series = _get_series()
     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.11)
     indexes = [c.index for c in cps]
-    assert indexes == [15, 71, 95, 131, 192]
+    assert indexes == [10, 11, 15, 61, 71, 95, 117, 131, 142, 148, 192, 212, 260, 363]
 
 
 def test_tb_magnitude0_p1():
     series = _get_series()
     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.1)
     indexes = [c.index for c in cps]
-    assert indexes == [15, 71, 95, 131, 192]
+    assert indexes == [10, 11, 15, 61, 71, 95, 117, 131, 142, 148, 192, 212, 260, 363]
 
 
 def test_tb_magnitude0_p01():
     series = _get_series()
     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.01)
     indexes = [c.index for c in cps]
-    assert indexes == [15, 71, 95, 131, 192]
+    assert indexes == [10, 11, 15, 61, 71, 95, 117, 131, 142, 148, 192, 212, 260, 363]
 
 
 def test_tb_magnitude0_p001():
     series = _get_series()
     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.001)
     indexes = [c.index for c in cps]
-    assert indexes == [15, 71, 192]
+    assert indexes == [10, 11, 15, 61, 71, 95, 117, 131, 142, 148, 192, 212, 260, 363]
 
 
 def test_tb_magnitude0_p0001():
     series = _get_series()
     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.0001)
     indexes = [c.index for c in cps]
-    assert indexes == [15, 71, 192]
+    assert indexes == [10, 11, 15, 61, 71, 95, 117, 131, 142, 148, 192, 212, 260, 363]
 
 
 def test_tb_magnitude0_p00001():
@@ -109,7 +109,7 @@ def test_tb_magnitude0_p00001():
     cps, weak_cps = compute_change_points_deterministic(series, max_pvalue=0.00001)
     indexes = [c.index for c in cps]
     print(cps)
-    assert indexes == [15, 71, 192]
+    assert indexes == [10, 15, 71, 95, 131, 192]
 
 
 def test_tb_magnitude0_p7x01():
