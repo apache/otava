@@ -61,7 +61,8 @@ def test_analysis_options_is_pydantic_model():
         window_len="25",
         max_pvalue="0.05",
         min_magnitude=1,
-        orig_edivisive=True,
+        significance_test="permutation",
+        segmentation="whole-series",
     )
 
     assert isinstance(options, AnalysisOptionsModel)
@@ -69,9 +70,8 @@ def test_analysis_options_is_pydantic_model():
         "window_len": 25,
         "max_pvalue": 0.05,
         "min_magnitude": 1.0,
-        "orig_edivisive": True,
-        "deterministic_edivisive": False,
-        "split_edivisive": True,
+        "significance_test": "permutation",
+        "segmentation": "whole-series",
     }
 
 
@@ -524,7 +524,7 @@ def test_can_append():
     assert not can
 
 
-def test_orig_edivisive():
+def test_permutation_whole_series():
     series_1 = [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55]
     series_2 = [2.02, 2.03, 2.01, 2.04, 1.82, 1.85, 1.79, 1.81, 1.80, 1.76, 1.78]
     time = list(range(len(series_1)))
@@ -537,9 +537,7 @@ def test_orig_edivisive():
         attributes={},
     )
 
-    options = AnalysisOptions()
-    options.orig_edivisive = True
-    options.split_edivisive = False
+    options = AnalysisOptions(significance_test="permutation", segmentation="whole-series")
     options.max_pvalue = 0.01
 
     change_points = test.analyze(options=options).change_points_by_time

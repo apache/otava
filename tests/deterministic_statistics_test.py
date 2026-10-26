@@ -157,7 +157,7 @@ def test_discovery_significance_is_distinct_from_final_segment_pvalue():
 def test_serialized_statistics_describe_filtered_segments():
     """Persist means, deviations, p-values, and magnitudes for the retained boundaries."""
     values = [8.] * 10 + [9.] * 10 + [10.] * 10 + [20.] * 10
-    options = AnalysisOptions(deterministic_edivisive=True, split_edivisive=False, min_magnitude=.18)
+    options = AnalysisOptions(segmentation="whole-series", min_magnitude=.18)
     analyzed = Series(
         "statistics", branch=None, time=list(range(len(values))),
         metrics={"latency": Metric()}, data={"latency": values}, attributes={},

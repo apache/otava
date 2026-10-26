@@ -28,7 +28,6 @@ from otava.main import script_main
 
 class CliOptionsTest(unittest.TestCase):
 
-    # Test --deterministic-edivisive in various ways
     def test_no_cli_option(self):
         with patch('otava.series.compute_change_points') as mock_split:
             script_main(args=[])
@@ -54,7 +53,7 @@ class CliOptionsTest(unittest.TestCase):
                 csv_path, timestamps, config_path, test_name = _create_files_in_temp_dir(td_path)
                 config_path_str = "" + str(config_path)
                 script_main(
-                    args=["analyze", "--config", config_path_str, "--split-edivisive", test_name]
+                    args=["analyze", "--config", config_path_str, "--segmentation", "split-merge", test_name]
                 )
 
             assert otava.series.compute_change_points.call_count == 2
@@ -67,7 +66,7 @@ class CliOptionsTest(unittest.TestCase):
                 csv_path, timestamps, config_path, test_name = _create_files_in_temp_dir(td_path)
                 config_path_str = "" + str(config_path)
                 script_main(
-                    args=["analyze", "--config", config_path_str, "--orig-edivisive", test_name]
+                    args=["analyze", "--config", config_path_str, "--significance-test", "permutation", "--segmentation", "whole-series", test_name]
                 )
 
             assert otava.series.compute_change_points_orig.call_count == 2
@@ -84,7 +83,10 @@ class CliOptionsTest(unittest.TestCase):
                         "analyze",
                         "--config",
                         config_path_str,
-                        "--deterministic-edivisive",
+                        "--significance-test",
+                        "t-test",
+                        "--segmentation",
+                        "whole-series",
                         test_name,
                     ]
                 )

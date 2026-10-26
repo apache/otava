@@ -35,7 +35,13 @@ from otava.change_point_divisive.base import (
     ChangePointsByMetric,
     ChangePointsByTime,
 )
-from otava.serialization import AnalysisOptionsModel, AnalyzedSeriesModel, JsonScalar
+from otava.serialization import (
+    AnalysisOptionsModel,
+    AnalyzedSeriesModel,
+    JsonScalar,
+    Segmentation,
+    SignificanceTest,
+)
 
 _datetime_adapter = TypeAdapter(datetime)
 
@@ -187,27 +193,30 @@ class AnalyzedSeries:
         metric names, timestamps, and attributes and assembles result groups.
 
         For append, new_data is the number of appended values and old_weak_cp
-        supplies previous weak points. Only the split/merge variant
-        (--split-edivisive) uses this incremental context. Original and
-        deterministic E-divisive rerun the full metric and return an empty
-        weak-point list.
+        supplies previous weak points. Only split/merge segmentation
+        (--segmentation split-merge) uses this incremental context.
+        Whole-series segmentation reruns the full metric and returns no weak
+        points.
         """
-        if options.orig_edivisive:
+        selected = (options.significance_test, options.segmentation)
+        if selected == (SignificanceTest.PERMUTATION, Segmentation.WHOLE_SERIES):
             change_points, _ = compute_change_points_orig(values, max_pvalue=options.max_pvalue)
             return change_points, []
-        if options.deterministic_edivisive:
+        if selected == (SignificanceTest.T_TEST, Segmentation.WHOLE_SERIES):
             change_points, _ = compute_change_points_deterministic(
                 values, max_pvalue=options.max_pvalue, min_magnitude=options.min_magnitude
             )
             return change_points, []
-        return compute_change_points(
-            values,
-            window_len=options.window_len,
-            max_pvalue=options.max_pvalue,
-            min_magnitude=options.min_magnitude,
-            new_data=new_data,
-            old_weak_cp=old_weak_cp,
-        )
+        if selected == (SignificanceTest.T_TEST, Segmentation.SPLIT_MERGE):
+            return compute_change_points(
+                values,
+                window_len=options.window_len,
+                max_pvalue=options.max_pvalue,
+                min_magnitude=options.min_magnitude,
+                new_data=new_data,
+                old_weak_cp=old_weak_cp,
+            )
+        raise ValueError(f"Significance test and segmentation pair is not supported: {selected!r}")
 
     @staticmethod
     def __compute_change_points(
@@ -307,7 +316,7 @@ class AnalyzedSeries:
         """
         Append new data points to the underlying series and recompute change points.
 
-        The split/merge variant (--split-edivisive) recomputes the tail
+        The split/merge variant (--segmentation split-merge) recomputes the tail
         incrementally. Original and deterministic E-divisive rerun the full
         history of each updated metric, which can be more expensive for long
         series. Untouched metrics retain their results.

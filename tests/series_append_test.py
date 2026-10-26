@@ -33,9 +33,8 @@ def analysis_options(mode, monkeypatch):
             partial(series_module.compute_change_points_orig, seed=1),
         )
     return AnalysisOptions(
-        orig_edivisive=mode == "orig",
-        deterministic_edivisive=mode == "deterministic",
-        split_edivisive=mode == "split",
+        significance_test="permutation" if mode == "orig" else "t-test",
+        segmentation="split-merge" if mode == "split" else "whole-series",
         window_len=30,
     )
 
@@ -139,7 +138,7 @@ def test_append_subset_preserves_untouched_metric_results(mode, monkeypatch):
 def test_deterministic_append_clears_points_when_full_analysis_finds_none():
     """Clear stale cached points and views when full recomputation finds no changes."""
     initial = [1.] * 10 + [5.] * 10
-    options = AnalysisOptions(deterministic_edivisive=True, split_edivisive=False)
+    options = AnalysisOptions(segmentation="whole-series")
     analyzed = make_series({"latency": initial}).analyze(options)
     assert [group.time for group in analyzed.change_points_by_time] == [10]
     tail = [1000., -1000.] * 10
@@ -167,7 +166,7 @@ def test_append_detects_first_change_after_stable_history(mode, monkeypatch):
 
 def test_deterministic_append_respects_magnitude_threshold():
     """Keep the existing large shift while filtering a smaller appended shift."""
-    options = AnalysisOptions(deterministic_edivisive=True, split_edivisive=False, min_magnitude=1.)
+    options = AnalysisOptions(segmentation="whole-series", min_magnitude=1.)
     analyzed = make_series({"latency": [1.] * 20 + [5.] * 20}).analyze(options)
     assert [group.time for group in analyzed.change_points_by_time] == [20]
 
