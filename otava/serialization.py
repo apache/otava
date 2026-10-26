@@ -16,11 +16,22 @@
 # under the License.
 
 from datetime import datetime
+from enum import Enum
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 JsonScalar = str | int | float | bool | None
+
+
+class SignificanceTest(str, Enum):
+    T_TEST = "t-test"
+    PERMUTATION = "permutation"
+
+
+class Segmentation(str, Enum):
+    WHOLE_SERIES = "whole-series"
+    SPLIT_MERGE = "split-merge"
 
 
 class AnalysisOptionsModel(BaseModel):
@@ -29,9 +40,20 @@ class AnalysisOptionsModel(BaseModel):
     window_len: int = 50
     max_pvalue: float = 0.001
     min_magnitude: float = 0.0
-    orig_edivisive: bool = False
-    deterministic_edivisive: bool = False
-    split_edivisive: bool = True
+    significance_test: SignificanceTest = SignificanceTest.T_TEST
+    segmentation: Segmentation = Field(default=Segmentation.SPLIT_MERGE, validate_default=True)
+
+    @field_validator("significance_test", "segmentation")
+    @classmethod
+    def validate_supported_pair(cls, value: SignificanceTest | Segmentation, info: ValidationInfo):
+        significance_test = value if info.field_name == "significance_test" else info.data.get("significance_test")
+        segmentation = value if info.field_name == "segmentation" else info.data.get("segmentation")
+        if significance_test == SignificanceTest.PERMUTATION and segmentation == Segmentation.SPLIT_MERGE:
+            raise ValueError(
+                "Permutation significance with split-merge segmentation is not supported; "
+                "use whole-series segmentation"
+            )
+        return value
 
 
 class MetricModel(BaseModel):

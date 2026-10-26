@@ -22,6 +22,7 @@ from typing import Dict, List, Optional
 
 import configargparse as argparse
 import pytz
+from pydantic import ValidationError
 
 from otava import config
 from otava._optional import MissingOptionalDependencyError
@@ -34,7 +35,7 @@ from otava.graphite import GraphiteError
 from otava.importer import DataImportError, Importers
 from otava.postgres import Postgres, PostgresError
 from otava.report import Report, ReportType
-from otava.series import AnalysisOptions, AnalyzedSeries
+from otava.series import AnalysisOptions, AnalyzedSeries, Segmentation, SignificanceTest
 from otava.slack import NotificationError, SlackNotifier, _create_slack_notifier
 from otava.test_config import (
     BigQueryTestConfig,
@@ -425,47 +426,35 @@ def setup_analysis_options_parser(parser: argparse.ArgumentParser):
         "as noise so it is best to keep it short enough to include not more "
         "than a few change points (optimally at most 1)",
     )
-    ediv_group = parser.add_mutually_exclusive_group()
-    ediv_group.add_argument(
-        "--orig-edivisive",
-        action="store_true",
-        dest="orig_edivisive",
-        help="use the original edivisive algorithm with no windowing "
-        "and weak change points analysis improvements",
+    parser.add_argument(
+        "--significance-test",
+        choices=[choice.value for choice in SignificanceTest],
+        default=SignificanceTest.T_TEST.value,
+        help="statistical test for candidate change points (default: t-test)",
     )
-    ediv_group.add_argument(
-        "--deterministic-edivisive",
-        action="store_true",
-        dest="deterministic_edivisive",
-        help="EXPERIMENTAL: use the original edivisive algorithm, but using "
-        "Student T for significance test. (TBD: May include weak change points later.)",
-    )
-    ediv_group.add_argument(
-        "--split-edivisive",
-        action="store_true",
-        dest="split_edivisive",
-        help="use 'hunter' version of this algorithm, from 2023, featuring "
-        "split of data into smaller windows, weak change points and Student T test. (Default)",
+    parser.add_argument(
+        "--segmentation",
+        choices=[choice.value for choice in Segmentation],
+        default=Segmentation.SPLIT_MERGE.value,
+        help="split-merge (default): sliding windows followed by merging, "
+        "introduced in the Hunter paper; whole-series: recursive splitting "
+        "without windows, as described in the original E-Divisive paper",
     )
 
 
 def analysis_options_from_args(args: argparse.Namespace) -> AnalysisOptions:
-    conf = AnalysisOptions()
+    values = {}
     if args.pvalue is not None:
-        conf.max_pvalue = args.pvalue
+        values["max_pvalue"] = args.pvalue
     if args.magnitude is not None:
-        conf.min_magnitude = args.magnitude
+        values["min_magnitude"] = args.magnitude
     if args.window is not None:
-        conf.window_len = args.window
-
-    conf.orig_edivisive = args.orig_edivisive
-    conf.deterministic_edivisive = args.deterministic_edivisive
-    conf.split_edivisive = args.split_edivisive
-    if not (args.split_edivisive or args.deterministic_edivisive or args.orig_edivisive):
-        # Default:
-        conf.split_edivisive = True
-
-    return conf
+        values["window_len"] = args.window
+    return AnalysisOptions(
+        significance_test=args.significance_test,
+        segmentation=args.segmentation,
+        **values,
+    )
 
 
 def create_otava_cli_parser() -> argparse.ArgumentParser:
@@ -569,6 +558,11 @@ def script_main(conf: Config = None, args: List[str] = None):
 
     try:
         args = parser.parse_args(args=args)
+        if args.command == "analyze":
+            try:
+                options = analysis_options_from_args(args)
+            except ValidationError as error:
+                parser.error(str(error))
         if conf is None:
             conf = config.load_config_from_parser_args(args)
         otava = Otava(conf)
@@ -591,7 +585,6 @@ def script_main(conf: Config = None, args: List[str] = None):
             slack_notification_channels = args.notify_slack
             slack_cph_since = parse_datetime(args.cph_report_since)
             data_selector = data_selector_from_args(args)
-            options = analysis_options_from_args(args)
             report_type = args.report_type
             tests = otava.get_tests(*args.tests)
             tests_analyzed_series = {test.name: None for test in tests}
