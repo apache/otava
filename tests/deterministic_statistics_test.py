@@ -69,10 +69,10 @@ def test_statistics_describe_adjacent_segments_after_all_splits(min_magnitude, a
     if as_array:
         values = np.array(values)
 
-    points, unfiltered = compute_change_points_deterministic(values, min_magnitude=min_magnitude)
+    points, weak_points = compute_change_points_deterministic(values, min_magnitude=min_magnitude)
 
     assert_adjacent_statistics(points, values, [20, 40])
-    assert_adjacent_statistics(unfiltered, values, [20, 40])
+    assert weak_points is None
 
 
 @pytest.mark.parametrize("number_type", [Decimal, Fraction])
@@ -85,10 +85,10 @@ def test_statistics_accept_float_convertible_values(number_type, as_array, thres
     if as_array:
         values = np.array(values, dtype=object)
 
-    points, unfiltered = compute_change_points_deterministic(values, min_magnitude=threshold)
+    points, weak_points = compute_change_points_deterministic(values, min_magnitude=threshold)
 
     assert_adjacent_statistics(points, numeric, indexes)
-    assert_adjacent_statistics(unfiltered, numeric, [10, 20, 30])
+    assert weak_points is None
     assert all(isinstance(value, number_type) for value in values)
 
 
@@ -105,11 +105,11 @@ def test_magnitude_filter_refreshes_neighbors_before_next_removal(levels, thresh
     """
     values = [value for level in levels for value in [level] * 10]
 
-    points, unfiltered = compute_change_points_deterministic(values, min_magnitude=threshold)
+    points, weak_points = compute_change_points_deterministic(values, min_magnitude=threshold)
 
     assert_adjacent_statistics(points, values, expected_indexes)
     assert all(point.stats.change_magnitude() >= threshold for point in points)
-    assert_adjacent_statistics(unfiltered, values, list(range(10, len(values), 10)))
+    assert weak_points is None
 
 
 @pytest.mark.parametrize("threshold,expected_indexes", [(.25, [10]), (.25001, [])])
@@ -117,31 +117,31 @@ def test_magnitude_filter_includes_boundary_equal_to_threshold(threshold, expect
     """Keep the 8 -> 10 change at a 25% cutoff and remove it above that cutoff."""
     values = [8.] * 10 + [10.] * 10
 
-    points, unfiltered = compute_change_points_deterministic(values, min_magnitude=threshold)
+    points, weak_points = compute_change_points_deterministic(values, min_magnitude=threshold)
 
     assert_adjacent_statistics(points, values, expected_indexes)
-    assert_adjacent_statistics(unfiltered, values, [10])
+    assert weak_points is None
 
 
 @pytest.mark.parametrize("values", [[], [1.], [1.] * 20])
 @pytest.mark.parametrize("threshold", [0., .1])
 def test_final_statistics_allow_series_without_change_points(values, threshold):
     """Empty, singleton, and constant histories return no points at either cutoff."""
-    points, unfiltered = compute_change_points_deterministic(values, min_magnitude=threshold)
+    points, weak_points = compute_change_points_deterministic(values, min_magnitude=threshold)
 
     assert points == []
-    assert unfiltered == []
+    assert weak_points is None
 
 
 def test_tigerbeetle_magnitudes_and_statistics_match_retained_segments():
     """Apply the 3% cutoff to current neighbors until all retained points qualify."""
     values = tigerbeetle_demo_data()
 
-    points, unfiltered = compute_change_points_deterministic(values, max_pvalue=.2, min_magnitude=.03)
+    points, weak_points = compute_change_points_deterministic(values, max_pvalue=.2, min_magnitude=.03)
 
     assert_adjacent_statistics(points, values, [10, 11, 15, 61, 71, 95, 131, 192, 363])
     assert all(point.stats.change_magnitude() >= .03 for point in points)
-    assert_adjacent_statistics(unfiltered, values, [10, 11, 15, 61, 71, 95, 117, 131, 142, 148, 192, 212, 260, 363])
+    assert weak_points is None
 
 
 def test_discovery_significance_is_distinct_from_final_segment_pvalue():
@@ -165,6 +165,7 @@ def test_serialized_statistics_describe_filtered_segments():
 
     payload = analyzed.to_json()
 
+    assert payload["weak_change_points"] == {}
     groups = payload["change_points"]["latency"]
     assert [group["time"] for group in groups] == [10, 30]
     names = {"mean_before": "mean_1", "mean_after": "mean_2", "stddev_before": "std_1", "stddev_after": "std_2", "pvalue": "pvalue", "magnitude": "magnitude"}
