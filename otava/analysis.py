@@ -249,7 +249,7 @@ def compute_change_points_orig(series: Sequence[SupportsFloat], max_pvalue: floa
     return change_points, None
 
 
-def compute_change_points_deterministic(series: Sequence[SupportsFloat], max_pvalue: float = 0.001, min_magnitude: float = 0.0) -> Tuple[PermCPList, Optional[PermCPList]]:
+def compute_change_points_deterministic(series: Sequence[SupportsFloat], max_pvalue: float = 0.001, min_magnitude: float = 0.0) -> Tuple[TtestCPList, None]:
     """
     Same as the original algorithm but with deterministic Student T significance test at the end.
 
@@ -259,8 +259,8 @@ def compute_change_points_deterministic(series: Sequence[SupportsFloat], max_pva
 
     Magnitude filtering removes the smallest current change below min_magnitude,
     recomputes its two neighbors, and repeats until all retained points meet the
-    inclusive threshold. The second result contains all discovered points with
-    statistics for the unfiltered segmentation.
+    inclusive threshold. Return the filtered t-test points and None for the second
+    result, since this variant does not expose weak change points.
 
     The motivation for this variation follows from fixing the bug explained at the top of https://github.com/apache/otava/pull/96
     The intuition is that the split-merge approach introduced by Datastax is addressing the same problem that the _kappa_ variable
@@ -282,28 +282,27 @@ def compute_change_points_deterministic(series: Sequence[SupportsFloat], max_pva
         series = series.astype(np.float64, copy=False)
     tester = DeterministicTTestSignificanceTester(max_pvalue=max_pvalue)
     detector = ChangePointDetector(significance_tester=tester, calculator=PairDistanceCalculator)
-    all_change_points = detector.get_change_points(series=series)
-    intervals = tester.get_intervals(all_change_points)
-    all_change_points = [
-        tester.recompute_change_point(cp, series, intervals) for cp in all_change_points
+    change_points = detector.get_change_points(series=series)
+    intervals = tester.get_intervals(change_points)
+    change_points = [
+        tester.recompute_change_point(cp, series, intervals) for cp in change_points
     ]
-    above_threshold_change_points = all_change_points.copy()
-    while min_magnitude > 0.0 and above_threshold_change_points:
+    while min_magnitude > 0.0 and change_points:
         weakest_index = min(
-            range(len(above_threshold_change_points)),
-            key=lambda i: above_threshold_change_points[i].stats.change_magnitude(),
+            range(len(change_points)),
+            key=lambda i: change_points[i].stats.change_magnitude(),
         )
-        if above_threshold_change_points[weakest_index].stats.change_magnitude() >= min_magnitude:
+        if change_points[weakest_index].stats.change_magnitude() >= min_magnitude:
             break
-        del above_threshold_change_points[weakest_index]
-        intervals = tester.get_intervals(above_threshold_change_points)
+        del change_points[weakest_index]
+        intervals = tester.get_intervals(change_points)
         # Removing a boundary joins its segments, changing the comparisons on both sides.
         for index in (weakest_index - 1, weakest_index):
-            if 0 <= index < len(above_threshold_change_points):
-                above_threshold_change_points[index] = tester.recompute_change_point(
-                    above_threshold_change_points[index], series, intervals
+            if 0 <= index < len(change_points):
+                change_points[index] = tester.recompute_change_point(
+                    change_points[index], series, intervals
                 )
-    return above_threshold_change_points, all_change_points
+    return change_points, None
 
 
 def compute_change_points_split(

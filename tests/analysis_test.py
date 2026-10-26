@@ -16,13 +16,32 @@
 # under the License.
 
 import numpy as np
+import pytest
 
 from otava.analysis import (
     TTestSignificanceTester,
+    TTestStats,
     compute_change_points,
+    compute_change_points_deterministic,
     compute_change_points_orig,
 )
 from otava.change_point_divisive.base import SplitCandidate
+
+
+@pytest.mark.parametrize("values,min_magnitude,expected_indexes", [
+    ([], 0., []),
+    ([1.] * 20, 0., []),
+    ([1.] * 10 + [5.] * 10, 0., [10]),
+    ([1.] * 10 + [5.] * 10, 1., [10]),
+    ([1.] * 10 + [5.] * 10, 5., []),
+])
+def test_deterministic_returns_ttest_points_without_weak_points(values, min_magnitude, expected_indexes):
+    """Return t-test results and None for weak points, with or without filtering."""
+    points, weak_points = compute_change_points_deterministic(values, min_magnitude=min_magnitude)
+
+    assert weak_points is None
+    assert [point.index for point in points] == expected_indexes
+    assert all(isinstance(point.stats, TTestStats) for point in points)
 
 
 def test_single_series():
