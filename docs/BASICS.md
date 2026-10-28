@@ -104,40 +104,75 @@ time                       commit      metric1    metric2
 
 ## Avoiding test definition duplication
 
-You may find that your test definitions are very similar to each other,  e.g. they all have the same metrics. Instead
-of copy-pasting the definitions  you can use templating capability built-in otava to define the common bits of configs
-separately.
+You may find that your test definitions are very similar to each other, e.g. they all have the same metrics. Instead
+of copy-pasting the definitions you can use standard YAML anchors and merge keys to define the common bits of the
+configuration once and reuse them.
 
-First, extract the common pieces to the `templates` section:
+Otava does not interpret the `templates` section. It is only a convenient place to define anchors:
+
+```yaml
+templates:
+  common-metrics: &common-metrics
+    metrics:
+      throughput:
+        suffix: client.throughput
+      response-time:
+        suffix: client.p50
+        direction: -1    # lower is better
+      cpu-load:
+        suffix: server.cpu
+        direction: -1    # lower is better
+```
+
+Recall the anchor in a test using the YAML merge key:
+
+```yaml
+tests:
+  my-product.test-1:
+    type: graphite
+    tags: [perf-test, daily, my-product, test-1]
+    prefix: performance-tests.daily.my-product.test-1
+    <<: *common-metrics
+  my-product.test-2:
+    type: graphite
+    tags: [perf-test, daily, my-product, test-2]
+    prefix: performance-tests.daily.my-product.test-2
+    <<: *common-metrics
+```
+
+Merge keys are shallow: a key defined in the test replaces the whole value from the anchor, including nested
+mappings. To combine parts of several shared definitions, anchor the individual pieces instead of a whole mapping.
+For example, define an anchor per metric and merge them one by one:
+
 ```yaml
 templates:
   common-metrics:
-    throughput:
-      suffix: client.throughput
-    response-time:
-      suffix: client.p50
-      direction: -1    # lower is better
-    cpu-load:
-      suffix: server.cpu
-      direction: -1    # lower is better
+    throughput: &throughput
+      scale: 1
+      direction: 1
+    latency: &latency
+      scale: 1.0e-6
+      direction: -1
+
+  write-metrics: &write-metrics
+    metrics:
+      throughput:
+        <<: *throughput
+        suffix: write.result-success.throughput
+      latency:
+        <<: *latency
+        suffix: write.result-success.p50
+
+tests:
+  my-product.test-1:
+    <<: *write-metrics
+    type: graphite
+    tags: [perf-test, daily, my-product, test-1]
+    prefix: performance-tests.daily.my-product.test-1
 ```
 
-Next you can recall a template in the `inherit` property of the test:
-
-```yaml
-my-product.test-1:
-  type: graphite
-  tags: [perf-test, daily, my-product, test-1]
-  prefix: performance-tests.daily.my-product.test-1
-  inherit: common-metrics
-my-product.test-2:
-  type: graphite
-  tags: [perf-test, daily, my-product, test-2]
-  prefix: performance-tests.daily.my-product.test-2
-  inherit: common-metrics
-```
-
-You can inherit more than one template.
+> [!NOTE]
+> The `inherit` property previously implemented by Otava has been removed. Use YAML anchors and merge keys instead.
 
 ## Validating Performance of a Feature Branch
 

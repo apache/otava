@@ -30,7 +30,6 @@ from otava.influxdb import InfluxDBConfig
 from otava.postgres import PostgresConfig
 from otava.slack import SlackConfig
 from otava.test_config import TestConfig, create_test_config
-from otava.util import merge_dict_list
 
 
 @dataclass
@@ -51,30 +50,19 @@ class ConfigError(Exception):
     message: str
 
 
-def load_templates(config: Dict) -> Dict[str, Dict]:
-    templates = config.get("templates", {})
-    if not isinstance(templates, Dict):
-        raise ConfigError("Property `templates` is not a dictionary")
-    return templates
-
-
-def load_tests(
-    config: Dict, templates: Dict, csv_config: Optional[CsvConfig] = None
-) -> Dict[str, TestConfig]:
+def load_tests(config: Dict, csv_config: Optional[CsvConfig] = None) -> Dict[str, TestConfig]:
     tests = config.get("tests", {})
     if not isinstance(tests, Dict):
         raise ConfigError("Property `tests` is not a dictionary")
 
     result = {}
     for test_name, test_config in tests.items():
-        template_names = test_config.get("inherit", [])
-        if not isinstance(template_names, List):
-            template_names = [templates]
-        try:
-            template_list = [templates[name] for name in template_names]
-        except KeyError as e:
-            raise ConfigError(f"Template {e.args[0]} referenced in test {test_name} not found")
-        test_config = merge_dict_list(template_list + [test_config])
+        if "inherit" in test_config:
+            raise ConfigError(
+                f"Test {test_name} uses the removed `inherit` property. "
+                "Use YAML anchors and merge keys instead: define the shared configuration "
+                "under an anchor and reference it with `<<: *anchor`."
+            )
         result[test_name] = create_test_config(test_name, test_config, csv_config)
 
     return result
@@ -108,8 +96,7 @@ def load_config_from_parser_args(args: configargparse.Namespace) -> Config:
         yaml = YAML(typ="safe")
         config = yaml.load(Path(config_file).read_text())
 
-        templates = load_templates(config)
-        tests = load_tests(config, templates, csv_config)
+        tests = load_tests(config, csv_config)
         groups = load_test_groups(config, tests)
     else:
         logging.warning("Otava configuration file not found or not specified")

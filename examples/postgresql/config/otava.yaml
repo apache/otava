@@ -15,9 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Templates define common bits shared between test definitions:
+# Shared test configuration is defined once with a YAML anchor:
 templates:
-  common:
+  common: &common
     type: postgres
     time_column: commit_ts
     attributes: [experiment_id, commit, config_id]
@@ -42,7 +42,7 @@ templates:
 # Define your tests here:
 tests:
   aggregate_mem:
-    inherit: [ common ] # avoids repeating metrics definitions and postgres-related config
+    <<: *common # avoids repeating metrics definitions and postgres-related config
     query: |
       SELECT e.commit, 
              e.commit_ts, 
@@ -64,7 +64,7 @@ tests:
       ORDER BY e.commit_ts ASC;
 
   aggregate_time_rocks:
-    inherit: [ common ]
+    <<: *common
     query: |
       SELECT e.commit, 
              e.commit_ts, 

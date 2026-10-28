@@ -21,9 +21,9 @@ bigquery:
   dataset: ${BIGQUERY_DATASET}
   credentials: ${BIGQUERY_CREDENTIALS}
 
-# Templates define common bits shared between test definitions:
+# Shared test configuration is defined once with a YAML anchor:
 templates:
-  common:
+  common: &common
     type: bigquery
     time_column: commit_ts
     attributes: [experiment_id, config_id, commit]
@@ -48,7 +48,7 @@ templates:
 # Define your tests here:
 tests:
   aggregate_mem:
-    inherit: [ common ] # avoids repeating metrics definitions and postgres-related config
+    <<: *common # avoids repeating metrics definitions and postgres-related config
     query: |
       SELECT e.commit, 
              e.commit_ts, 
