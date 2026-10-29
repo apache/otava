@@ -18,7 +18,6 @@
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Optional
-from warnings import warn
 
 from pydantic import (
     BaseModel,
@@ -66,7 +65,6 @@ class Metric(DomainModel):
         super().__init__(direction=direction, scale=scale, unit=unit)
 
     def to_json(self):
-        warn("Metric.to_json() is deprecated; use model_dump(mode='json')", DeprecationWarning, stacklevel=2)
         return self.model_dump(mode="json")
 
 
@@ -562,10 +560,8 @@ class AnalyzedSeries(DomainModel):
         return payload
 
     def to_json(self):
-        warn("AnalyzedSeries.to_json() is deprecated; use model_dump(mode='json')", DeprecationWarning, stacklevel=2)
         return self.model_dump(mode="json")
 
     @classmethod
     def from_json(cls, analyzed_json):
-        warn("AnalyzedSeries.from_json() is deprecated; use model_validate()", DeprecationWarning, stacklevel=2)
         return cls.model_validate(analyzed_json)

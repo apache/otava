@@ -145,7 +145,6 @@ class BaseStats(DomainModel):
         return self.std_2
 
     def to_json(self):
-        warn("BaseStats.to_json() is deprecated; use model_dump(mode='json')", DeprecationWarning, stacklevel=2)
         return {
             "forward_change_percent": f"{self.forward_change_percent():-0f}",
             "magnitude": f"{self.change_magnitude():-0f}",
@@ -208,7 +207,6 @@ class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
         return CandidateChangePoint(index=self.index, qhat=self.qhat)
 
     def to_json(self):
-        warn("ChangePoint.to_json() is deprecated; use model_dump(mode='json')", DeprecationWarning, stacklevel=2)
         return self.persistence_dict()
 
     def forward_change_percent(self) -> float:
@@ -318,7 +316,6 @@ class ChangePointGroup(DomainModel):
         return self
 
     def to_json(self):
-        warn("ChangePointGroup.to_json() is deprecated; use model_dump(mode='json')", DeprecationWarning, stacklevel=2)
         changes = [cp.persistence_dict() for cp in self.changes.values()]
 
         return {

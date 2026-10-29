@@ -26,9 +26,10 @@ domain models. Persist an analysis with `analysis.model_dump(mode="json")`, and 
 with `AnalyzedSeries.model_validate(payload)`. The JSON document remains compatible with
 previous releases, including legacy string metric units and older flat change-point entries.
 
-`to_json()` and `from_json()` remain as deprecated wrappers for the current release and
-emit `DeprecationWarning`. Migrate callers before the next breaking release, when those
-wrappers and the `ChangePointSerializer` compatibility shim will be removed.
+`to_json()` and `from_json()` remain available as convenient, backward-compatible
+wrappers around `model_dump(mode="json")` and `model_validate()`. The
+`ChangePointSerializer` compatibility shim remains deprecated and will be removed in a
+future breaking release.
 
 The old `otava.serialization.*Model` imports also remain available for this release as
 flat-persistence compatibility models. New code should use the domain models and

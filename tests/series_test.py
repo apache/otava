@@ -317,7 +317,7 @@ def test_pydantic_persistence_api_and_deprecation_wrappers():
         warnings.simplefilter("always")
         assert analysis.to_json() == payload
         assert AnalyzedSeries.from_json(payload).model_dump(mode="json") == payload
-    assert [warning.category for warning in caught] == [DeprecationWarning, DeprecationWarning]
+    assert len(caught) == 0
 
 
 def test_persistence_validation_uses_every_pydantic_entry_point():
