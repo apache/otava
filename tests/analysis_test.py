@@ -16,13 +16,32 @@
 # under the License.
 
 import numpy as np
+import pytest
 
 from otava.analysis import (
     TTestSignificanceTester,
+    TTestStats,
     compute_change_points,
+    compute_change_points_deterministic,
     compute_change_points_orig,
 )
-from otava.change_point_divisive.base import CandidateChangePoint
+from otava.change_point_divisive.base import SplitCandidate
+
+
+@pytest.mark.parametrize("values,min_magnitude,expected_indexes", [
+    ([], 0., []),
+    ([1.] * 20, 0., []),
+    ([1.] * 10 + [5.] * 10, 0., [10]),
+    ([1.] * 10 + [5.] * 10, 1., [10]),
+    ([1.] * 10 + [5.] * 10, 5., []),
+])
+def test_deterministic_returns_ttest_points_without_weak_points(values, min_magnitude, expected_indexes):
+    """Return t-test results and None for weak points, with or without filtering."""
+    points, weak_points = compute_change_points_deterministic(values, min_magnitude=min_magnitude)
+
+    assert weak_points is None
+    assert [point.index for point in points] == expected_indexes
+    assert all(isinstance(point.stats, TTestStats) for point in points)
 
 
 def test_single_series():
@@ -101,13 +120,13 @@ def test_significance_tester():
     tester = TTestSignificanceTester(0.001)
 
     series = np.array([1.00, 1.02, 1.05, 0.95, 0.98, 1.00, 1.02, 1.05, 0.95, 0.98])
-    candidate = CandidateChangePoint(index=5, qhat=0.)
-    cp = tester.change_point(candidate, series, intervals=[slice(None, None)])
+    candidate = SplitCandidate(index=5, kappa=10, qhat=0.)
+    cp = tester.evaluate_candidate(candidate, series, intervals=[slice(None, None)])
     assert not tester.is_significant(cp)
     assert 0.99 < cp.stats.pvalue < 1.01
 
     series = np.array([1.00, 1.02, 1.05, 0.95, 0.98, 0.80, 0.82, 0.85, 0.79, 0.77])
-    candidate = CandidateChangePoint(index=5, qhat=0.)
-    cp = tester.change_point(candidate, series, intervals=[slice(None, None)])
+    candidate = SplitCandidate(index=5, kappa=10, qhat=0.)
+    cp = tester.evaluate_candidate(candidate, series, intervals=[slice(None, None)])
     assert tester.is_significant(cp)
     assert 0.00 < cp.stats.pvalue < 0.001

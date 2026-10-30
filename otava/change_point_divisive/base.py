@@ -17,9 +17,10 @@
 """
 Hierarchy of ChangePoint classes:
 
-    CandidateChangePoint   <-->   ChangePoint   --> ChangePointSerializer
+    SplitCandidate        -->    ChangePoint   --> ChangePointSerializer
       .index                       .index                .to_json()
-                               ,   .stats                .get_this_or_that()
+      .kappa                       .qhat                 .get_this_or_that()
+      .qhat                        .stats
                                       ^
                              /         `------BaseStats
                                                ^  .pvalue
@@ -45,7 +46,7 @@ Hierarchy of ChangePoint classes:
           .pivot()                         < - - >  .pivot()
 """
 
-from dataclasses import dataclass, fields, replace
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from typing import Dict, Generic, List, Optional, Sequence, SupportsFloat, TypeVar
 
@@ -54,11 +55,19 @@ from numpy.typing import NDArray
 
 
 @dataclass
-class CandidateChangePoint:
-    """Candidate for a change point. The point that maximizes Q-hat function on [start:end+1] slice"""
+class SplitCandidate:
+    """A maximizing Q-hat pair; kappa is the exclusive right-sample endpoint.
+
+    Both coordinates refer to the series held by the calculator.
+    """
 
     index: int
+    kappa: int
     qhat: float
+
+    def __post_init__(self) -> None:
+        if self.kappa <= self.index:
+            raise ValueError("kappa must be greater than the split index")
 
 
 @dataclass
@@ -154,15 +163,15 @@ GenericStats = TypeVar("GenericStats", bound=BaseStats)
 
 
 @dataclass
-class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
+class ChangePoint(Generic[GenericStats]):
     """
     ChangePoint class.
 
-    Defined by index and significance test statistic.
+    Defined by index, Q-hat score, and computed test statistics. A point is
+    evaluated before significance is checked, and may also be a weak point.
     This class is the basic change point that is used during computation
-    and returned as a result. This class does not however carry additional
-    attributes like metric, time, or commit sha. Those are in ChangePointGroup
-    and ChangePoints.
+    and returned as a result. Time and commit attributes are in ChangePointGroup
+    and ChangePoints; metric is an optional convenience field on this class.
     Note that while in theory the index, commit sha, an the time(stamp) should
     all be the same, in practice they aren't always. For example if at some point
     during a tests lifetime, more metrics are added to the output, then different
@@ -172,6 +181,8 @@ class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
     use the ChangePointGroup and ChangePoints classes.
     """
 
+    index: int
+    qhat: float
     stats: GenericStats
     # Which metric this change point belongs to. (This is redundant and for convenience.)
     metric: Optional[str] = None
@@ -188,18 +199,13 @@ class ChangePoint(CandidateChangePoint, Generic[GenericStats]):
 
     @classmethod
     def from_candidate(
-        cls, candidate: CandidateChangePoint, stats: GenericStats
+        cls, candidate: SplitCandidate, stats: GenericStats
     ) -> "ChangePoint[GenericStats]":
         return cls(
             index=candidate.index,
             qhat=candidate.qhat,
             stats=stats,
         )
-
-    def to_candidate(self) -> CandidateChangePoint:
-        """Downgrades Change Point to a Candidate Change Point. Used to recompute stats for Weak Change Points."""
-        data = {f.name: getattr(self, f.name) for f in fields(CandidateChangePoint)}
-        return CandidateChangePoint(**data)
 
     def to_json(self):
         return ChangePointSerializer(self).to_json()
@@ -757,12 +763,12 @@ class SignificanceTester(Generic[GenericStats]):
 
     def get_sides(
         self,
-        candidate: CandidateChangePoint,
+        index: int,
         series: Sequence[SupportsFloat],
         intervals: List[slice],
     ) -> (Sequence, Sequence):
         """
-        Computes properties of the change point if the Candidate Change Point based on the provided intervals.
+        Select samples around an index using current interval boundaries.
 
         The method works in both steps of the algorithm:
         1. Split step:
@@ -775,13 +781,13 @@ class SignificanceTester(Generic[GenericStats]):
 
         """
         for i, interval in enumerate(intervals):
-            if interval.stop == candidate.index:
+            if interval.stop == index:
                 # Merge step
                 left_interval = interval
                 right_interval = intervals[i + 1]
                 break
-            elif (interval.start is None or interval.start < candidate.index) and (
-                interval.stop is None or candidate.index < interval.stop
+            elif (interval.start is None or interval.start < index) and (
+                interval.stop is None or index < interval.stop
             ):
                 # Split step
                 # Note: handles slices with omitted indexes:
@@ -791,12 +797,12 @@ class SignificanceTester(Generic[GenericStats]):
                 #
                 #       array[i: len(array)] == array[i:] == array[slice(i, None)] == array[slice(i, len(array))],
                 #       i.e., interval.stop == None and interval.stop == len(array) are equivalent.
-                left_interval = slice(interval.start, candidate.index)
-                right_interval = slice(candidate.index, interval.stop)
+                left_interval = slice(interval.start, index)
+                right_interval = slice(index, interval.stop)
                 break
         else:
             raise ValueError(
-                f"Candidate Change Point at index={candidate.index} doesn't correspond to any interval in {intervals}."
+                f"Change point at index={index} doesn't correspond to any interval in {intervals}."
             )
         left = series[left_interval]
         right = series[right_interval]
@@ -823,11 +829,17 @@ class SignificanceTester(Generic[GenericStats]):
         """Compares ChangePoint to level of significance max_pvalue"""
         return point.stats.pvalue <= self.max_pvalue
 
-    def change_point(
-        self, candidate: CandidateChangePoint, series: NDArray, intervals: List[slice]
+    def evaluate_candidate(
+        self, candidate: SplitCandidate, series: Sequence[SupportsFloat], intervals: List[slice]
     ) -> ChangePoint[GenericStats]:
-        """Computes stats for a change point candidate and wraps it into ChangePoint class"""
-        ...
+        """Compute test statistics before deciding whether to retain a split."""
+        raise NotImplementedError
+
+    def recompute_change_point(
+        self, point: ChangePoint[GenericStats], series: Sequence[SupportsFloat], intervals: List[slice]
+    ) -> ChangePoint[GenericStats]:
+        """Reevaluate an existing point against its current neighboring segments."""
+        raise NotImplementedError
 
 
 class Calculator:
@@ -836,7 +848,7 @@ class Calculator:
     def __init__(self, series: NDArray):
         self.series = series
 
-    def get_next_candidate(self, intervals: List[slice]) -> Optional[CandidateChangePoint]:
+    def get_next_candidate(self, intervals: List[slice]) -> Optional[SplitCandidate]:
         """Returns list of existing change points to find next best change point candidate."""
         candidates = [
             self.get_candidate_change_point(interval=interval)
@@ -848,7 +860,6 @@ class Calculator:
         candidate = max(candidates, key=lambda point: point.qhat)
         return candidate
 
-    def get_candidate_change_point(self, interval: slice) -> CandidateChangePoint:
-        """Given start and end indexes return best candidate for a change point.
-        Note that start and end are indexes of the first and last element, i.e. a slice [start:end+1]."""
+    def get_candidate_change_point(self, interval: slice) -> SplitCandidate:
+        """Return the best split and exclusive right endpoint within series[interval]."""
         ...

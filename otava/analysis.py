@@ -19,14 +19,15 @@ import copy
 from dataclasses import dataclass, replace
 from typing import List, Optional, Sequence, SupportsFloat, Tuple
 
+import numpy as np
 from scipy.stats import ttest_ind_from_stats
 
 from otava.change_point_divisive.base import (
     BaseStats,
-    CandidateChangePoint,
     ChangePoint,
     GenericStats,
     SignificanceTester,
+    SplitCandidate,
 )
 from otava.change_point_divisive.calculator import PairDistanceCalculator
 from otava.change_point_divisive.detector import ChangePointDetector
@@ -66,7 +67,7 @@ TtestCPList = List[ChangePoint[TTestStats]]
 
 
 # TODO: Move to change_point_divisive.significance_test
-class TTestSignificanceTester(SignificanceTester):
+class TTestSignificanceTester(SignificanceTester[TTestStats]):
     """
     Uses two-sided Student's T-test to decide if a candidate change point
     splits the series into pieces that are significantly different from each other.
@@ -93,15 +94,50 @@ class TTestSignificanceTester(SignificanceTester):
 
         return TTestStats(pvalue=p, mean_1=base_stats.mean_1, mean_2=base_stats.mean_2, std_1=base_stats.std_1, std_2=base_stats.std_2, tstatistic=t, degrees_of_freedom=df)
 
-    def change_point(
+    def evaluate_candidate(
         self,
-        candidate: CandidateChangePoint,
+        candidate: SplitCandidate,
         series: Sequence[SupportsFloat],
         intervals: List[slice],
     ) -> ChangePoint[TTestStats]:
-        left, right = self.get_sides(candidate, series, intervals)
+        left, right = self.get_sides(candidate.index, series, intervals)
         stats = self.compare(left, right)
         return ChangePoint.from_candidate(candidate, stats)
+
+    def recompute_change_point(
+        self,
+        point: ChangePoint[TTestStats],
+        series: Sequence[SupportsFloat],
+        intervals: List[slice],
+    ) -> ChangePoint[TTestStats]:
+        left, right = self.get_sides(point.index, series, intervals)
+        return ChangePoint(
+            index=point.index, qhat=point.qhat, stats=self.compare(left, right), metric=point.metric
+        )
+
+
+class DeterministicTTestSignificanceTester(TTestSignificanceTester):
+    """Test the samples selected by Q-hat, ending the right sample at kappa.
+
+    Recomputing an existing point still uses its current neighboring segments.
+    """
+
+    def evaluate_candidate(
+        self,
+        candidate: SplitCandidate,
+        series: Sequence[SupportsFloat],
+        intervals: List[slice],
+    ) -> ChangePoint[TTestStats]:
+        for interval in intervals:
+            start = 0 if interval.start is None else interval.start
+            end = len(series) if interval.stop is None else interval.stop
+            if start < candidate.index < end:
+                if not candidate.index < candidate.kappa <= min(end, len(series)):
+                    raise ValueError("Candidate kappa must lie within the containing interval")
+                left = series[start : candidate.index]
+                right = series[candidate.index : candidate.kappa]
+                return ChangePoint.from_candidate(candidate, self.compare(left, right))
+        raise ValueError(f"Split candidate at index={candidate.index} is not inside an interval")
 
 
 def merge(
@@ -144,7 +180,7 @@ def merge(
             if index < 0 or index >= len(change_points):
                 return
             cp = change_points[index]
-            change_points[index] = tester.change_point(cp.to_candidate(), series, intervals)
+            change_points[index] = tester.recompute_change_point(cp, series, intervals)
 
         recompute(weakest_cp_index)
         recompute(weakest_cp_index + 1)
@@ -196,7 +232,7 @@ def split(series: Sequence[SupportsFloat], window_len: int = 30, max_pvalue: flo
     # Sort change points by index; required by get_intervals() and maintained by merge()
     change_points.sort(key=lambda cp: cp.index)
     intervals = tester.get_intervals(change_points)
-    return [tester.change_point(cp.to_candidate(), series, intervals) for cp in change_points]
+    return [tester.recompute_change_point(cp, series, intervals) for cp in change_points]
 
 
 def compute_change_points_orig(series: Sequence[SupportsFloat], max_pvalue: float = 0.001, seed: Optional[int] = None) -> Tuple[PermCPList, Optional[PermCPList]]:
@@ -211,6 +247,72 @@ def compute_change_points_orig(series: Sequence[SupportsFloat], max_pvalue: floa
     detector = ChangePointDetector(significance_tester=tester, calculator=PairDistanceCalculator)
     change_points = detector.get_change_points(series=series)
     return change_points, None
+
+
+def compute_change_points_deterministic(series: Sequence[SupportsFloat], max_pvalue: float = 0.001, min_magnitude: float = 0.0) -> Tuple[TtestCPList, None]:
+    """
+    Same as the original algorithm but with deterministic Student T significance test at the end.
+
+    max_pvalue applies to discovery tests using the selected kappa. Returned statistics,
+    including p-values, describe the final adjacent segments and may differ from the
+    discovery tests. They are not used to apply the discovery cutoff a second time.
+
+    Magnitude filtering removes the smallest current change below min_magnitude,
+    recomputes its two neighbors, and repeats until all retained points meet the
+    inclusive threshold. Return the filtered t-test points and None for the second
+    result, since this variant does not expose weak change points.
+
+    The motivation for this variation follows from fixing the bug explained at the top of https://github.com/apache/otava/pull/96
+    The intuition is that the split-merge approach introduced by Datastax is addressing the same problem that the _kappa_ variable
+    does in the original paper. Now that we compute correctly over all values of kappa, the split-merge part should be unnecessary,
+    as the original algorithm with kappa bug fixed, will find the same change points, and more. Therefore the conclusion is we want
+    to go back as much as possible to the original and real algorithm from the Matteson & James paper. But even then, we find that
+    Student T as significance test is both much faster but also qualitatively produces better results for the use case we're in at least,
+    that we want to continue using T test and not random permutations for the significance test.
+
+    TBD: Whether weak change points are still helpful or not. By reading the problem they fix appears unrelated from the split-merge vs **kappa** symptoms.
+
+    TODO: Support incremental e-divisive. This was easy to implement on top of the split-merge variation. Not clear what is the correct way here.
+    An easy solution is to rerun from the last change-point, but the problem is the last change point could itself be influenced by the new data
+    appended.
+    """
+    if not isinstance(series, np.ndarray):
+        series = np.array(series, dtype=np.float64)
+    if not np.issubdtype(series.dtype, np.floating):
+        series = series.astype(np.float64, copy=False)
+    tester = DeterministicTTestSignificanceTester(max_pvalue=max_pvalue)
+    detector = ChangePointDetector(significance_tester=tester, calculator=PairDistanceCalculator)
+    change_points = detector.get_change_points(series=series)
+    intervals = tester.get_intervals(change_points)
+    change_points = [
+        tester.recompute_change_point(cp, series, intervals) for cp in change_points
+    ]
+    while min_magnitude > 0.0 and change_points:
+        weakest_index = min(
+            range(len(change_points)),
+            key=lambda i: change_points[i].stats.change_magnitude(),
+        )
+        if change_points[weakest_index].stats.change_magnitude() >= min_magnitude:
+            break
+        del change_points[weakest_index]
+        intervals = tester.get_intervals(change_points)
+        # Removing a boundary joins its segments, changing the comparisons on both sides.
+        for index in (weakest_index - 1, weakest_index):
+            if 0 <= index < len(change_points):
+                change_points[index] = tester.recompute_change_point(
+                    change_points[index], series, intervals
+                )
+    return change_points, None
+
+
+def compute_change_points_split(
+    series: Sequence[SupportsFloat], window_len: int = 50, max_pvalue: float = 0.001, min_magnitude: float = 0.0,
+    new_data: Optional[int] = None, old_weak_cp: Optional[GenCPList] = None
+) -> Tuple[GenCPList, Optional[GenCPList]]:
+    """
+    This function added mainly for symmetry and anticipating a future where this is no longer the default
+    """
+    return compute_change_points(series, window_len, max_pvalue, min_magnitude, new_data, old_weak_cp)
 
 
 def compute_change_points(

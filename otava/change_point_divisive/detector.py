@@ -34,8 +34,10 @@ class ChangePointDetector:
 
     def get_change_points(self, series: Sequence[SupportsFloat], start: Optional[int] = None, end: Optional[int] = None) -> List[ChangePoint[GenericStats]]:
         '''Finds change points in `series[start : end]`.'''
+        start, end, _ = slice(start, end).indices(len(series))
+        series = series[start : end]
         if not isinstance(series, np.ndarray):
-            series = np.array(series[start : end], dtype=np.float64)
+            series = np.array(series, dtype=np.float64)
         if not np.issubdtype(series.dtype, np.floating):
             series = series.astype(np.float64, copy=False)
 
@@ -47,7 +49,7 @@ class ChangePointDetector:
             candidate = calc.get_next_candidate(intervals)
             if candidate is None:
                 break
-            change_point = self.tester.change_point(candidate, series, intervals)
+            change_point = self.tester.evaluate_candidate(candidate, series, intervals)
             if self.tester.is_significant(change_point):
                 # TODO: Consider BST vs sorted array
                 change_points.append(change_point)
@@ -56,8 +58,7 @@ class ChangePointDetector:
             else:
                 break
 
-        if start is not None:
-            for cp in change_points:
-                cp.index += start
+        for cp in change_points:
+            cp.index += start
 
         return change_points
