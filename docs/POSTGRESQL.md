@@ -129,8 +129,8 @@ time                       experiment_id       commit      config_id    process_
 
 See [otava.yaml](../examples/postgresql/config/otava.yaml) for the example configuration:
 * Block `postgres` contains connection details to the PostgreSQL database.
-* Block `templates` contains common pieces of configuration used by all tests - time column and a list of attributes and metrics.
-* Block `tests` contains configuration for the individual tests, specifically a query that fetches analyzed columns sorted by commit timestamp.
+* Block `templates` defines shared pieces of configuration with YAML anchors: time column, a list of attributes, and metrics.
+* Block `tests` contains configuration for the individual tests, specifically a query that fetches analyzed columns sorted by commit timestamp. Each test merges the shared configuration with `<<: *common`.
 
 [schema.sql](../examples/postgresql/init-db/schema.sql) contains the schema used in this example.
 

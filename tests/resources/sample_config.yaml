@@ -37,48 +37,54 @@ grafana:
   user: GRAFANA_USER
   password: GRAFANA_PASSWORD
 
-# Templates define common bits shared between test definitions
+# Shared pieces of test definitions are defined with YAML anchors
 templates:
   common_metrics:
-    metrics:
-      throughput:
-        scale: 1
-        direction: 1
-      p50:
-        scale: 1.0e-6
-        direction: -1
-      p75:
-        scale: 1.0e-6
-        direction: -1
-      p90:
-        scale: 1.0e-6
-        direction: -1
-      p95:
-        scale: 1.0e-6
-        direction: -1
-      p99:
-        scale: 1.0e-6
-        direction: -1
-      max:
-        scale: 1.0e-6
-        direction: -1
+    throughput: &common_throughput
+      scale: 1
+      direction: 1
+    p50: &common_p50
+      scale: 1.0e-6
+      direction: -1
+    p75: &common_p75
+      scale: 1.0e-6
+      direction: -1
+    p90: &common_p90
+      scale: 1.0e-6
+      direction: -1
+    p95: &common_p95
+      scale: 1.0e-6
+      direction: -1
+    p99: &common_p99
+      scale: 1.0e-6
+      direction: -1
+    max: &common_max
+      scale: 1.0e-6
+      direction: -1
 
-  write_metrics:
+  write_metrics: &write_metrics
     type: graphite
     metrics:
       throughput:
+        <<: *common_throughput
         suffix: write.result-success.throughput
       p50:
+        <<: *common_p50
         suffix: write.result-success.p50
       p75:
+        <<: *common_p75
         suffix: write.result-success.p75
       p90:
+        <<: *common_p90
         suffix: write.result-success.p90
       p95:
+        <<: *common_p95
         suffix: write.result-success.p95
       p99:
+        <<: *common_p99
         suffix: write.result-success.p99
       max:
+        <<: *common_max
         suffix: write.result-success.max
 
 
@@ -107,11 +113,11 @@ tests:
     attributes: [ commit ]
 
   remote1:
-    inherit: [common_metrics, write_metrics]
+    <<: *write_metrics
     prefix: "performance_regressions.my_product.%{BRANCH}.test1"
 
   remote2:
-    inherit: [common_metrics, write_metrics]
+    <<: *write_metrics
     prefix: "performance_regressions.my_product.%{BRANCH}.test2"
 
 
