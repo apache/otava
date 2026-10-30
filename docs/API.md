@@ -26,40 +26,40 @@ change points back.
 ```python
 from otava import AnalysisOptions, Metric, Series
 
-# One measurement per commit. Metric.direction says which way is an improvement:
-# 1 when higher is better, -1 when lower is better.
+# One measurement per commit. The metric's direction says which way is an
+# improvement.
 series = Series(
-    test_name="throughput",
+    test_name="send_hello_message",
     branch=None,
     time=list(range(60)),
-    metrics={"ops": Metric(direction=1, scale=1.0)},
-    data={"ops": [100.0] * 30 + [80.0] * 30},
+    metrics={"throughput": Metric(direction=Metric.HIGHER_IS_BETTER, unit="ops/s")},
+    data={"throughput": [100.0] * 30 + [80.0] * 30},
     attributes={"commit": [f"sha{i}" for i in range(60)]},
 )
 
 analyzed = series.analyze(AnalysisOptions(window_len=20, max_pvalue=0.001))
 
-for group in analyzed.change_points_by_time:
-    for metric, change in group.changes.items():
+for change_points_at in analyzed.change_points_by_time:
+    for metric, change_point in change_points_at.changes.items():
         print(
-            group.attributes["commit"],
+            change_points_at.attributes["commit"],
             metric,
-            change.stats.mean_before(),
-            change.stats.mean_after(),
-            f"{change.stats.forward_change_percent():+.1f}%",
+            change_point.stats.mean_before(),
+            change_point.stats.mean_after(),
+            f"{change_point.stats.forward_change_percent():+.1f}%",
         )
 ```
 
 `analyze()` does not interpret `time`, so a plain index works for data that is
 not a time series, but keep it increasing: change points are collected in time
-order, and a second group that is not later than the first raises `ValueError`.
-Otava's human-readable log and regression reports do interpret it, formatting
-it with `datetime.fromtimestamp`, so those report formats read it as seconds
-since the epoch. JSON reports preserve the numeric value.
+order, and a `ChangePointGroup` that is not later than the previous one raises
+`ValueError`. Otava's human-readable log and regression reports do interpret
+it, formatting it with `datetime.fromtimestamp`, so those report formats read
+it as seconds since the epoch. JSON reports preserve the numeric value.
 
 `attributes` carries one value per data point, and the values at a change point
-are returned on its group. That is how you get from a detected change back to
-the commit that caused it.
+are returned on its `ChangePointGroup`. That is how you get from a detected
+change back to the commit that caused it.
 
 `Series.analyze()` is lazy: the change points are computed the first time any of
 the change point properties on `AnalyzedSeries` is read, and cached from then on.
@@ -72,14 +72,31 @@ The names in `otava.__all__`, re-exported from the package root:
 | Name | Purpose |
 | --- | --- |
 | `Series` | Input data: timestamps, metrics, values, per-point attributes |
-| `Metric` | Direction, scale and unit of one metric |
+| `Metric` | Direction (`Metric.HIGHER_IS_BETTER` or `Metric.LOWER_IS_BETTER`), scale and unit of one metric |
 | `AnalysisOptions` | `window_len`, `max_pvalue`, `min_magnitude`, `orig_edivisive` |
 | `AnalyzedSeries` | Result of `Series.analyze()` |
 | `ChangePoint` | One change in one metric; the statistics are on its `stats` |
 | `ChangePointGroup` | Changes that share a point in time |
 | `ChangePointsByMetric` | Change points keyed by metric |
 | `ChangePointsByTime` | Change point groups in time order |
-| `compute_change_points` | The detection algorithm on a bare sequence of floats; returns `(strong, weak)` |
+
+How they fit together:
+
+```text
+Series
+  .metrics: {metric name: Metric}
+  .analyze(AnalysisOptions) -> AnalyzedSeries
+                                 .change_points: ChangePointsByMetric
+                                 .change_points_by_time: ChangePointsByTime
+                                     |
+                                     | both hold ChangePointGroup objects
+                                     v
+                                 ChangePointGroup        one per point in time
+                                   .time
+                                   .attributes
+                                   .changes: {metric name: ChangePoint}
+                                                             .stats
+```
 
 The supported import surface is the names above when imported from `otava`.
 Submodule paths such as `otava.importer`, `otava.config` and `otava.main` are
@@ -94,9 +111,9 @@ with the same defaults. The attribute names and the flag names differ; run
 
 | Option | Default | Effect |
 | --- | --- | --- |
-| `window_len` | 50 | Number of points the algorithm looks at around a candidate |
+| `window_len` | 50 | Number of points the algorithm looks at around a candidate; ignored when `orig_edivisive` is set |
 | `max_pvalue` | 0.001 | Significance threshold a change point must meet |
-| `min_magnitude` | 0.0 | Smallest relative change worth reporting |
+| `min_magnitude` | 0.0 | Smallest relative change worth reporting; ignored when `orig_edivisive` is set |
 | `orig_edivisive` | False | Use unmodified e-divisive instead of the windowed variant |
 
 See [Change Point Detection](MATH.md) for what these do to the results.

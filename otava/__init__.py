@@ -23,15 +23,15 @@ read the change points back.
 
     >>> from otava import AnalysisOptions, Metric, Series
     >>> series = Series(
-    ...     "throughput",
+    ...     "send_hello_message",
     ...     branch=None,
     ...     time=list(range(40)),
-    ...     metrics={"ops": Metric(direction=1, scale=1.0)},
-    ...     data={"ops": [100.0] * 20 + [80.0] * 20},
+    ...     metrics={"throughput": Metric(direction=Metric.HIGHER_IS_BETTER)},
+    ...     data={"throughput": [100.0] * 20 + [80.0] * 20},
     ...     attributes={},
     ... )
     >>> analyzed = series.analyze(AnalysisOptions(window_len=20))
-    >>> [group.time for group in analyzed.change_points_by_time]
+    >>> [change_points_at.time for change_points_at in analyzed.change_points_by_time]
     [20]
 
 The supported import surface is the names re-exported from ``otava``. Submodule
@@ -39,7 +39,6 @@ paths such as ``otava.importer`` and ``otava.main`` are not part of the public
 API and may change without notice.
 """
 
-from otava.analysis import compute_change_points
 from otava.change_point_divisive.base import (
     ChangePoint,
     ChangePointGroup,
@@ -57,5 +56,4 @@ __all__ = [
     "ChangePointsByTime",
     "Metric",
     "Series",
-    "compute_change_points",
 ]

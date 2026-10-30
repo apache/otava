@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import dataclasses
 import doctest
 import re
 import subprocess
@@ -24,7 +25,7 @@ from pathlib import Path
 from types import ModuleType
 
 import otava
-from otava.series import AnalysisOptions
+from otava.series import AnalysisOptions, Metric
 
 REPO_ROOT = Path(__file__).parents[1]
 DOCS_API = REPO_ROOT / "docs/API.md"
@@ -41,25 +42,13 @@ DEFINING_MODULES = {
     "ChangePointsByTime": "otava.change_point_divisive.base",
     "Metric": "otava.series",
     "Series": "otava.series",
-    "compute_change_points": "otava.analysis",
 }
 
 
-def optional_client_modules():
-    """Literal optional dependencies imported by top-level Otava modules.
-
-    Read the import_optional_dependency() call sites instead of repeating the
-    currently known module names here.
-    """
-    call_site = re.compile(r"""import_optional_dependency\(\s*["']([^"']+)["']""")
-    names = {
-        match.group(1).partition(".")[0]
-        for path in (REPO_ROOT / "otava").glob("*.py")
-        for match in call_site.finditer(path.read_text(encoding="utf-8"))
-    }
-
-    assert names, "no import_optional_dependency() call sites found"
-    return sorted(names)
+# Top-level packages of the service clients behind the optional extras, as
+# passed to import_optional_dependency(). Add a new client here together with
+# its extra.
+OPTIONAL_CLIENT_MODULES = ["google", "influxdb_client_3", "pg8000", "requests", "slack_sdk"]
 
 
 def docs_section(title):
@@ -115,6 +104,15 @@ def test_package_root_exports_nothing_beyond_dunder_all():
     assert foreign == []
 
 
+def test_metric_direction_constants_are_not_fields():
+    assert (Metric.HIGHER_IS_BETTER, Metric.LOWER_IS_BETTER) == (1, -1)
+    assert Metric().direction == Metric.HIGHER_IS_BETTER
+
+    # Metric is a dataclass. Without the ClassVar annotation the constants would
+    # become fields and show up in repr(), equality and dataclasses.asdict().
+    assert [field.name for field in dataclasses.fields(Metric)] == ["direction", "scale", "unit"]
+
+
 def test_documented_public_names_match_dunder_all():
     assert documented_public_names() == sorted(otava.__all__)
 
@@ -165,7 +163,7 @@ def test_importing_the_package_does_not_load_optional_service_clients():
     # otava/_optional.py reaches its clients through importlib.import_module(),
     # which does not go through builtins.__import__, so patching that would miss
     # every import written the way this repository writes them.
-    script = "blocked = " + repr(optional_client_modules()) + textwrap.dedent(
+    script = "blocked = " + repr(OPTIONAL_CLIENT_MODULES) + textwrap.dedent(
         """
         import sys
 
