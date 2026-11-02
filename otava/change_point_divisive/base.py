@@ -853,7 +853,7 @@ class Calculator:
         candidates = [
             self.get_candidate_change_point(interval=interval)
             for interval in intervals
-            if len(self.series[interval]) > 1
+            if len(self.series[interval]) > 2
         ]
         if not candidates:
             return
