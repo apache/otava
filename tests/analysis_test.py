@@ -16,6 +16,7 @@
 # under the License.
 
 import numpy as np
+import pytest
 from signal_processing_algorithms.e_divisive.change_points import EDivisiveChangePoint
 
 from otava.analysis import TTestSignificanceTester, compute_change_points, fill_missing
@@ -73,3 +74,21 @@ def test_significance_tester():
     cp = tester.change_point(5, series, [0, len(series)])
     assert tester.is_significant(EDivisiveChangePoint(5), series, [0, len(series)])
     assert 0.00 < cp.stats.pvalue < 0.001
+
+
+@pytest.mark.parametrize("tail, expected_indexes", [([], [4]), ([3.] * 4, [4, 12])])
+def test_merge_refreshes_adjacent_statistics(tail, expected_indexes):
+    # Removing boundary 8 joins the 2.0 and 2.05 segments. The surviving
+    # boundaries must describe that combined segment, on both sides if present.
+    values = [1.] * 4 + [2.] * 4 + [2.05] * 4 + tail
+
+    points, _ = compute_change_points(
+        values, window_len=50, max_pvalue=.001, min_magnitude=.1
+    )
+
+    assert [point.index for point in points] == expected_indexes
+    np.testing.assert_allclose(points[0].stats.mean_2, 2.025)
+    np.testing.assert_allclose(points[0].stats.std_2, .025)
+    if tail:
+        np.testing.assert_allclose(points[1].stats.mean_1, 2.025)
+        np.testing.assert_allclose(points[1].stats.std_1, .025)
