@@ -16,6 +16,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import numpy as np
+import pytest
+
 from otava.analysis import compute_change_points
 
 
@@ -58,7 +61,7 @@ def test_tb_old_defaults_p1():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.1, min_magnitude=0.05)
     indexes = [c.index for c in cps]
-    assert indexes == [10, 11, 15, 71, 363]
+    assert indexes == [10, 11, 15, 71]
 
 
 def test_tb_old_defaults_p2():
@@ -72,28 +75,28 @@ def test_tb_magnitude0_p2():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.2, min_magnitude=0.0)
     indexes = [c.index for c in cps]
-    assert indexes == [3, 6, 7, 10, 11, 13, 15, 16, 28, 29, 35, 37, 39, 41, 44, 48, 49, 56, 58, 61, 65, 66, 69, 71, 74, 76, 82, 95, 108, 117, 125, 126, 129, 131, 136, 137, 142, 148, 165, 169, 187, 190, 192, 197, 200, 212, 220, 241, 243, 246, 247, 249, 250, 260, 265, 266, 268, 278, 282, 288, 305, 306, 325, 330, 337, 338, 340, 347, 349, 363]
+    assert indexes == [3, 6, 7, 10, 11, 13, 15, 16, 28, 29, 35, 37, 39, 41, 44, 48, 49, 56, 58, 61, 65, 66, 69, 71, 74, 76, 82, 95, 108, 117, 125, 126, 129, 131, 136, 137, 142, 148, 165, 169, 187, 190, 192, 197, 200, 212, 220, 234, 241, 243, 246, 247, 249, 250, 260, 265, 266, 268, 278, 282, 288, 305, 306, 325, 330, 337, 338, 340, 347, 349, 363]
 
 
 def test_tb_magnitude0_p1():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.1, min_magnitude=0.0)
     indexes = [c.index for c in cps]
-    assert indexes == [3, 6, 10, 11, 15, 16, 28, 29, 35, 37, 39, 41, 44, 48, 49, 61, 71, 95, 117, 131, 142, 148, 165, 169, 192, 206, 212, 260, 265, 268, 278, 282, 288, 305, 363]
+    assert indexes == [3, 10, 11, 15, 16, 28, 29, 35, 37, 39, 41, 44, 48, 49, 61, 71, 95, 117, 131, 142, 148, 165, 169, 192, 206, 212, 220, 260, 268, 278, 282, 363]
 
 
 def test_tb_magnitude0_p01():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.01, min_magnitude=0.0)
     indexes = [c.index for c in cps]
-    assert indexes == [15, 26, 61, 71, 95, 117, 131, 142, 148, 165, 169, 192, 212, 260]
+    assert indexes == [15, 61, 71, 95, 117, 131, 142, 148, 165, 169, 192, 212, 260]
 
 
 def test_tb_magnitude0_p001():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.001, min_magnitude=0.0)
     indexes = [c.index for c in cps]
-    assert indexes == [15, 61, 71, 95, 117, 131, 142, 148, 192, 212, 260]
+    assert indexes == [15, 61, 71, 95, 117, 131, 142, 148, 192, 212]
 
 
 def test_tb_magnitude0_p0001():
@@ -109,3 +112,24 @@ def test_tb_magnitude0_p00001():
     indexes = [c.index for c in cps]
     print(cps)
     assert indexes == [71, 95, 131, 192, 212]
+
+
+@pytest.mark.parametrize("max_pvalue, min_magnitude", [
+    (.001, 0), (.01, 0), (.1, 0), (.2, 0), (.1, .05), (.2, .05),
+])
+def test_tb_statistics_match_final_segments(max_pvalue, min_magnitude):
+    series = _get_series()
+    points, _ = compute_change_points(
+        series, window_len=30, max_pvalue=max_pvalue, min_magnitude=min_magnitude
+    )
+    assert points
+    bounds = [0] + [point.index for point in points] + [len(series)]
+
+    for point, start, split, end in zip(points, bounds, bounds[1:], bounds[2:]):
+        left, right = series[start:split], series[split:end]
+        np.testing.assert_allclose(
+            [point.stats.mean_1, point.stats.mean_2, point.stats.std_1, point.stats.std_2],
+            [np.mean(left), np.mean(right), np.std(left), np.std(right)],
+        )
+        assert point.stats.pvalue <= max_pvalue
+        assert point.stats.change_magnitude() >= min_magnitude
