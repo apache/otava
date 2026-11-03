@@ -19,7 +19,7 @@
 # JSON Data Source
 
 > **Tip**
-> See [examples/](../examples/) for sample configuration files.
+> See [examples/](https://github.com/apache/otava/tree/master/examples) for sample configuration files.
 
 ## Overview
 
