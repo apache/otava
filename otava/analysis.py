@@ -226,8 +226,8 @@ def merge(
             cp = change_points[index]
             change_points[index] = tester.change_point(cp.to_candidate(), series, intervals)
 
+        recompute(weakest_cp_index - 1)
         recompute(weakest_cp_index)
-        recompute(weakest_cp_index + 1)
 
     return change_points
 
