@@ -18,7 +18,7 @@
 import numpy as np
 import pytest
 
-from otava.analysis import TTestSignificanceTester, TTestStats
+from otava.analysis import TTestSignificanceTester, TTestStats, split
 from otava.change_point_divisive.base import ChangePoint
 from otava.change_point_divisive.calculator import PairDistanceCalculator
 from otava.change_point_divisive.detector import ChangePointDetector
@@ -115,6 +115,33 @@ def test_ttest():
     cpd = ChangePointDetector(significance_tester=st, calculator=PairDistanceCalculator)
     cps = cpd.get_change_points(series=sequence)
     assert [cp.index for cp in cps] == CHANGE_POINTS_INDS
+
+
+@pytest.mark.parametrize("as_array", [False, True])
+@pytest.mark.parametrize("start,end", [(7, 21), (-21, -7)])
+def test_detector_limits_analysis_to_requested_window(as_array, start, end):
+    sequence = [500.] * 7 + list(SEQUENCE) + [-500.] * 7
+    if as_array:
+        sequence = np.array(sequence)
+    detector = ChangePointDetector(TTestSignificanceTester(0.01), PairDistanceCalculator)
+
+    points = detector.get_change_points(sequence, start=start, end=end)
+
+    assert [point.index for point in points] == [12, 15]
+    assert points[0].stats.mean_1 == pytest.approx(0.56)
+    assert points[1].stats.mean_2 == pytest.approx(149.35)
+
+
+@pytest.mark.parametrize("as_array", [False, True])
+def test_split_respects_windows_for_array_and_list_input(as_array):
+    rng = np.random.default_rng(7)
+    sequence = np.concatenate([np.full(60, 20.), np.full(60, 23.)]) + rng.normal(0, 0.3, 120)
+    if not as_array:
+        sequence = list(sequence)
+
+    points = split(sequence)
+
+    assert [point.index for point in points] == [60]
 
 
 def test_get_intervals_requires_sorted_change_points():
