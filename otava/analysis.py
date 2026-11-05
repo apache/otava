@@ -17,6 +17,7 @@
 
 import copy
 from dataclasses import dataclass, replace
+from functools import partial
 from typing import List, Optional, Sequence, SupportsFloat, Tuple
 
 from scipy.stats import ttest_ind_from_stats
@@ -215,7 +216,7 @@ def compute_change_points_orig(series: Sequence[SupportsFloat], max_pvalue: floa
 
 def compute_change_points(
     series: Sequence[SupportsFloat], window_len: int = 50, max_pvalue: float = 0.001, min_magnitude: float = 0.0,
-    new_data: Optional[int] = None, old_weak_cp: Optional[GenCPList] = None
+    new_data: Optional[int] = None, old_weak_cp: Optional[GenCPList] = None, core_window: bool = True
 ) -> Tuple[GenCPList, Optional[GenCPList]]:
     """
     Change Point detection algorithm described in "Hunter: Using Change Point Detection to Hunt for Performance
@@ -242,7 +243,25 @@ def compute_change_points(
         2. Merge step:
             - Filters out weak change points recursively going bottom-up, keeping only high-quality change points, i.e., the
               ones that meet either a p-value threshold criteria or relative magnitude change criteria.
+
+    If `core_window` is True (default), the window constraint of the split step is pushed down into the e-divisive
+    computation itself (see `PairDistanceCalculator(window_len=...)`, issue #84): a single detection pass runs over the
+    whole series, and for every candidate split the calculator only evaluates the pairs of points within `window_len/2`
+    of the candidate. This removes the overlapping-window chunking of `split()`, so every data point contributes to
+    exactly one evaluation per candidate and every change point is scored with one, position-independent p-value.
+    The merge step is unchanged. `new_data` / `old_weak_cp` (incremental append) are only supported by the legacy
+    path (`core_window=False`) for now.
     """
     first_pass_pvalue = max_pvalue * 10 if max_pvalue < 0.05 else (max_pvalue * 2 if max_pvalue < 0.5 else max_pvalue)
-    weak_change_points = split(series, window_len, first_pass_pvalue, new_points=new_data, old_cp=old_weak_cp)
+    if core_window and new_data is None and old_weak_cp is None:
+        tester = TTestSignificanceTester(first_pass_pvalue)
+        detector = ChangePointDetector(
+            significance_tester=tester,
+            calculator=partial(PairDistanceCalculator, window_len=window_len),
+        )
+        weak_change_points = detector.get_change_points(series=series)
+    else:
+        # incremental append (new_data / old_weak_cp) is not supported by the
+        # core-window path yet - fall back to the chunked split() for now
+        weak_change_points = split(series, window_len, first_pass_pvalue, new_points=new_data, old_cp=old_weak_cp)
     return merge(copy.copy(weak_change_points), series, max_pvalue, min_magnitude), weak_change_points

@@ -62,6 +62,25 @@ class CandidateChangePoint:
 
 
 @dataclass
+class WindowedCandidateChangePoint(CandidateChangePoint):
+    """Candidate for a change point found by a windowed calculator (issue #84).
+
+    `window` is the neighborhood of the candidate that the qhat value was
+    computed on: [max(interval.start, tau - window_len/2), kappa), where kappa is
+    the right end that maximized Q. The first-pass significance test must judge
+    the candidate on exactly this evidence (see SignificanceTester.get_sides),
+    otherwise a local change gets diluted by the rest of its interval and can
+    never pass, even though it is exactly what the windowed qhat found.
+
+    `ChangePoint.from_candidate` / `ChangePoint.to_candidate` deliberately drop
+    the window, so the merge step keeps rescoring change points on full
+    intervals, exactly as before.
+    """
+
+    window: Optional[slice] = None
+
+
+@dataclass
 class BaseStats:
     """Abstract statistics class for change point. Implementation depends on the statistical test."""
 
@@ -791,8 +810,15 @@ class SignificanceTester(Generic[GenericStats]):
                 #
                 #       array[i: len(array)] == array[i:] == array[slice(i, None)] == array[slice(i, len(array))],
                 #       i.e., interval.stop == None and interval.stop == len(array) are equivalent.
-                left_interval = slice(interval.start, candidate.index)
-                right_interval = slice(candidate.index, interval.stop)
+                left_start = interval.start if interval.start is not None else 0
+                right_stop = interval.stop if interval.stop is not None else len(series)
+                # A windowed candidate must be judged on the evidence it was found on:
+                # clip both sides to the neighborhood the windowed qhat was computed on.
+                if getattr(candidate, "window", None) is not None:
+                    left_start = max(left_start, candidate.window.start)
+                    right_stop = min(right_stop, candidate.window.stop)
+                left_interval = slice(left_start, candidate.index)
+                right_interval = slice(candidate.index, right_stop)
                 break
         else:
             raise ValueError(

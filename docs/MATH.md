@@ -111,3 +111,18 @@ $C(s, \tau, \kappa) = \dfrac{2(\tau - s)}{(\kappa - s) (\kappa - \tau - 1)} \lef
 Note that $A(s, s, \kappa)=0$, and $B(s, s, \kappa)=0$, and $C(s, \kappa, \kappa)=0$ because they correspond to empty subsequences. Moreover, $B(s, s + 1, \kappa) = 0$ and $C(s, \kappa - 1, \kappa)=0$ because each of them corresponds to an average pairwise distance within a subsequence consisting of a single point, i.e., each of them is the sum with zero terms. Using that, we can compute values for $A$, $B$, and $C$ iteratively. Note that functions $A$ and $B$ are computed as $\tau$ increases, and function $C$ is computed as $\tau$ decreases. 
 
 These formulas are effectively used in Apache Otava after some NumPy vectorizations. For details see [change_point_divisive/calculator.py](https://github.com/apache/otava/tree/master/otava/change_point_divisive/calculator.py).
+
+### Windowed Computation (issue #84)
+
+Instead of chunking the series into overlapping windows and running full detection per chunk, the window constraint can be pushed into the `Q` function itself. For a window length $W \geq 2$ let $\lfloor W/2 \rfloor$ be its half. The windowed statistic of a candidate change point $\tau$ limits both sides of the split to the $\lfloor W/2 \rfloor$ neighboring points of $\tau$:
+
+$Q_w(s, \tau, \kappa; W) = Q\bigl(\max(s, \tau - \lfloor W/2 \rfloor),\ \tau,\ \min(\kappa, \tau + \lfloor W/2 \rfloor)\bigr),$
+
+i.e. it is exactly the $Q$ function of the (shorter) slice `Z[max(s, tau - W//2) : min(kappa, tau + W//2)]` split at `tau`, with all the $A$/$B$/$C$ normalizations taken over the window-local boundaries. The candidate change point is the pair $(\tau, \kappa)$ maximizing $Q_w$, subject to $\tau < \kappa$ as before.
+
+Two properties are worth noting:
+
+1. **Equivalence in the limit.** For $W \geq 2 \cdot (\text{end} - \text{start})$ the constraint is inactive for every $\tau$ ($\max(s, \tau - \lfloor W/2 \rfloor) = s$ and $\tau + \lfloor W/2 \rfloor \geq \text{end}$), so $Q_w$ coincides with the unwindowed $Q$ and the detection result is bit-for-bit the one of the full computation.
+2. **Variant independence.** The definition only touches the calculator, so it composes with any significance test: the chunked split/merge path, the permutation test (Matteson & James), and the deterministic variation are all applicable unchanged.
+
+The evaluation scans only the band $\kappa - \tau \leq \lfloor W/2 \rfloor$ of the $(\tau, \kappa)$ matrix (swept along the band's short side, vectorized over $\tau$), which costs $O(N \cdot W)$ time per candidate search instead of $O(N^2)$. Because the window is anchored at the *candidate* rather than at a chunk grid, every candidate is scored on the same, position-independent evidence - there is no dependence on where chunk boundaries happen to fall, and every data point contributes to exactly one evaluation per candidate.
