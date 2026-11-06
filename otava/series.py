@@ -18,7 +18,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict, Iterable, List, Optional
+from typing import ClassVar, Dict, Iterable, List, Optional
 
 from pydantic import TypeAdapter
 
@@ -45,11 +45,14 @@ class AnalysisOptions(AnalysisOptionsModel):
 
 @dataclass
 class Metric:
+    HIGHER_IS_BETTER: ClassVar[int] = 1
+    LOWER_IS_BETTER: ClassVar[int] = -1
+
     direction: int
     scale: float
     unit: str
 
-    def __init__(self, direction: int = 1, scale: float = 1.0, unit: str = ""):
+    def __init__(self, direction: int = HIGHER_IS_BETTER, scale: float = 1.0, unit: str = ""):
         self.direction = direction
         self.scale = scale
         self.unit = unit

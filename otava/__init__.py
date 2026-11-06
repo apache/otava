@@ -1,0 +1,59 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+"""Change detection for continuous performance engineering.
+
+The names re-exported here are the public API of Otava as a library: the types
+needed to build a Series from data Otava did not import itself, analyze it, and
+read the change points back.
+
+    >>> from otava import AnalysisOptions, Metric, Series
+    >>> series = Series(
+    ...     "send_hello_message",
+    ...     branch=None,
+    ...     time=list(range(40)),
+    ...     metrics={"throughput": Metric(direction=Metric.HIGHER_IS_BETTER)},
+    ...     data={"throughput": [100.0] * 20 + [80.0] * 20},
+    ...     attributes={},
+    ... )
+    >>> analyzed = series.analyze(AnalysisOptions(window_len=20))
+    >>> [change_points_at.time for change_points_at in analyzed.change_points_by_time]
+    [20]
+
+The supported import surface is the names re-exported from ``otava``. Submodule
+paths such as ``otava.importer`` and ``otava.main`` are not part of the public
+API and may change without notice.
+"""
+
+from otava.change_point_divisive.base import (
+    ChangePoint,
+    ChangePointGroup,
+    ChangePointsByMetric,
+    ChangePointsByTime,
+)
+from otava.series import AnalysisOptions, AnalyzedSeries, Metric, Series
+
+__all__ = [
+    "AnalysisOptions",
+    "AnalyzedSeries",
+    "ChangePoint",
+    "ChangePointGroup",
+    "ChangePointsByMetric",
+    "ChangePointsByTime",
+    "Metric",
+    "Series",
+]
