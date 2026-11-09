@@ -22,9 +22,9 @@ name: Python application
 
 on:
   push:
-    branches: [master, "0.7"]
+    branches: [master, "0.7", "0.7.x"]
   pull_request:
-    branches: [master, "0.7"]
+    branches: [master, "0.7", "0.7.x"]
 
 jobs:
   build:
@@ -42,7 +42,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: ${{ matrix.python-version }}
           prune-cache: true
@@ -68,7 +68,7 @@ jobs:
           python-version: "3.10"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.10"
           prune-cache: true
