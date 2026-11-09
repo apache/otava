@@ -131,7 +131,9 @@ def test_tb_statistics_match_final_segments(max_pvalue, min_magnitude):
         left, right = series[start:split], series[split:end]
         np.testing.assert_allclose(
             [point.stats.mean_1, point.stats.mean_2, point.stats.std_1, point.stats.std_2],
-            [np.mean(left), np.mean(right), np.std(left), np.std(right)],
+            [np.mean(left), np.mean(right),
+             np.std(left, ddof=1) if len(left) > 1 else 0.0,
+             np.std(right, ddof=1) if len(right) > 1 else 0.0],
         )
         expected = ttest_ind(left, right, equal_var=True, alternative="two-sided")
         assert point.stats.pvalue == pytest.approx(expected.pvalue)

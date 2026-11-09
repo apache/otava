@@ -17,7 +17,6 @@
 
 import copy
 from dataclasses import dataclass, replace
-from math import sqrt
 from typing import List, Optional, Sequence, SupportsFloat, Tuple
 
 from scipy.stats import ttest_ind_from_stats
@@ -89,13 +88,9 @@ class TTestSignificanceTester(SignificanceTester):
         # This is because if we had only 2 points, they can be either equal or different, but if they
         # are different, we have no context for how different they have to be to be statistically significant.
         if df > 0:
-            # BaseStats reports population SDs; SciPy requires corrected sample SDs.
-            # A singleton contributes zero within-sample sum of squares.
-            sample_std_1 = base_stats.std_1 * sqrt(n_1 / (n_1 - 1)) if n_1 > 1 else 0.0
-            sample_std_2 = base_stats.std_2 * sqrt(n_2 / (n_2 - 1)) if n_2 > 1 else 0.0
             (t, p) = ttest_ind_from_stats(
-                base_stats.mean_1, sample_std_1, n_1,
-                base_stats.mean_2, sample_std_2, n_2,
+                base_stats.mean_1, base_stats.std_1, n_1,
+                base_stats.mean_2, base_stats.std_2, n_2,
                 equal_var=True, alternative="two-sided",
             )
 

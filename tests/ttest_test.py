@@ -76,20 +76,20 @@ def test_ttest_matches_raw_sample_student_test_for_seeded_samples():
         assert actual.degrees_of_freedom == expected.df
 
 
-def test_ttest_keeps_population_descriptive_statistics():
+def test_ttest_reports_sample_standard_deviations():
     left, right = [0, 2], [4, 8, 12]
     base = BaseStats.calculate(left, right)
 
     stats = TTestSignificanceTester(0.05).compare(left, right)
 
-    expected = (1.0, 8.0, 1.0, math.sqrt(32 / 3))
+    expected = (1.0, 8.0, math.sqrt(2), 4.0)
     assert (base.mean_1, base.mean_2, base.std_1, base.std_2) == pytest.approx(expected)
     assert (stats.mean_1, stats.mean_2, stats.std_1, stats.std_2) == pytest.approx(expected)
     serialized = stats.to_json()
     assert serialized["mean_before"] == "1.000000"
     assert serialized["mean_after"] == "8.000000"
-    assert serialized["stddev_before"] == "1.000000"
-    assert serialized["stddev_after"] == "3.265986"
+    assert serialized["stddev_before"] == "1.414214"
+    assert serialized["stddev_after"] == "4.000000"
     point = ChangePoint(index=2, qhat=0, stats=stats).to_json()
     assert (point["mean_before"], point["mean_after"],
             point["stddev_before"], point["stddev_after"]) == pytest.approx(expected)

@@ -126,7 +126,7 @@ def test_merge_refreshes_adjacent_statistics(tail, expected_indexes):
 
     assert [point.index for point in points] == expected_indexes
     np.testing.assert_allclose(points[0].stats.mean_2, 2.025)
-    np.testing.assert_allclose(points[0].stats.std_2, .025)
+    np.testing.assert_allclose(points[0].stats.std_2, .02672612419124244)
     if tail:
         np.testing.assert_allclose(points[1].stats.mean_1, 2.025)
-        np.testing.assert_allclose(points[1].stats.std_1, .025)
+        np.testing.assert_allclose(points[1].stats.std_1, .02672612419124244)
