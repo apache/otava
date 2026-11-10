@@ -58,16 +58,16 @@ def test_single_series():
     indexes = [c.index for c in cps]
     assert indexes == [10]
 
-    # decrease window_len to generate more cp and hit the last two lines in code cov...
+    # Short windows do not make the tail significant with sample variances.
     cps, _ = compute_change_points(series+[0.47, 0.48, 0.45, 0.01, 0.1, 0.22], max_pvalue=0.0001, new_data=0.27, old_weak_cp=cps, window_len=5)
     indexes = [c.index for c in cps]
-    assert indexes == [10, 23]
+    assert indexes == [10]
 
     cps = [cps[0]]
     cps[0].index = 2
     cps, _ = compute_change_points(series+[0.47, 0.48, 0.45, 0.01, 0.1, 0.22], max_pvalue=0.0001, new_data=0.27, old_weak_cp=cps, window_len=5)
     indexes = [c.index for c in cps]
-    assert indexes == [10, 23]
+    assert indexes == [10]
 
 
 def test_single_series_original():
@@ -126,7 +126,7 @@ def test_merge_refreshes_adjacent_statistics(tail, expected_indexes):
 
     assert [point.index for point in points] == expected_indexes
     np.testing.assert_allclose(points[0].stats.mean_2, 2.025)
-    np.testing.assert_allclose(points[0].stats.std_2, .025)
+    np.testing.assert_allclose(points[0].stats.std_2, .02672612419124244)
     if tail:
         np.testing.assert_allclose(points[1].stats.mean_1, 2.025)
-        np.testing.assert_allclose(points[1].stats.std_1, .025)
+        np.testing.assert_allclose(points[1].stats.std_1, .02672612419124244)

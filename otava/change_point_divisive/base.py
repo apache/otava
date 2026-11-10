@@ -77,9 +77,10 @@ class BaseStats:
         """
         Compute basic statistics for the left and right sides of a change point.
 
-        Returns a new BaseStats holding the mean and standard deviation of each side. The
-        p-value depends on the significance test used, so we cannot compute it here; if the
-        caller already knows it they can pass it in, otherwise it defaults to 1.0.
+        Returns a new BaseStats holding the mean and sample standard deviation (ddof=1)
+        of each side. A singleton is assigned zero standard deviation. The p-value depends
+        on the significance test used, so we cannot compute it here; if the caller already
+        knows it they can pass it in, otherwise it defaults to 1.0.
         """
         if len(left) == 0 or len(right) == 0:
             raise ValueError
@@ -93,8 +94,8 @@ class BaseStats:
             pvalue=p,
             mean_1=np.mean(left),
             mean_2=np.mean(right),
-            std_1=np.std(left) if len(left) >= 2 else 0.0,
-            std_2=np.std(right) if len(right) >= 2 else 0.0,
+            std_1=np.std(left, ddof=1) if len(left) >= 2 else 0.0,
+            std_2=np.std(right, ddof=1) if len(right) >= 2 else 0.0,
         )
 
     def copy(self):
