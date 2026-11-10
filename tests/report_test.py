@@ -77,8 +77,8 @@ def test_json_report(report):
                                                         'mean_before': '2.025000',
                                                         'metric': 'series2',
                                                         'pvalue': '0.000000',
-                                                        'stddev_after': '0.026954',
-                                                        'stddev_before': '0.011180',
+                                                        'stddev_after': '0.029114',
+                                                        'stddev_before': '0.012910',
                                                         'time': 4}],
                                           'time': 4},
                                           {'attributes': {},
@@ -89,8 +89,8 @@ def test_json_report(report):
                                                        'mean_before': '0.996667',
                                                        'metric': 'series1',
                                                        'pvalue': '0.000000',
-                                                       'stddev_after': '0.025768',
-                                                       'stddev_before': '0.067495',
+                                                       'stddev_after': '0.028810',
+                                                       'stddev_before': '0.073937',
                                                        'time': 6}],
                                            'time': 6}]}
     assert isinstance(obj, dict)

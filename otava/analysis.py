@@ -117,12 +117,12 @@ class TTestSignificanceTester(SignificanceTester):
 
         mean_l = np.mean(left)
         mean_r = np.mean(right)
-        std_l = np.std(left) if len(left) >= 2 else 0.0
-        std_r = np.std(right) if len(right) >= 2 else 0.0
+        std_l = np.std(left, ddof=1) if len(left) >= 2 else 0.0
+        std_r = np.std(right, ddof=1) if len(right) >= 2 else 0.0
 
         if len(left) + len(right) > 2:
             (_, p) = ttest_ind_from_stats(
-                mean_l, std_l, len(left), mean_r, std_r, len(right), alternative="two-sided"
+                mean_l, std_l, len(left), mean_r, std_r, len(right), equal_var=True, alternative="two-sided"
             )
         else:
             p = 1.0

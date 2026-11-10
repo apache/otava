@@ -53,9 +53,11 @@ def test_analyze_graphite():
             expected_points=data_points,
         )
 
+        # These six-point fixtures have corrected t-test p-values around 0.0015
+        # (throughput) and 0.0018 (CPU); use 0.01 to exercise change reporting.
         # Run the Otava analysis
         proc = subprocess.run(
-            ["uv", "run", "otava", "analyze", "my-product.test", "--since=-10m"],
+            ["uv", "run", "otava", "analyze", "my-product.test", "--since=-10m", "-P", "0.01"],
             capture_output=True,
             text=True,
             timeout=600,
@@ -266,6 +268,7 @@ tests:
             config_file_path = config_file.name
 
         try:
+            # Use 0.01 for the same six-point fixtures as test_analyze_graphite.
             # Run the Otava analysis with --branch
             proc = subprocess.run(
                 [
@@ -277,6 +280,8 @@ tests:
                     "--branch",
                     branch_name,
                     "--since=-10m",
+                    "-P",
+                    "0.01",
                 ],
                 capture_output=True,
                 text=True,

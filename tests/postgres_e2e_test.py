@@ -39,9 +39,11 @@ def test_analyze():
     password = "examplepassword"
     db = "benchmark_results"
     with postgres_container(username, password, db) as (postgres_container_id, host_port):
+        # The six-point fixture has corrected t-test p=0.00151189; use 0.01
+        # so this integration test exercises change reporting and persistence.
         # Run the Otava analysis
         proc = subprocess.run(
-            ["uv", "run", "otava", "analyze", "aggregate_mem", "--branch", "trunk", "--since", "2025-01-01"],
+            ["uv", "run", "otava", "analyze", "aggregate_mem", "--branch", "trunk", "--since", "2025-01-01", "-P", "0.01"],
             capture_output=True,
             text=True,
             timeout=600,
@@ -137,9 +139,11 @@ def test_analyze_and_update_postgres():
     password = "examplepassword"
     db = "benchmark_results"
     with postgres_container(username, password, db) as (postgres_container_id, host_port):
+        # The six-point fixture has corrected t-test p=0.00151189; use 0.01
+        # so this integration test exercises change reporting and persistence.
         # Run the Otava analysis
         proc = subprocess.run(
-            ["uv", "run", "otava", "analyze", "aggregate_mem", "--branch", "trunk", "--update-postgres", "--since", "2025-01-01"],
+            ["uv", "run", "otava", "analyze", "aggregate_mem", "--branch", "trunk", "--update-postgres", "--since", "2025-01-01", "-P", "0.01"],
             capture_output=True,
             text=True,
             timeout=600,
@@ -225,8 +229,8 @@ def test_analyze_and_update_postgres():
             pytest.fail(f"DB change value {forward_change!r} not within tolerance of -5.6")
         if abs(backward_change - 5.94) > 0.2:
             pytest.fail(f"DB backward change {backward_change!r} not within tolerance of 5.94")
-        if p_value >= 0.001:
-            pytest.fail(f"DB p-value {p_value!r} not less than 0.01")
+        # Independently calculated from the raw seeded groups with SciPy ttest_ind.
+        assert p_value == pytest.approx(0.001511888829236909)
 
 
 def _postgres_readiness_check_f(
