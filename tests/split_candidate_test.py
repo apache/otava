@@ -64,9 +64,9 @@ def test_recompute_uses_current_neighbors_and_preserves_metric(tester_name, seri
 
     assert (updated.index, updated.qhat, updated.metric) == (4, 12., "latency")
     assert updated.stats.mean_1 == 2.
-    assert updated.stats.std_1 == 1.
+    assert updated.stats.std_1 == pytest.approx(np.sqrt(2))
     assert updated.stats.mean_2 == 7.
-    assert updated.stats.std_2 == pytest.approx(np.sqrt(8 / 3))
+    assert updated.stats.std_2 == 2.
     assert updated.stats.degrees_of_freedom == 3
     assert point.stats is old_stats
     assert point.stats.mean_2 == 10.
@@ -99,7 +99,7 @@ def test_deterministic_detects_short_regression_and_recovery():
 
 
 @pytest.mark.parametrize("qhat", [0., 1e8])
-@pytest.mark.parametrize("kappa,mean_2,std_2,df", [(6, 6., 1., 2), (8, 8., np.sqrt(5), 4)])
+@pytest.mark.parametrize("kappa,mean_2,std_2,df", [(6, 6., np.sqrt(2), 2), (8, 8., np.sqrt(20 / 3), 4)])
 def test_deterministic_uses_containing_interval_start_and_exclusive_endpoint(kappa, mean_2, std_2, df, qhat):
     tester = analysis.DeterministicTTestSignificanceTester(0.001)
     sequence = [-100., -100., 1., 3., 5., 7., 9., 11., 100., 100.]
@@ -110,13 +110,13 @@ def test_deterministic_uses_containing_interval_start_and_exclusive_endpoint(kap
     assert point.index == 4
     assert point.qhat == qhat
     assert point.stats.mean_1 == 2.
-    assert point.stats.std_1 == 1.
+    assert point.stats.std_1 == pytest.approx(np.sqrt(2))
     assert point.stats.mean_2 == mean_2
     assert point.stats.std_2 == pytest.approx(std_2)
     assert point.stats.degrees_of_freedom == df
     if kappa == 6:
-        assert point.stats.tstatistic == -4.
-        assert point.stats.pvalue == pytest.approx(0.05719095841793663)
+        assert point.stats.tstatistic == pytest.approx(-2 * np.sqrt(2))
+        assert point.stats.pvalue == pytest.approx(0.10557280900008414)
 
 
 @pytest.mark.parametrize("index,kappa", [(4, 9), (4, 11), (2, 6), (-1, 1), (9, 11), (10, 11)])
