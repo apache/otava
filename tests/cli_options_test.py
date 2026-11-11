@@ -28,7 +28,6 @@ from otava.main import script_main
 
 class CliOptionsTest(unittest.TestCase):
 
-    # Test --deterministic-edivisive in various ways
     def test_no_cli_option(self):
         with patch('otava.series.compute_change_points') as mock_split:
             script_main(args=[])
@@ -46,18 +45,53 @@ class CliOptionsTest(unittest.TestCase):
 
             assert otava.series.compute_change_points.call_count == 2
 
-    # Failing due to lack of cp.metric see pull#141
-    # def test_orig_cli_option(self):
-    #     with patch('otava.series.compute_change_points') as mock_orig:
-    #         mock_orig.return_value = ([], None)
-    #         with tempfile.TemporaryDirectory() as td:
-    #             td_path = Path(td)
-    #             csv_path, timestamps, config_path, test_name = _create_files_in_temp_dir(td_path)
-    #             # _uv_run(td_path, test_name)
-    #             config_path_str = "" + str(config_path)
-    #             script_main(args=["analyze", "--config", config_path_str, "--orig-edivisive", "true", test_name])
-    #
-    #         assert otava.series.compute_change_points_orig.call_count == 2
+    def test_split_cli_option(self):
+        with patch("otava.series.compute_change_points") as mock_split:
+            mock_split.return_value = ([], [])
+            with tempfile.TemporaryDirectory() as td:
+                td_path = Path(td)
+                csv_path, timestamps, config_path, test_name = _create_files_in_temp_dir(td_path)
+                config_path_str = "" + str(config_path)
+                script_main(
+                    args=["analyze", "--config", config_path_str, "--segmentation", "split-merge", test_name]
+                )
+
+            assert otava.series.compute_change_points.call_count == 2
+
+    def test_orig_cli_option(self):
+        with patch("otava.series.compute_change_points_orig") as mock_orig:
+            mock_orig.return_value = ([], None)
+            with tempfile.TemporaryDirectory() as td:
+                td_path = Path(td)
+                csv_path, timestamps, config_path, test_name = _create_files_in_temp_dir(td_path)
+                config_path_str = "" + str(config_path)
+                script_main(
+                    args=["analyze", "--config", config_path_str, "--significance-test", "permutation", "--segmentation", "whole-series", test_name]
+                )
+
+            assert otava.series.compute_change_points_orig.call_count == 2
+
+    def test_deterministic_cli_option(self):
+        with patch("otava.series.compute_change_points_deterministic") as mock_deterministic:
+            mock_deterministic.return_value = ([], None)
+            with tempfile.TemporaryDirectory() as td:
+                td_path = Path(td)
+                csv_path, timestamps, config_path, test_name = _create_files_in_temp_dir(td_path)
+                config_path_str = "" + str(config_path)
+                script_main(
+                    args=[
+                        "analyze",
+                        "--config",
+                        config_path_str,
+                        "--significance-test",
+                        "t-test",
+                        "--segmentation",
+                        "whole-series",
+                        test_name,
+                    ]
+                )
+
+            assert otava.series.compute_change_points_deterministic.call_count == 2
 
 
 def _create_files_in_temp_dir(td_path: Path):
