@@ -20,7 +20,13 @@ import pytest
 from scipy.stats import ttest_ind
 from signal_processing_algorithms.e_divisive.change_points import EDivisiveChangePoint
 
-from otava.analysis import TTestSignificanceTester, compute_change_points, fill_missing
+from otava.analysis import (
+    ChangePoint,
+    TTestSignificanceTester,
+    compute_change_points,
+    fill_missing,
+    split,
+)
 
 
 def test_fill_missing():
@@ -114,3 +120,16 @@ def test_significance_uses_sample_standard_deviations(left, right):
         assert stats.pvalue == pytest.approx(expected)
     else:
         assert stats.pvalue == 1.
+
+
+@pytest.mark.parametrize("old_indexes", [[10], [10, 15]])
+def test_incremental_split_sorts_boundaries_before_computing_statistics(old_indexes):
+    values = [1.] * 5 + [2.] * 5 + [3.] * 5 + [4.] * 5
+    old_points = [ChangePoint(index, None) for index in old_indexes]
+
+    points = split(values, window_len=50, max_pvalue=.01, new_points=1, old_cp=old_points)
+
+    assert [point.index for point in points] == [5, 10, 15]
+    assert [(point.stats.mean_1, point.stats.mean_2) for point in points] == [
+        (1., 2.), (2., 3.), (3., 4.),
+    ]

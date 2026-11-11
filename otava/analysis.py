@@ -291,6 +291,9 @@ def split(series: np.array, window_len: int = 30, max_pvalue: float = 0.001,
             if i not in indexes:
                 indexes += [i]
 
+    # Incremental detection can discover boundaries before retained ones.
+    # Statistics require their endpoints to be in chronological order.
+    indexes.sort()
     window_endpoints = [0] + indexes + [len(series)]
     return [tester.change_point(i, series, window_endpoints) for i in indexes]
 
