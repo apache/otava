@@ -31,7 +31,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Keep the full Python matrix on an image supported by setup-python.
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         python-version: ["3.8", "3.9", "3.10"]
