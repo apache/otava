@@ -10,7 +10,7 @@ resolution-markers = [
 
 [[package]]
 name = "apache-otava"
-version = "0.7.0"
+version = "0.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "dateparser" },
