@@ -17,6 +17,7 @@
 
 import numpy as np
 import pytest
+from scipy.stats import ttest_ind
 from signal_processing_algorithms.e_divisive.change_points import EDivisiveChangePoint
 
 from otava.analysis import TTestSignificanceTester, compute_change_points, fill_missing
@@ -88,7 +89,28 @@ def test_merge_refreshes_adjacent_statistics(tail, expected_indexes):
 
     assert [point.index for point in points] == expected_indexes
     np.testing.assert_allclose(points[0].stats.mean_2, 2.025)
-    np.testing.assert_allclose(points[0].stats.std_2, .025)
+    np.testing.assert_allclose(points[0].stats.std_2, .02672612419124244)
     if tail:
         np.testing.assert_allclose(points[1].stats.mean_1, 2.025)
-        np.testing.assert_allclose(points[1].stats.std_1, .025)
+        np.testing.assert_allclose(points[1].stats.std_1, .02672612419124244)
+
+
+@pytest.mark.parametrize("left, right", [
+    ([1., 2., 3.], [2., 4., 6.]),
+    ([1.], [2., 3., 4.]),
+    ([1., 2., 3.], [4.]),
+    ([1., 1.], [2., 2.]),
+    ([1.], [2.]),
+])
+def test_significance_uses_sample_standard_deviations(left, right):
+    stats = TTestSignificanceTester(.05).compare(np.array(left), np.array(right))
+    assert stats.std_1 == pytest.approx(np.std(left, ddof=1) if len(left) > 1 else 0.)
+    assert stats.std_2 == pytest.approx(np.std(right, ddof=1) if len(right) > 1 else 0.)
+    if len(left) + len(right) > 2:
+        # SciPy 1.10 returns NaN for singleton raw samples; the pooled
+        # Student t-test for these two fixtures has this finite p-value.
+        expected = (.22540333075851657 if min(len(left), len(right)) == 1
+                    else ttest_ind(left, right, equal_var=True).pvalue)
+        assert stats.pvalue == pytest.approx(expected)
+    else:
+        assert stats.pvalue == 1.

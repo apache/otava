@@ -18,6 +18,7 @@
 
 import numpy as np
 import pytest
+from scipy.stats import t, ttest_ind
 
 from otava.analysis import compute_change_points
 
@@ -71,21 +72,21 @@ def test_tb_magnitude0_p2():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.2, min_magnitude=0.0)
     indexes = [c.index for c in cps]
-    assert indexes == [16, 27, 29, 56, 58, 60, 61, 69, 71, 82, 83, 91, 95, 108, 114, 116, 117, 131, 138, 142, 148, 165, 167, 178, 187, 189, 190, 192, 206, 212, 213, 222, 241, 243, 244, 246, 247, 249, 260, 266, 268, 272, 274, 275, 278, 282, 284, 285, 288, 295, 297, 314, 325, 330, 347, 351]
+    assert indexes == [16, 27, 29, 56, 58, 60, 61, 71, 82, 83, 91, 95, 108, 114, 116, 117, 131, 138, 142, 148, 165, 167, 178, 187, 189, 190, 192, 206, 212, 213, 222, 241, 243, 246, 247, 249, 260, 266, 268, 272, 274, 278, 282, 284, 285, 288, 295, 297, 311, 312, 325, 330, 347, 351]
 
 
 def test_tb_magnitude0_p1():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.1, min_magnitude=0.0)
     indexes = [c.index for c in cps]
-    assert indexes == [16, 27, 29, 56, 58, 61, 71, 82, 95, 113, 116, 117, 131, 138, 142, 148, 157, 165, 167, 178, 187, 189, 192, 206, 212, 222, 246, 247, 249, 260, 266, 268, 272, 274, 278, 282, 311, 312, 325, 330, 347, 351]
+    assert indexes == [16, 27, 29, 56, 58, 61, 71, 82, 95, 113, 116, 117, 131, 138, 142, 148, 165, 167, 178, 187, 189, 192, 206, 212, 222, 246, 247, 249, 260, 266, 268, 272, 274, 278, 282, 325, 330, 353]
 
 
 def test_tb_magnitude0_p01():
     series = _get_series()
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.01, min_magnitude=0.0)
     indexes = [c.index for c in cps]
-    assert indexes == [16, 61, 71, 82, 95, 117, 131, 142, 148, 192, 212, 249, 260, 330, 353]
+    assert indexes == [16, 61, 71, 82, 95, 117, 131, 142, 148, 192, 212, 260, 330, 353]
 
 
 def test_tb_magnitude0_p001():
@@ -107,7 +108,7 @@ def test_tb_magnitude0_p00001():
     cps, weak_cps = compute_change_points(series, window_len=30, max_pvalue=0.00001, min_magnitude=0.0)
     indexes = [c.index for c in cps]
     print(cps)
-    assert indexes == [71, 95, 131, 192, 212]
+    assert indexes == [71, 95, 131, 192]
 
 
 @pytest.mark.parametrize("max_pvalue, min_magnitude", [
@@ -125,7 +126,20 @@ def test_tb_statistics_match_final_segments(max_pvalue, min_magnitude):
         left, right = series[start:split], series[split:end]
         np.testing.assert_allclose(
             [point.stats.mean_1, point.stats.mean_2, point.stats.std_1, point.stats.std_2],
-            [np.mean(left), np.mean(right), np.std(left), np.std(right)],
+            [np.mean(left), np.mean(right), np.std(left, ddof=1) if len(left) > 1 else 0.,
+             np.std(right, ddof=1) if len(right) > 1 else 0.],
         )
+        if min(len(left), len(right)) > 1:
+            expected_pvalue = ttest_ind(left, right, equal_var=True).pvalue
+        else:
+            # Older SciPy returns NaN for raw singleton samples. Evaluate
+            # the pooled Student t statistic directly in that case.
+            df = len(left) + len(right) - 2
+            squared_errors = sum((np.array(left) - np.mean(left)) ** 2)
+            squared_errors += sum((np.array(right) - np.mean(right)) ** 2)
+            standard_error = np.sqrt(squared_errors / df * (1 / len(left) + 1 / len(right)))
+            statistic = abs(np.mean(left) - np.mean(right)) / standard_error
+            expected_pvalue = 2 * t.sf(statistic, df)
+        assert point.stats.pvalue == pytest.approx(expected_pvalue)
         assert point.stats.pvalue <= max_pvalue
         assert point.stats.change_magnitude() >= min_magnitude
