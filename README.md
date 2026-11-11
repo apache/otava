@@ -34,6 +34,19 @@ integrated with a pull request.
 
 See the documentation in https://otava.apache.org/docs/overview/.
 
+## Incubation status
+
+Apache Otava (incubating) is an effort undergoing incubation at the Apache
+Software Foundation (ASF), sponsored by the Apache Incubator PMC.
+
+Incubation is required of all newly accepted projects until a further review
+indicates that the infrastructure, communications, and decision making process
+have stabilized in a manner consistent with other successful ASF projects.
+
+While incubation status is not necessarily a reflection of the completeness
+or stability of the code, it does indicate that the project has yet to be
+fully endorsed by the ASF.
+
 ## Python Versions
 
 Apache Otava is tested against Python 3.8, 3.9, and 3.10.
