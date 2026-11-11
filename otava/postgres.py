@@ -32,7 +32,9 @@ from otava.test_config import PostgresTestConfig
 
 
 def _pg8000_module():
-    return import_optional_dependency("pg8000", "postgres")
+    pg8000 = import_optional_dependency("pg8000", "postgres")
+    pg8000.dbapi.paramstyle = "pyformat"
+    return pg8000
 
 
 @dataclass
@@ -103,14 +105,13 @@ class Postgres:
     ):
         cursor = self.__get_conn().cursor()
         change_point = ChangePointSerializer(change_point_group[metric_name])
-        kwargs = {**attributes, **{test.time_column: datetime.utcfromtimestamp(change_point_group.time)}}
-        update_stmt = test.update_stmt.format(metric=metric_name, **kwargs)
-        cursor.execute(
-            update_stmt,
-            (
-                change_point.forward_change_percent(),
-                change_point.backward_change_percent(),
-                change_point.stats.pvalue,
-            ),
-        )
+        parameters = {
+            **attributes,
+            test.time_column: datetime.utcfromtimestamp(change_point_group.time),
+            "forward_change_percent": change_point.forward_change_percent(),
+            "backward_change_percent": change_point.backward_change_percent(),
+            "p_value": change_point.stats.pvalue,
+        }
+        update_stmt = test.update_stmt.format(metric=metric_name)
+        cursor.execute(update_stmt, parameters)
         self.__get_conn().commit()
