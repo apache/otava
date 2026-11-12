@@ -545,6 +545,29 @@ def test_orig_edivisive(seed):
     assert restored.options.seed == seed
 
 
+def test_orig_edivisive_append_preserves_algorithm():
+    """An unchanged appended value must not erase an old original E-Divisive boundary."""
+    values = [1.] * 20 + [5.] * 280
+    analyzed = Series(
+        "append", None, list(range(300)), {"latency": Metric()},
+        {"latency": values.copy()}, {},
+    ).analyze(AnalysisOptions(orig_edivisive=True, seed=1))
+    assert [group.time for group in analyzed.change_points_by_time] == [20]
+
+    updated, weak = analyzed.append([300], {"latency": [5.]}, {})
+    points = analyzed.change_points.get_change_points_for_metric("latency")
+    fresh, _ = compute_change_points_orig(values + [5.], seed=1)
+
+    assert [p.index for p in points] == [p.index for p in fresh] == [20]
+    assert [p.index for p in updated.get_change_points_for_metric("latency")] == [20]
+    assert isinstance(points[0].stats, PermutationStats)
+    assert points[0].qhat == fresh[0].qhat
+    np.testing.assert_array_equal(points[0].stats.permuted_qhats, fresh[0].stats.permuted_qhats)
+    assert len(weak) == 0
+    assert len(analyzed.weak_change_points) == 0
+    assert [group.time for group in analyzed.change_points_by_time] == [20]
+
+
 def test_series_sparse_commits():
     """Verify series processes sparse commit sequences without artificial padding."""
     name = "sparse_commit_test"
