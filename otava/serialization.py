@@ -18,7 +18,7 @@
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 JsonScalar = str | int | float | bool | None
 
@@ -30,6 +30,10 @@ class AnalysisOptionsModel(BaseModel):
     max_pvalue: float = 0.001
     min_magnitude: float = 0.0
     orig_edivisive: bool = False
+    seed: Optional[int] = Field(
+        default=None, ge=0,
+        description="Random seed for original E-Divisive permutation tests; None uses fresh random draws.",
+    )
 
 
 class MetricModel(BaseModel):
