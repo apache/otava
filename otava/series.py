@@ -185,6 +185,7 @@ class AnalyzedSeries:
                 change_points, _ = compute_change_points_orig(
                     values,
                     max_pvalue=options.max_pvalue,
+                    seed=options.seed,
                 )
                 for c in change_points:
                     c.metric = metric

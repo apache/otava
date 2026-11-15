@@ -20,10 +20,13 @@ import time
 from datetime import datetime
 from random import random
 
+import numpy as np
 import pytest
 from pydantic import ValidationError
 
+from otava.analysis import compute_change_points_orig
 from otava.change_point_divisive.base import ChangePointSerializer
+from otava.change_point_divisive.significance_test import PermutationStats
 from otava.serialization import AnalysisOptionsModel, AnalyzedSeriesModel
 from otava.series import AnalysisOptions, AnalyzedSeries, Metric, Series
 
@@ -55,6 +58,7 @@ def test_analysis_options_is_pydantic_model():
         max_pvalue="0.05",
         min_magnitude=1,
         orig_edivisive=True,
+        seed="7",
     )
 
     assert isinstance(options, AnalysisOptionsModel)
@@ -63,12 +67,19 @@ def test_analysis_options_is_pydantic_model():
         "max_pvalue": 0.05,
         "min_magnitude": 1.0,
         "orig_edivisive": True,
+        "seed": 7,
     }
 
 
 def test_analysis_options_rejects_unknown_fields():
     with pytest.raises(ValidationError):
         AnalysisOptions(no_such_option=True)
+
+
+@pytest.mark.parametrize("seed", [-1, 1.5, "invalid"])
+def test_analysis_options_rejects_invalid_seed(seed):
+    with pytest.raises(ValidationError):
+        AnalysisOptions(seed=seed)
 
 
 def test_change_point_detection_many():
@@ -515,28 +526,23 @@ def test_can_append():
     assert not can
 
 
-def test_orig_edivisive():
-    series_1 = [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55]
-    series_2 = [2.02, 2.03, 2.01, 2.04, 1.82, 1.85, 1.79, 1.81, 1.80, 1.76, 1.78]
-    time = list(range(len(series_1)))
-    test = Series(
-        "test",
-        branch=None,
-        time=time,
-        metrics={"series1": Metric(1, 1.0), "series2": Metric(1, 1.0)},
-        data={"series1": series_1, "series2": series_2},
-        attributes={},
-    )
+@pytest.mark.parametrize("seed", [1, 2])
+def test_orig_edivisive(seed):
+    """Expose reproducible permutation draws through the public series API."""
+    values = [1.] * 20 + [5.] * 20
+    analyzed = Series(
+        "original", None, list(range(40)), {"latency": Metric()},
+        {"latency": values}, {},
+    ).analyze(AnalysisOptions(orig_edivisive=True, max_pvalue=.01, seed=seed))
+    points = analyzed.change_points.get_change_points_for_metric("latency")
+    expected, _ = compute_change_points_orig(values, max_pvalue=.01, seed=seed)
 
-    options = AnalysisOptions()
-    options.orig_edivisive = True
-    options.max_pvalue = 0.01
-
-    change_points = test.analyze(options=options).change_points_by_time
-    assert len(change_points) >= 0
-    # assert len(change_points) == 2
-    # assert change_points[0].index == 4
-    # assert change_points[1].index == 6
+    assert [p.index for p in points] == [20]
+    assert isinstance(points[0].stats, PermutationStats)
+    np.testing.assert_array_equal(points[0].stats.permuted_qhats, expected[0].stats.permuted_qhats)
+    assert points[0].stats.pvalue == expected[0].stats.pvalue
+    restored = AnalyzedSeries.from_json(analyzed.to_json())
+    assert restored.options.seed == seed
 
 
 def test_series_sparse_commits():
