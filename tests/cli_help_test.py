@@ -156,15 +156,21 @@ def test_otava_analyze_help_output():
 
     # Python 3.13+ formats mutually exclusive group usage and option aliases differently
     if IS_PYTHON_313_PLUS:
-        usage_filter_lines = """\
-                     [--attrs LIST] [--since-commit STRING | --since-version STRING |
-                     --since DATE] [--until-commit STRING | --until-version STRING | --until DATE]"""
+        usage_tail = """\
+                     [--metrics LIST] [--attrs LIST] [--since-commit STRING |
+                     --since-version STRING | --since DATE] [--until-commit STRING |
+                     --until-version STRING | --until DATE] [--last COUNT] [-P, --p-value PVALUE]
+                     [-M MAGNITUDE] [--window WINDOW] [--orig-edivisive]
+                     tests [tests ...]"""
         magnitude_option = "  -M, --magnitude MAGNITUDE"
     else:
-        usage_filter_lines = """\
-                     [--attrs LIST]
+        usage_tail = """\
+                     [--metrics LIST] [--attrs LIST]
                      [--since-commit STRING | --since-version STRING | --since DATE]
-                     [--until-commit STRING | --until-version STRING | --until DATE]"""
+                     [--until-commit STRING | --until-version STRING | --until DATE]
+                     [--last COUNT] [-P, --p-value PVALUE] [-M MAGNITUDE] [--window WINDOW]
+                     [--orig-edivisive]
+                     tests [tests ...]"""
         magnitude_option = "  -M MAGNITUDE, --magnitude MAGNITUDE"
 
     usage_and_options = f"""\
@@ -182,11 +188,8 @@ usage: otava analyze [-h] [--config-file CONFIG_FILE] [--csv-delimiter CSV_DELIM
                      [--influxdb-database INFLUXDB_DATABASE] [--influxdb-token INFLUXDB_TOKEN]
                      [--update-grafana] [--update-postgres] [--update-bigquery]
                      [--notify-slack NOTIFY_SLACK [NOTIFY_SLACK ...]] [--cph-report-since DATE]
-                     [--output {{log,json,regressions_only}}] [--branch [STRING]] [--metrics LIST]
-{usage_filter_lines}
-                     [--last COUNT] [-P, --p-value PVALUE] [-M MAGNITUDE] [--window WINDOW]
-                     [--orig-edivisive]
-                     tests [tests ...]
+                     [--output {{log,json,regressions_only}}] [--fail-on-change] [--branch [STRING]]
+{usage_tail}
 
 positional arguments:
   tests                 name of the test or group of the tests
@@ -203,6 +206,7 @@ options:
                         Slack. Same syntax as --since.
   --output {{log,json,regressions_only}}
                         Output format for the generated report.
+  --fail-on-change      Exit with a non-zero status if any change points are found.
   --branch [STRING]     name of the branch [env var: BRANCH]
   --metrics LIST        a comma-separated list of metrics to analyze
   --attrs LIST          a comma-separated list of attribute names associated with the runs (e.g.
