@@ -17,6 +17,7 @@
 
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from html import escape
 from typing import List, Optional
 
 from pytz import UTC
@@ -60,7 +61,7 @@ class GrafanaError(Exception):
 class Annotation:
     id: Optional[int]
     time: datetime
-    text: str
+    text: str  # Grafana API "text" field; the annotation body may contain HTML
     tags: List[str]
 
 
@@ -89,7 +90,7 @@ class Grafana:
         if end is not None:
             query_parameters["to"] = int(end.timestamp() * 1000)
         if tags is not None:
-            query_parameters["tags"] = tags
+            query_parameters["tags"] = [escape(tag) for tag in tags]
         try:
             response = requests.get(
                 url=url, params=query_parameters, auth=(self.__user, self.__password)
@@ -138,6 +139,7 @@ class Grafana:
             url = f"{self.url}api/annotations"
             for annotation in annotations:
                 data = asdict(annotation)
+                data["tags"] = [escape(tag) for tag in annotation.tags]
                 data["time"] = int(annotation.time.timestamp() * 1000)
                 del data["id"]
                 response = requests.post(url=url, json=data, auth=(self.__user, self.__password))

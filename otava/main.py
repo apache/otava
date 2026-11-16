@@ -18,6 +18,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from html import escape
 from typing import Dict, List, Optional
 
 import configargparse as argparse
@@ -167,17 +168,17 @@ class Otava:
                 tmp_tags_to_create += interpolate(t, substitutions)
             tags_to_create = tmp_tags_to_create
 
-            old_annotations = [a for a in old_annotations_for_test if metric_tag in a.tags]
+            old_annotations = [a for a in old_annotations_for_test if escape(metric_tag) in a.tags]
             old_annotation_times = set((a.time for a in old_annotations if a.tags))
 
             target_annotations = []
             for cpg in cpg_list:
-                annotation_text = get_back_links(cpg.attributes)
+                annotation_html = get_back_links(cpg.attributes)
                 target_annotations.append(
                     Annotation(
                         id=None,
                         time=datetime.fromtimestamp(cpg.time, tz=pytz.UTC),
-                        text=annotation_text,
+                        text=annotation_html,
                         tags=tags_to_create,
                     )
                 )

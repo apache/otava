@@ -21,6 +21,7 @@ from io import StringIO
 import pytest
 
 from otava.config import (
+    ConfigError,
     NestedYAMLConfigFileParser,
     load_config_from_file,
 )
@@ -48,6 +49,29 @@ def test_load_graphite_tests():
     assert test.metrics["p50"].direction == -1
     assert test.metrics["p50"].scale == 1.0e-6
     assert test.metrics["p50"].suffix is not None
+
+
+def test_load_tests_defined_with_yaml_anchors():
+    config = load_config_from_file("tests/resources/sample_config.yaml")
+    test = config.tests["remote2"]
+    assert isinstance(test, GraphiteTestConfig)
+    assert len(test.metrics) == 7
+    assert test.metrics["max"].scale == 1.0e-6
+    assert test.metrics["max"].suffix == "write.result-success.max"
+
+
+def test_inherit_property_is_rejected(tmp_path):
+    config_file = tmp_path / "otava.yaml"
+    config_file.write_text(
+        "tests:\n"
+        "  test1:\n"
+        "    type: csv\n"
+        "    file: data.csv\n"
+        "    inherit: common\n"
+    )
+
+    with pytest.raises(ConfigError, match="removed `inherit` property"):
+        load_config_from_file(str(config_file))
 
 
 def test_load_csv_tests():

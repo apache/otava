@@ -16,13 +16,23 @@
 # under the License.
 
 from datetime import datetime
+from html import escape
 from typing import Dict
+from urllib.parse import urlsplit
 
 from otava.util import format_timestamp
 
 
 def form_hyperlink_html_str(display_text: str, url: str) -> str:
-    return f'<li><a href="{url}" target="_blank">{display_text}</a></li>'
+    try:
+        if urlsplit(url).scheme not in ("http", "https", "ssh", "git+ssh"):
+            return ""
+    except ValueError:
+        return ""
+    return (
+        f'<li><a href="{escape(url, quote=True)}" target="_blank" rel="noopener noreferrer">'
+        f"{escape(display_text)}</a></li>"
+    )
 
 
 def form_created_msg_html_str() -> str:
@@ -40,23 +50,27 @@ def get_back_links(attributes: Dict[str, str]) -> str:
     """
 
     # grabbing test runner related data (e.g. Fallout)
-    html_str = ""
+    annotation_html = ""
     if attributes.get("test_url"):
-        html_str = form_hyperlink_html_str(display_text="Test", url=attributes.get("test_url"))
+        annotation_html = form_hyperlink_html_str(
+            display_text="Test", url=attributes.get("test_url")
+        )
 
     if attributes.get("run_url"):
-        html_str = form_hyperlink_html_str(display_text="Test run", url=attributes.get("run_url"))
+        annotation_html = form_hyperlink_html_str(
+            display_text="Test run", url=attributes.get("run_url")
+        )
 
     # grabbing Github project repository related data
     # TODO: Will we be responsible for handling versioning from repositories aside from bdp?
     repo_url = attributes.get("repo_url", "http://github.com/riptano/bdp")
     if attributes.get("commit"):
-        html_str += form_hyperlink_html_str(
+        annotation_html += form_hyperlink_html_str(
             display_text="Git commit", url=f"{repo_url}/commit/{attributes.get('commit')}"
         )
     elif attributes.get("branch"):
-        html_str += form_hyperlink_html_str(
+        annotation_html += form_hyperlink_html_str(
             display_text="Git branch", url=f"{repo_url}/tree/{attributes.get('branch')}"
         )
-    html_str += form_created_msg_html_str()
-    return html_str
+    annotation_html += form_created_msg_html_str()
+    return annotation_html
