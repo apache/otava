@@ -15,12 +15,23 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""Deprecated compatibility models for the pre-#78 persistence API."""
+
 from datetime import datetime
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict
 
 JsonScalar = str | int | float | bool | None
+
+__all__ = [
+    "AnalysisOptionsModel",
+    "AnalyzedSeriesModel",
+    "ChangePointGroupModel",
+    "ChangePointModel",
+    "JsonScalar",
+    "MetricModel",
+]
 
 
 class AnalysisOptionsModel(BaseModel):

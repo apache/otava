@@ -27,7 +27,7 @@ else:
     Connection = Any
 
 from otava._optional import import_optional_dependency
-from otava.change_point_divisive.base import ChangePointGroup, ChangePointSerializer
+from otava.change_point_divisive.base import ChangePointGroup
 from otava.test_config import PostgresTestConfig
 
 
@@ -104,7 +104,7 @@ class Postgres:
         change_point_group: ChangePointGroup,
     ):
         cursor = self.__get_conn().cursor()
-        change_point = ChangePointSerializer(change_point_group[metric_name])
+        change_point = change_point_group[metric_name]
         parameters = {
             **attributes,
             test.time_column: datetime.utcfromtimestamp(change_point_group.time),
