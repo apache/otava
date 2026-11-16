@@ -102,6 +102,17 @@ time                       commit      metric1    metric2
 2026-01-10 02:00:00 +0000  aaa9         148209       9.03
 ```
 
+### Failing CI on change points
+
+By default `otava analyze` exits with a zero status regardless of the results. Add `--fail-on-change`
+to exit with a non-zero status when any change points are found, so a CI job can fail on them:
+
+```console
+$ otava analyze local.sample --fail-on-change
+```
+
+Combine it with `--output regressions_only` for a short report that lists only the regressions.
+
 ## Avoiding test definition duplication
 
 You may find that your test definitions are very similar to each other, e.g. they all have the same metrics. Instead
