@@ -64,7 +64,7 @@ def test_ttest_decision_is_invariant_to_represented_input_dtype(low_precision_se
 def test_pair_distances_do_not_overflow_in_float16():
     values = np.array([-60000] * 3 + [60000] * 3, dtype=np.float16)
 
-    with np.errstate(over='ignore', invalid='ignore'):
+    with np.errstate(over='raise', invalid='raise'):
         candidate = PairDistanceCalculator(values).get_candidate_change_point(slice(None))
 
     assert candidate.index == 3
@@ -98,3 +98,23 @@ def test_pair_distances_preserve_exact_large_integer_differences():
     # Q = 2 / 6 * (90 - 3 / 2 * 4 - 3 / 2 * 4) = 26.
     assert candidate.index == 3
     assert candidate.qhat == pytest.approx(26)
+
+
+@pytest.mark.parametrize('dtype', [np.float16, np.float32])
+@pytest.mark.parametrize('group_size', [3, 25, 500])
+@pytest.mark.parametrize('power', [1.0, 1.99])
+def test_q_stays_finite_as_full_range_low_precision_series_grow(dtype, group_size, power):
+    magnitude = float(np.finfo(dtype).max)
+    values = np.array([-magnitude] * group_size + [magnitude] * group_size, dtype=dtype)
+    calculator = PairDistanceCalculator(values, power=power)
+
+    with np.errstate(over='raise', invalid='raise'):
+        q_values = calculator._get_Q_vals(0, len(values))
+        candidate = calculator.get_candidate_change_point(slice(None))
+
+    # All within-group distances are zero. For k observations per side,
+    # Q = 2 / (2k) * k**2 * distance = k * distance, so Q grows linearly.
+    assert np.isfinite(q_values).all()
+    assert np.isfinite(candidate.qhat)
+    assert candidate.index == group_size
+    assert candidate.qhat == pytest.approx(group_size * (2 * magnitude) ** power, rel=1e-12)
