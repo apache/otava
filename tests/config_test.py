@@ -23,8 +23,9 @@ import pytest
 from otava.config import (
     NestedYAMLConfigFileParser,
     load_config_from_file,
+    load_config_from_parser_args,
 )
-from otava.main import create_otava_cli_parser
+from otava.main import create_otava_cli_parser, data_selector_from_args, script_main
 from otava.test_config import CsvTestConfig, GraphiteTestConfig, HistoStatTestConfig
 
 
@@ -310,3 +311,109 @@ def test_unknown_argument_raises_error(capsys):
     # Check error message
     captured = capsys.readouterr()
     assert "unrecognized arguments: --banana" in captured.err
+
+
+@pytest.fixture
+def cli_config_file(tmp_path, monkeypatch):
+    # Keep the caller's environment from masking whether values come from YAML.
+    for name in ("OTAVA_CONFIG", "GRAFANA_ADDRESS", "GRAFANA_USER", "GRAFANA_PASSWORD",
+                 "POSTGRES_HOSTNAME", "POSTGRES_PORT"):
+        monkeypatch.delenv(name, raising=False)
+    # Include a test definition and nested service settings to exercise both paths through YAML.
+    path = tmp_path / "otava.yaml"
+    path.write_text(
+        "grafana:\n"
+        "  url: https://configured.example/\n"
+        "  user: configured-user\n"
+        "postgres:\n"
+        "  hostname: configured-host\n"
+        "  port: 5433\n"
+        "tests:\n"
+        "  sample:\n"
+        "    type: csv\n"
+        "    file: data.csv\n"
+        "    time_column: time\n"
+        "    metrics: [value]\n"
+    )
+    return path
+
+
+@pytest.mark.parametrize("command", [
+    ["list-tests"], ["list-groups"], ["list-metrics", "sample"],
+    ["analyze", "sample"],
+    ["remove-annotations", "sample"], ["validate"],
+])
+@pytest.mark.parametrize("position", ["before", "after", "env"])
+def test_cli_reads_config_file_in_each_supported_position(cli_config_file, monkeypatch, command, position):
+    # Given a YAML file selected through either parser or through OTAVA_CONFIG
+    if position == "env":
+        monkeypatch.setenv("OTAVA_CONFIG", str(cli_config_file))
+        args = command
+    else:
+        option = ["--config-file", str(cli_config_file)]
+        args = option + command if position == "before" else command + option
+
+    # When Otava parses the command and loads its configuration
+    parsed = create_otava_cli_parser().parse_args(args)
+    config = load_config_from_parser_args(parsed)
+
+    # Then the selected path survives subcommand parsing, and both the test definition
+    # and the nested settings reach the loaded configuration.
+    assert parsed.config_file == str(cli_config_file)
+    assert list(config.tests) == ["sample"]
+    assert config.grafana.url == "https://configured.example/"
+    assert config.grafana.user == "configured-user"
+    assert config.postgres.hostname == "configured-host"
+    assert config.postgres.port == 5433
+
+
+@pytest.mark.parametrize("position", ["before", "after"])
+def test_cli_config_and_service_options_override_environment(cli_config_file, tmp_path, monkeypatch, position):
+    # Given conflicting environment values and explicit CLI options on either side of list-tests
+    other = tmp_path / "other.yaml"
+    other.write_text("tests: {}\n")
+    monkeypatch.setenv("OTAVA_CONFIG", str(other))
+    monkeypatch.setenv("GRAFANA_ADDRESS", "https://environment.example/")
+    options = ["--config-file", str(cli_config_file), "--grafana-url", "https://cli.example/"]
+    args = options + ["list-tests"] if position == "before" else ["list-tests"] + options
+
+    # When Otava resolves the configuration and service settings
+    config = load_config_from_parser_args(create_otava_cli_parser().parse_args(args))
+
+    # Then the CLI selects the file with the sample test and wins over both the
+    # environment and YAML for the Grafana URL.
+    assert list(config.tests) == ["sample"]
+    assert config.grafana.url == "https://cli.example/"
+
+
+@pytest.mark.parametrize("position", ["before", "after", "env"])
+def test_list_tests_reads_selected_config_file(cli_config_file, monkeypatch, capsys, caplog, position):
+    # Given a config file selected with --config-file=... or OTAVA_CONFIG
+    if position == "env":
+        monkeypatch.setenv("OTAVA_CONFIG", str(cli_config_file))
+        args = ["list-tests"]
+    else:
+        option = [f"--config-file={cli_config_file}"]
+        args = option + ["list-tests"] if position == "before" else ["list-tests"] + option
+
+    # When the CLI entry point runs list-tests
+    script_main(args=args)
+
+    # Then it prints the configured test instead of warning that the config is missing.
+    assert "sample" in capsys.readouterr().out
+    assert "configuration file not found" not in caplog.text
+
+
+@pytest.mark.parametrize("override", [None, "cli-branch"])
+def test_subcommand_environment_options_remain_available(cli_config_file, monkeypatch, override):
+    # Given BRANCH for analyze, optionally overridden by an explicit --branch
+    monkeypatch.setenv("BRANCH", "environment-branch")
+    args = ["--config-file", str(cli_config_file), "analyze", "sample"]
+    if override:
+        args += ["--branch", override]
+
+    # When Otava parses the analyze command
+    parsed = create_otava_cli_parser().parse_args(args)
+
+    # Then the selector uses BRANCH unless --branch was supplied.
+    assert data_selector_from_args(parsed).branch == (override or "environment-branch")

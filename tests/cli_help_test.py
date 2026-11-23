@@ -345,7 +345,7 @@ BigQuery Options:
   --bigquery-credentials BIGQUERY_CREDENTIALS
                         BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
 
- In general, command-line values override environment variables which override defaults.
+In general, command-line values override environment variables which override defaults.
 """
     )
 
@@ -425,7 +425,7 @@ BigQuery Options:
   --bigquery-credentials BIGQUERY_CREDENTIALS
                         BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
 
- In general, command-line values override environment variables which override defaults.
+In general, command-line values override environment variables which override defaults.
 """
     )
 
@@ -502,7 +502,7 @@ BigQuery Options:
   --bigquery-credentials BIGQUERY_CREDENTIALS
                         BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
 
- In general, command-line values override environment variables which override defaults.
+In general, command-line values override environment variables which override defaults.
 """
     )
 
@@ -584,7 +584,7 @@ BigQuery Options:
   --bigquery-credentials BIGQUERY_CREDENTIALS
                         BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
 
- In general, command-line values override environment variables which override defaults.
+In general, command-line values override environment variables which override defaults.
 """
     )
 
@@ -660,6 +660,6 @@ BigQuery Options:
   --bigquery-credentials BIGQUERY_CREDENTIALS
                         BigQuery credentials file [env var: BIGQUERY_VAULT_SECRET]
 
- In general, command-line values override environment variables which override defaults.
+In general, command-line values override environment variables which override defaults.
 """
     )
