@@ -20,7 +20,7 @@ Unit tests for the unified ChangePoint class hierarchy in
 otava.change_point_divisive.base:
 
     BaseStats (+ TTestStats / PermutationStats)
-    CandidateChangePoint / ChangePoint / ChangePointSerializer
+    SplitCandidate / ChangePoint / ChangePointSerializer
     ChangePointGroup
     ChangePoints / ChangePointsByTime / ChangePointsByMetric
     SignificanceTester.calculate helpers (compare / get_sides / get_intervals)
@@ -33,7 +33,6 @@ from hypothesis import strategies as st
 
 from otava.change_point_divisive.base import (
     BaseStats,
-    CandidateChangePoint,
     ChangePoint,
     ChangePointGroup,
     ChangePoints,
@@ -41,6 +40,7 @@ from otava.change_point_divisive.base import (
     ChangePointsByTime,
     ChangePointSerializer,
     SignificanceTester,
+    SplitCandidate,
 )
 
 
@@ -260,19 +260,14 @@ def test_basestats_copy_is_independent_and_keeps_class():
     assert s.mean_1 != 999.0
 
 
-# CandidateChangePoint / ChangePoint / ChangePointSerializer
-def test_changepoint_from_and_to_candidate():
-    candidate = CandidateChangePoint(index=7, qhat=2.5)
+# SplitCandidate / ChangePoint / ChangePointSerializer
+def test_changepoint_from_candidate():
+    candidate = SplitCandidate(index=7, kappa=10, qhat=2.5)
     stats = make_stats()
     cp = ChangePoint.from_candidate(candidate, stats)
     assert cp.index == 7
     assert cp.qhat == 2.5
     assert cp.stats is stats
-
-    back = cp.to_candidate()
-    assert isinstance(back, CandidateChangePoint)
-    assert back.index == 7
-    assert back.qhat == 2.5
 
 
 def test_changepoint_equality_is_NOT_JUST_by_index():
@@ -956,7 +951,7 @@ def test_tester_get_sides_split_step():
     tester = SignificanceTester(0.05)
     series = np.array([1.0, 1.0, 1.0, 5.0, 5.0, 5.0])
     intervals = tester.get_intervals([make_cp(index=3)])
-    left, right = tester.get_sides(CandidateChangePoint(index=3, qhat=1.0), series, intervals)
+    left, right = tester.get_sides(3, series, intervals)
     assert list(left) == [1.0, 1.0, 1.0]
     assert list(right) == [5.0, 5.0, 5.0]
 
@@ -966,7 +961,7 @@ def test_tester_get_sides_merge_step():
     series = np.arange(9, dtype=float)
     intervals = [slice(0, 3), slice(3, 6), slice(6, None)]
     # candidate index matches the stop of the first interval -> merge step
-    left, right = tester.get_sides(CandidateChangePoint(index=3, qhat=1.0), series, intervals)
+    left, right = tester.get_sides(3, series, intervals)
     assert list(left) == [0.0, 1.0, 2.0]
     assert list(right) == [3.0, 4.0, 5.0]
 
@@ -977,7 +972,7 @@ def test_tester_get_sides_not_exist():
     intervals = [slice(0, 3), slice(3, 6), slice(6, None)]
     # candidate index matches the stop of the first interval -> merge step
     with pytest.raises(ValueError):
-        left, right = tester.get_sides(CandidateChangePoint(index=-1, qhat=1.0), series, intervals)
+        left, right = tester.get_sides(-1, series, intervals)
 
 
 def test_tester_is_significant():

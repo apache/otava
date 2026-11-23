@@ -93,7 +93,7 @@ def test_permutation_calculation():
 
     seed = 1
     st = PermutationsSignificanceTester(max_pvalue=0.05, permutations=1, calculator=PairDistanceCalculator, seed=seed)
-    change_point = st.change_point(candidate=candidate, series=sequence, intervals=[whole_interval])
+    change_point = st.evaluate_candidate(candidate=candidate, series=sequence, intervals=[whole_interval])
 
     test_rng = np.random.default_rng(seed)
     rand_sequence = sequence.copy()
@@ -110,6 +110,8 @@ def test_permutation_test():
     cpd = ChangePointDetector(significance_tester=st, calculator=PairDistanceCalculator)
     cps = cpd.get_change_points(series=sequence)
     assert [cp.index for cp in cps] == CHANGE_POINTS_INDS
+    assert [cp.qhat for cp in cps] == pytest.approx([761.2821428571428, 198.26666666666662])
+    assert [cp.stats.pvalue for cp in cps] == pytest.approx([0., 1 / 101])
 
 
 def test_permutation_test_integers():

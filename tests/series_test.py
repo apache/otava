@@ -20,12 +20,19 @@ import time
 from datetime import datetime
 from random import random
 
+import numpy as np
 import pytest
 from pydantic import ValidationError
 
 from otava.change_point_divisive.base import ChangePointSerializer
 from otava.serialization import AnalysisOptionsModel, AnalyzedSeriesModel
-from otava.series import AnalysisOptions, AnalyzedSeries, Metric, Series
+from otava.series import (
+    AnalysisOptions,
+    AnalyzedSeries,
+    Metric,
+    Series,
+    compute_change_points_deterministic,
+)
 
 
 def test_change_point_detection():
@@ -54,7 +61,8 @@ def test_analysis_options_is_pydantic_model():
         window_len="25",
         max_pvalue="0.05",
         min_magnitude=1,
-        orig_edivisive=True,
+        significance_test="permutation",
+        segmentation="whole-series",
     )
 
     assert isinstance(options, AnalysisOptionsModel)
@@ -62,7 +70,8 @@ def test_analysis_options_is_pydantic_model():
         "window_len": 25,
         "max_pvalue": 0.05,
         "min_magnitude": 1.0,
-        "orig_edivisive": True,
+        "significance_test": "permutation",
+        "segmentation": "whole-series",
     }
 
 
@@ -515,7 +524,7 @@ def test_can_append():
     assert not can
 
 
-def test_orig_edivisive():
+def test_permutation_whole_series():
     series_1 = [1.02, 0.95, 0.99, 1.00, 1.12, 0.90, 0.50, 0.51, 0.48, 0.48, 0.55]
     series_2 = [2.02, 2.03, 2.01, 2.04, 1.82, 1.85, 1.79, 1.81, 1.80, 1.76, 1.78]
     time = list(range(len(series_1)))
@@ -528,8 +537,7 @@ def test_orig_edivisive():
         attributes={},
     )
 
-    options = AnalysisOptions()
-    options.orig_edivisive = True
+    options = AnalysisOptions(significance_test="permutation", segmentation="whole-series")
     options.max_pvalue = 0.01
 
     change_points = test.analyze(options=options).change_points_by_time
@@ -769,3 +777,28 @@ def test_from_json_does_not_recompute(monkeypatch):
     assert restored.change_points_timestamp == analyzed.change_points_timestamp
     assert [c.index for c in restored.change_points.get_change_points_for_metric("m1")] == [10]
     assert len(restored.change_points_by_time) == len(analyzed.change_points_by_time)
+
+
+# The selected kappa lets deterministic E-divisive isolate a short spike.
+def test_tail_spike_change_point():
+    series = np.random.default_rng(2).normal(loc=100.0, scale=5.0, size=303)
+    series[-4] = 150.0
+
+    cps, _ = compute_change_points_deterministic(
+        series,
+        max_pvalue=0.001,
+    )
+
+    assert len(series) - 4 in [cp.index for cp in cps]
+
+
+def test_middle_spike_and_recovery_change_points():
+    series = np.random.default_rng(2).normal(loc=100.0, scale=5.0, size=303)
+    series[150] = 150.0
+
+    cps, _ = compute_change_points_deterministic(
+        series,
+        max_pvalue=0.001,
+    )
+
+    assert [cp.index for cp in cps] == [150, 151]

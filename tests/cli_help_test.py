@@ -185,7 +185,8 @@ usage: otava analyze [-h] [--config-file CONFIG_FILE] [--csv-delimiter CSV_DELIM
                      [--output {{log,json,regressions_only}}] [--branch [STRING]] [--metrics LIST]
 {usage_filter_lines}
                      [--last COUNT] [-P, --p-value PVALUE] [-M MAGNITUDE] [--window WINDOW]
-                     [--orig-edivisive]
+                     [--significance-test {{t-test,permutation}}]
+                     [--segmentation {{whole-series,split-merge}}]
                      tests [tests ...]
 
 positional arguments:
@@ -235,8 +236,12 @@ options:
                         windows are less susceptible to noise; however, a very large window may
                         cause dismissing short regressions as noise so it is best to keep it short
                         enough to include not more than a few change points (optimally at most 1)
-  --orig-edivisive      use the original edivisive algorithm with no windowing and weak change
-                        points analysis improvements
+  --significance-test {t-test,permutation}
+                        statistical test for candidate change points (default: t-test)
+  --segmentation {whole-series,split-merge}
+                        split-merge (default): sliding windows followed by merging, introduced in
+                        the Hunter paper; whole-series: recursive splitting without windows, as
+                        described in the original E-Divisive paper
 
 CSV Options:
   Options for CSV configuration
