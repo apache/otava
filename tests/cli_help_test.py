@@ -407,7 +407,7 @@ InfluxDB Options:
   --influxdb-token INFLUXDB_TOKEN
                         InfluxDB 3 database token [env var: INFLUXDB_TOKEN]
 
- In general, command-line values override environment variables which override defaults.
+In general, command-line values override environment variables which override defaults.
 """
     )
 
@@ -508,7 +508,7 @@ InfluxDB Options:
   --influxdb-token INFLUXDB_TOKEN
                         InfluxDB 3 database token [env var: INFLUXDB_TOKEN]
 
- In general, command-line values override environment variables which override defaults.
+In general, command-line values override environment variables which override defaults.
 """
     )
 
@@ -606,7 +606,7 @@ InfluxDB Options:
   --influxdb-token INFLUXDB_TOKEN
                         InfluxDB 3 database token [env var: INFLUXDB_TOKEN]
 
- In general, command-line values override environment variables which override defaults.
+In general, command-line values override environment variables which override defaults.
 """
     )
 
@@ -710,7 +710,7 @@ InfluxDB Options:
   --influxdb-token INFLUXDB_TOKEN
                         InfluxDB 3 database token [env var: INFLUXDB_TOKEN]
 
- In general, command-line values override environment variables which override defaults.
+In general, command-line values override environment variables which override defaults.
 """
     )
 
@@ -807,6 +807,6 @@ InfluxDB Options:
   --influxdb-token INFLUXDB_TOKEN
                         InfluxDB 3 database token [env var: INFLUXDB_TOKEN]
 
- In general, command-line values override environment variables which override defaults.
+In general, command-line values override environment variables which override defaults.
 """
     )

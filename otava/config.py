@@ -201,6 +201,14 @@ def create_subparser_parent() -> configargparse.ArgumentParser:
     parent = configargparse.ArgumentParser(add_help=False)
     parent.add_argument('--config-file', help='Otava config file path', env_var="OTAVA_CONFIG")
     add_service_option_groups(parent)
+    # Shared defaults and environment settings are handled by the root parser.
+    # Subcommands should only apply explicit command-line overrides.
+    for action in parent._actions:
+        action.default = configargparse.SUPPRESS
+        # Keep the hint visible without reapplying the environment value.
+        if action.env_var and action.help != configargparse.SUPPRESS:
+            action.help = f"{action.help or ''} [env var: {action.env_var}]"
+        action.env_var = None
     return parent
 
 

@@ -541,6 +541,13 @@ def create_otava_cli_parser() -> argparse.ArgumentParser:
         parents=[subparser_parent],
     )
 
+    for subparser in subparsers.choices.values():
+        if not any(action.env_var for action in subparser._actions):
+            subparser.epilog = (
+                "In general, command-line values override environment variables "
+                "which override defaults."
+            )
+
     return parser
 
 
