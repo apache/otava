@@ -179,12 +179,26 @@ class PairDistanceCalculator(Calculator):
 
 
         This method computes all values of `Q` for given `start` and `end`, and returns index
-        of the potential critical point and the maximized value of `Q`.'''
+        of the potential critical point and the maximized value of `Q`.
+
+        Raises ValueError if floating-point distances, intermediate sums, or Q values
+        exceed the numeric range, or observations produce nonfinite Q values.'''
 
         start = 0 if interval.start is None else interval.start
         end = len(self.series) if interval.stop is None else interval.stop
         assert end - start > 1, f"interval must be a non-empty slice, but array[{start}:{end}] was given."
 
-        Q = self._get_Q_vals(start, end)
+        error_message = (
+            "Cannot calculate finite change-point scores; ensure all observations are finite "
+            "and rescale their magnitudes."
+        )
+        try:
+            with np.errstate(over='raise', invalid='raise'):
+                Q = self._get_Q_vals(start, end)
+        except FloatingPointError as error:
+            raise ValueError(error_message) from error
+        if not np.isfinite(Q).all():
+            raise ValueError(error_message)
+
         i, j = np.unravel_index(np.argmax(Q), Q.shape)
         return CandidateChangePoint(index=i + 1 + start, qhat=Q[i][j])

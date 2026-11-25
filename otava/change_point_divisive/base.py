@@ -90,6 +90,12 @@ class BaseStats:
         else:
             p = 1.0
 
+        # Promote before reductions so float16/float32 rounding cannot erase
+        # a difference in means or inflate the reported spread.
+        left, right = np.asarray(left), np.asarray(right)
+        left = left.astype(np.result_type(left.dtype, np.float64), copy=False)
+        right = right.astype(np.result_type(right.dtype, np.float64), copy=False)
+
         return BaseStats(
             pvalue=p,
             mean_1=np.mean(left),
@@ -835,6 +841,11 @@ class Calculator:
     """Abstract class for calculator. Calculator provides an interface to get best change point candidate"""
 
     def __init__(self, series: NDArray):
+        # Promote low-precision floats before calculating distances. Preserve
+        # exact integer differences and any wider floating-point precision.
+        series = np.asarray(series)
+        if np.issubdtype(series.dtype, np.floating) and series.dtype.itemsize < 8:
+            series = series.astype(np.float64)
         self.series = series
 
     def get_next_candidate(self, intervals: List[slice]) -> Optional[CandidateChangePoint]:
