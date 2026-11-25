@@ -583,6 +583,7 @@ def script_main(conf: Config = None, args: List[str] = None):
             report_type = args.report_type
             tests = otava.get_tests(*args.tests)
             tests_analyzed_series = {test.name: None for test in tests}
+            import_failed = False
             for test in tests:
                 try:
                     analyzed_series = otava.analyze(
@@ -603,7 +604,8 @@ def script_main(conf: Config = None, args: List[str] = None):
                     if slack_notification_channels:
                         tests_analyzed_series[test.name] = analyzed_series
                 except DataImportError as err:
-                    logging.error(err.message)
+                    import_failed = True
+                    logging.error("Failed to import data for %s: %s", test.name, err.message)
                 except GrafanaError as err:
                     logging.error(
                         f"Failed to update grafana dashboards for {test.name}: {err.message}"
@@ -619,6 +621,8 @@ def script_main(conf: Config = None, args: List[str] = None):
                     channels=slack_notification_channels,
                     since=slack_cph_since,
                 )
+            if import_failed:
+                exit(1)
 
         if args.command == "remove-annotations":
             if args.tests:

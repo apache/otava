@@ -16,6 +16,7 @@
 # under the License.
 
 import csv
+import json
 import os
 import subprocess
 import sys
@@ -168,6 +169,46 @@ def test_analyze_csv():
             )
 
         assert _remove_trailing_whitespaces(proc.stdout) == expected_output.rstrip("\n")
+
+
+def test_analyze_reports_valid_test_after_csv_import_error(tmp_path):
+    data = tmp_path / "data.csv"
+    data.write_text(
+        "time,latency,memory\n2026-01-01,10,invalid\n2026-01-02,10,100\n",
+        encoding="utf-8",
+    )
+    config = tmp_path / "otava.yaml"
+    config.write_text(
+        textwrap.dedent(f"""\
+            tests:
+              memory-test:
+                type: csv
+                file: {data}
+                time_column: time
+                metrics: [memory]
+              latency-test:
+                type: csv
+                file: {data}
+                time_column: time
+                metrics: [latency]
+            """),
+        encoding="utf-8",
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable, "-m", "otava.main", "analyze", "--config-file", str(config),
+            "--since", "2025-12-31", "--output", "json", "memory-test", "latency-test",
+        ],
+        cwd=Path(__file__).parents[1],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+
+    assert proc.returncode == 1, proc.stderr
+    assert json.loads(proc.stdout) == {"latency-test": []}
+    assert any("memory-test" in line and "invalid" in line for line in proc.stderr.splitlines())
 
 
 def test_analyze_csv_multiple_branches_without_branch_flag_fails():
