@@ -20,7 +20,11 @@ import statistics
 import numpy as np
 import pytest
 
-from otava.analysis import TTestSignificanceTester, compute_change_points
+from otava.analysis import (
+    TTestSignificanceTester,
+    compute_change_points,
+    compute_change_points_orig,
+)
 from otava.change_point_divisive.base import BaseStats
 from otava.change_point_divisive.calculator import PairDistanceCalculator
 from otava.change_point_divisive.detector import ChangePointDetector
@@ -118,3 +122,37 @@ def test_q_stays_finite_as_full_range_low_precision_series_grow(dtype, group_siz
     assert np.isfinite(candidate.qhat)
     assert candidate.index == group_size
     assert candidate.qhat == pytest.approx(group_size * (2 * magnitude) ** power, rel=1e-12)
+
+
+@pytest.mark.parametrize('values,power', [
+    pytest.param([-1e308] * 3 + [1e308] * 3, 1.0, id='subtraction-overflow'),
+    pytest.param([0.0] * 3 + [1e200] * 3, 1.99, id='power-overflow'),
+    # The correct final Q is 2.5e307 and fits in float64, but intermediate
+    # pair-distance sums exceed its range.
+    pytest.param([0.0] * 25 + [1e306] * 25, 1.0, id='sum-overflow'),
+    pytest.param([0.0, np.nan, 1.0], 1.0, id='nan-observation'),
+    pytest.param([0.0, np.inf, 1.0], 1.0, id='infinite-observation'),
+])
+def test_calculator_rejects_unsupported_numeric_range(values, power):
+    calculator = PairDistanceCalculator(np.array(values), power=power)
+
+    # The calculator must enforce its contract even if callers ignore
+    # NumPy overflow warnings.
+    with np.errstate(over='ignore', invalid='ignore'):
+        with pytest.raises(ValueError, match='rescale'):
+            calculator.get_candidate_change_point(slice(None))
+
+
+@pytest.mark.parametrize('algorithm', ['detector', 'split_merge', 'permutation'])
+def test_detection_rejects_float64_intermediate_overflow(algorithm):
+    values = np.array([0.0] * 25 + [1e306] * 25)
+
+    with np.errstate(over='ignore', invalid='ignore'):
+        with pytest.raises(ValueError, match='rescale'):
+            if algorithm == 'detector':
+                detector = ChangePointDetector(TTestSignificanceTester(0.001), PairDistanceCalculator)
+                detector.get_change_points(values)
+            elif algorithm == 'split_merge':
+                compute_change_points(values)
+            else:
+                compute_change_points_orig(values, seed=1)
