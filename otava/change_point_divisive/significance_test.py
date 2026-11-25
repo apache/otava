@@ -63,7 +63,16 @@ class PermutationsSignificanceTester(SignificanceTester):
         self.rng = np.random.default_rng(seed)
 
     def change_point(self, candidate: CandidateChangePoint, series: NDArray, intervals: List[slice]) -> ChangePoint[PermutationStats]:
-        '''Perform permutation test within candidate cluster'''
+        """Perform permutation test within candidate cluster.
+
+        Raises ValueError for nonfinite observed or permuted change-point scores.
+        """
+        error_message = (
+            "Permutation significance requires finite change-point scores; "
+            "ensure all observations are finite and rescale their magnitudes."
+        )
+        if not np.isfinite(candidate.qhat):
+            raise ValueError(error_message)
 
         # 1. Find permutated Qhats
         qhats = np.empty(self.permutations)
@@ -75,7 +84,13 @@ class PermutationsSignificanceTester(SignificanceTester):
                 self.rng.shuffle(seg)
             rand_calc = self.calculator(rand_series)
             rand_candidate = rand_calc.get_next_candidate(intervals)
-            qhats[i] = rand_candidate.qhat
+            try:
+                with np.errstate(over='raise', invalid='raise'):
+                    qhats[i] = rand_candidate.qhat
+            except FloatingPointError as error:
+                raise ValueError(error_message) from error
+            if not np.isfinite(qhats[i]):
+                raise ValueError(error_message)
 
         # 2. Estimate p-value
         extreme_qhat_perm = np.sum(qhats >= candidate.qhat)

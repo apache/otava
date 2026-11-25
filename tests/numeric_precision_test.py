@@ -25,9 +25,10 @@ from otava.analysis import (
     compute_change_points,
     compute_change_points_orig,
 )
-from otava.change_point_divisive.base import BaseStats
+from otava.change_point_divisive.base import BaseStats, Calculator, CandidateChangePoint
 from otava.change_point_divisive.calculator import PairDistanceCalculator
 from otava.change_point_divisive.detector import ChangePointDetector
+from otava.change_point_divisive.significance_test import PermutationsSignificanceTester
 
 
 @pytest.fixture(params=[(np.float16, 10000), (np.float32, 100000000)])
@@ -156,3 +157,29 @@ def test_detection_rejects_float64_intermediate_overflow(algorithm):
                 compute_change_points(values)
             else:
                 compute_change_points_orig(values, seed=1)
+
+
+@pytest.mark.parametrize('qhat', [np.nan, np.inf, -np.inf])
+def test_permutation_rejects_nonfinite_observed_score(qhat):
+    values = np.array([0.0] * 3 + [1.0] * 3)
+    candidate = CandidateChangePoint(index=3, qhat=qhat)
+    tester = PermutationsSignificanceTester(0.05, 10, PairDistanceCalculator, seed=1)
+
+    with pytest.raises(ValueError, match='finite'):
+        tester.change_point(candidate, values, [slice(None)])
+
+
+@pytest.mark.parametrize('qhat', [np.nan, np.inf, -np.inf])
+def test_permutation_rejects_nonfinite_permuted_score(qhat):
+    # Exercise the tester's calculator interface with an invalid score;
+    # PairDistanceCalculator itself rejects these before returning a candidate.
+    class NonfiniteScoreCalculator(Calculator):
+        def get_candidate_change_point(self, interval):
+            return CandidateChangePoint(index=3, qhat=qhat)
+
+    values = np.array([0.0] * 3 + [1.0] * 3)
+    candidate = CandidateChangePoint(index=3, qhat=3.0)
+    tester = PermutationsSignificanceTester(0.05, 10, NonfiniteScoreCalculator, seed=1)
+
+    with pytest.raises(ValueError, match='finite'):
+        tester.change_point(candidate, values, [slice(None)])
