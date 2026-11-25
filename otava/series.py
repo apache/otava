@@ -173,6 +173,33 @@ class AnalyzedSeries:
         return self.__change_points_by_time
 
     @staticmethod
+    def __compute_change_points_for_metric(
+        values: List[float],
+        options: AnalysisOptions,
+        new_data: Optional[int] = None,
+        old_weak_cp: Optional[List[ChangePoint[TTestStats]]] = None,
+    ) -> tuple[List[ChangePoint], List[ChangePoint]]:
+        """Use the same algorithm for initial analysis and appended observations.
+
+        Original E-Divisive has no incremental implementation or weak points,
+        so it reruns the full updated metric. Only split/merge uses the
+        incremental context supplied by append.
+        """
+        if options.orig_edivisive:
+            change_points, _ = compute_change_points_orig(
+                values, max_pvalue=options.max_pvalue, seed=options.seed,
+            )
+            return change_points, []
+        return compute_change_points(
+            values,
+            window_len=options.window_len,
+            max_pvalue=options.max_pvalue,
+            min_magnitude=options.min_magnitude,
+            new_data=new_data,
+            old_weak_cp=old_weak_cp,
+        )
+
+    @staticmethod
     def __compute_change_points(
         series: Series, options: AnalysisOptions
     ) -> (ChangePointsByMetric, ChangePointsByMetric):
@@ -181,42 +208,25 @@ class AnalyzedSeries:
         weak_change_points = ChangePointsByMetric()
         for metric in series.data.keys():
             values = series.data[metric].copy()
-            if options.orig_edivisive:
-                change_points, _ = compute_change_points_orig(
-                    values,
-                    max_pvalue=options.max_pvalue,
+            change_points, weak_cps = AnalyzedSeries.__compute_change_points_for_metric(
+                values, options
+            )
+            for c in weak_cps:
+                c.metric = metric
+                cpg = ChangePointGroup(
+                    time=series.time[c.index],
+                    attributes=series.attributes_at(c.index),
+                    changes={metric: c},
                 )
-                for c in change_points:
-                    c.metric = metric
-                    cpg = ChangePointGroup(
-                        time=series.time[c.index],
-                        attributes=series.attributes_at(c.index),
-                        changes={metric: c},
-                    )
-                    result.append(cpg)
-            else:
-                change_points, weak_cps = compute_change_points(
-                    values,
-                    window_len=options.window_len,
-                    max_pvalue=options.max_pvalue,
-                    min_magnitude=options.min_magnitude,
+                weak_change_points.append(cpg)
+            for c in change_points:
+                c.metric = metric
+                cpg = ChangePointGroup(
+                    time=series.time[c.index],
+                    attributes=series.attributes_at(c.index),
+                    changes={metric: c},
                 )
-                for c in weak_cps:
-                    c.metric = metric
-                    cpg = ChangePointGroup(
-                        time=series.time[c.index],
-                        attributes=series.attributes_at(c.index),
-                        changes={metric: c},
-                    )
-                    weak_change_points.append(cpg)
-                for c in change_points:
-                    c.metric = metric
-                    cpg = ChangePointGroup(
-                        time=series.time[c.index],
-                        attributes=series.attributes_at(c.index),
-                        changes={metric: c},
-                    )
-                    result.append(cpg)
+                result.append(cpg)
 
         return result, weak_change_points
 
@@ -278,7 +288,9 @@ class AnalyzedSeries:
         """
         Append new data points to the underlying series and recompute change points.
 
-        The recompute is done efficiently, only the tail of the Series() is recomputed.
+        Split/merge recomputes the tail incrementally. Original E-Divisive
+        reruns the full history of each updated metric, which can be more
+        expensive for long series. Untouched metrics retain their results.
 
         Parameters are the same as for the constructor. Just the metrics are missing, it is required
         to have the same metrics or a subset in the new data,
@@ -315,11 +327,9 @@ class AnalyzedSeries:
                 for cp in previous_weak_cp
                 if cp.index < len(self.__series.data[metric]) - new_data_len - 1
             ]
-            change_points, weak_cps = compute_change_points(
-                self.__series.data[metric],
-                window_len=self.options.window_len,
-                max_pvalue=self.options.max_pvalue,
-                min_magnitude=self.options.min_magnitude,
+            change_points, weak_cps = self.__compute_change_points_for_metric(
+                self.__series.data[metric].copy(),
+                self.options,
                 new_data=new_data_len,
                 old_weak_cp=old_weak_cp,
             )
