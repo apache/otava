@@ -111,12 +111,3 @@ $C(s, \tau, \kappa) = \dfrac{2(\tau - s)}{(\kappa - s) (\kappa - \tau - 1)} \lef
 Note that $A(s, s, \kappa)=0$, and $B(s, s, \kappa)=0$, and $C(s, \kappa, \kappa)=0$ because they correspond to empty subsequences. Moreover, $B(s, s + 1, \kappa) = 0$ and $C(s, \kappa - 1, \kappa)=0$ because each of them corresponds to an average pairwise distance within a subsequence consisting of a single point, i.e., each of them is the sum with zero terms. Using that, we can compute values for $A$, $B$, and $C$ iteratively. Note that functions $A$ and $B$ are computed as $\tau$ increases, and function $C$ is computed as $\tau$ decreases. 
 
 These formulas are effectively used in Apache Otava after some NumPy vectorizations. For details see [change_point_divisive/calculator.py](https://github.com/apache/otava/tree/master/otava/change_point_divisive/calculator.py).
-
-## Numeric range
-
-Otava promotes float16 and float32 observations to float64 before calculating
-pairwise distances. For very large float64 observations, intermediate distance
-sums can overflow even when the final Q score would fit. If a calculation
-overflows or produces a nonfinite Q, detection raises `ValueError`. Check for
-missing or infinite observations and express large values in a larger unit,
-such as seconds instead of nanoseconds, before retrying.
