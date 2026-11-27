@@ -523,7 +523,7 @@ def create_otava_cli_parser() -> argparse.ArgumentParser:
     )
     analyze_parser.add_argument(
         "--fail-on-change",
-        help="Exit with a non-zero status if any change points are found.",
+        help="Exit with status 3 if any change points are found.",
         dest="fail_on_change",
         action="store_true",
     )
@@ -624,8 +624,8 @@ def script_main(conf: Config = None, args: List[str] = None):
                     since=slack_cph_since,
                 )
             if fail_on_change and change_points_found:
-                logging.info("Change points found, exiting with a non-zero status.")
-                exit(1)
+                logging.info("Change points found, exiting with status 3.")
+                exit(3)
 
         if args.command == "remove-annotations":
             if args.tests:

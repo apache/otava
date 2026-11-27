@@ -94,7 +94,7 @@ def test_bundled_csv_example_fail_on_change():
         timeout=120,
     )
 
-    assert proc.returncode == 1, proc.stderr
+    assert proc.returncode == 3, proc.stderr
     assert "-12.9%" in proc.stdout
 
 

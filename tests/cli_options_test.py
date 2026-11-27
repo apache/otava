@@ -56,7 +56,7 @@ class CliOptionsTest(unittest.TestCase):
                 script_main(
                     args=["analyze", "--config", str(config_path), "--fail-on-change", test_name]
                 )
-            assert exc_info.value.code == 1
+            assert exc_info.value.code == 3
 
     def test_fail_on_change_does_not_exit_when_no_change_points_found(self):
         with patch("otava.series.compute_change_points") as mock_split:

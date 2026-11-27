@@ -206,7 +206,7 @@ options:
                         Slack. Same syntax as --since.
   --output {{log,json,regressions_only}}
                         Output format for the generated report.
-  --fail-on-change      Exit with a non-zero status if any change points are found.
+  --fail-on-change      Exit with status 3 if any change points are found.
   --branch [STRING]     name of the branch [env var: BRANCH]
   --metrics LIST        a comma-separated list of metrics to analyze
   --attrs LIST          a comma-separated list of attribute names associated with the runs (e.g.
