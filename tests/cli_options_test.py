@@ -58,6 +58,16 @@ class CliOptionsTest(unittest.TestCase):
                 )
             assert exc_info.value.code == 3
 
+    def test_fail_on_change_error_keeps_exit_code_1(self):
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
+            _, _, config_path, _ = _create_files_in_temp_dir(td_path)
+            with pytest.raises(SystemExit) as exc_info:
+                script_main(
+                    args=["analyze", "--config", str(config_path), "--fail-on-change", "no-such-test"]
+                )
+            assert exc_info.value.code == 1
+
     def test_fail_on_change_does_not_exit_when_no_change_points_found(self):
         with patch("otava.series.compute_change_points") as mock_split:
             mock_split.return_value = ([], [])
