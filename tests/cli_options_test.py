@@ -22,6 +22,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 import otava.series
 from otava.main import script_main
 
@@ -45,6 +47,36 @@ class CliOptionsTest(unittest.TestCase):
                 script_main(args=["analyze", "--config", config_path_str, test_name])
 
             assert otava.series.compute_change_points.call_count == 2
+
+    def test_fail_on_change_exits_when_change_points_found(self):
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
+            _, _, config_path, test_name = _create_files_in_temp_dir(td_path)
+            with pytest.raises(SystemExit) as exc_info:
+                script_main(
+                    args=["analyze", "--config", str(config_path), "--fail-on-change", test_name]
+                )
+            assert exc_info.value.code == 3
+
+    def test_fail_on_change_error_keeps_exit_code_1(self):
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
+            _, _, config_path, _ = _create_files_in_temp_dir(td_path)
+            with pytest.raises(SystemExit) as exc_info:
+                script_main(
+                    args=["analyze", "--config", str(config_path), "--fail-on-change", "no-such-test"]
+                )
+            assert exc_info.value.code == 1
+
+    def test_fail_on_change_does_not_exit_when_no_change_points_found(self):
+        with patch("otava.series.compute_change_points") as mock_split:
+            mock_split.return_value = ([], [])
+            with tempfile.TemporaryDirectory() as td:
+                td_path = Path(td)
+                _, _, config_path, test_name = _create_files_in_temp_dir(td_path)
+                script_main(
+                    args=["analyze", "--config", str(config_path), "--fail-on-change", test_name]
+                )
 
     # Failing due to lack of cp.metric see pull#141
     # def test_orig_cli_option(self):

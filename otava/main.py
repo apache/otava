@@ -521,6 +521,12 @@ def create_otava_cli_parser() -> argparse.ArgumentParser:
         default=ReportType.LOG,
         type=ReportType,
     )
+    analyze_parser.add_argument(
+        "--fail-on-change",
+        help="Exit with status 3 if any change points are found.",
+        dest="fail_on_change",
+        action="store_true",
+    )
     setup_data_selector_parser(analyze_parser)
     setup_analysis_options_parser(analyze_parser)
 
@@ -581,12 +587,17 @@ def script_main(conf: Config = None, args: List[str] = None):
             data_selector = data_selector_from_args(args)
             options = analysis_options_from_args(args)
             report_type = args.report_type
+            fail_on_change = args.fail_on_change
             tests = otava.get_tests(*args.tests)
             tests_analyzed_series = {test.name: None for test in tests}
+            change_points_found = False
             for test in tests:
                 try:
                     analyzed_series = otava.analyze(
                         test, selector=data_selector, options=options, report_type=report_type
+                    )
+                    change_points_found = change_points_found or bool(
+                        analyzed_series.change_points_by_time
                     )
                     if update_grafana_flag:
                         if not isinstance(test, GraphiteTestConfig):
@@ -619,6 +630,9 @@ def script_main(conf: Config = None, args: List[str] = None):
                     channels=slack_notification_channels,
                     since=slack_cph_since,
                 )
+            if fail_on_change and change_points_found:
+                logging.info("Change points found, exiting with status 3.")
+                exit(3)
 
         if args.command == "remove-annotations":
             if args.tests:

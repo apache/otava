@@ -72,6 +72,32 @@ def test_bundled_csv_example():
     assert _remove_trailing_whitespaces(proc.stdout) == expected_output.rstrip("\n")
 
 
+def test_bundled_csv_example_fail_on_change():
+    repo_root = Path(__file__).parents[1]
+    config = repo_root / "examples/csv/config/otava-local.yaml"
+    cmd = [
+        sys.executable,
+        "-m",
+        "otava.main",
+        "analyze",
+        "local.sample",
+        "--since=2026-01-01T00:00:00Z",
+        "--fail-on-change",
+    ]
+
+    proc = subprocess.run(
+        cmd,
+        cwd=repo_root,
+        env=dict(os.environ, OTAVA_CONFIG=str(config)),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+
+    assert proc.returncode == 3, proc.stderr
+    assert "-12.9%" in proc.stdout
+
+
 def test_analyze_csv():
     """
     End-to-end test for the CSV example from docs/CSV.md.
